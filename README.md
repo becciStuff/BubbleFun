@@ -6,7 +6,7 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for the staged support/weight physics and the rules that must stay fair. G1 is testable but **not yet active during play**.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for the staged support/weight physics and the rules that must stay fair. G1 support analysis powers the **isolated v0.6.0 Gravity Lab**, but normal Arcade and puzzle rules are unchanged.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
@@ -114,7 +114,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/config.js` — shared layouts, colours and gameplay constants
 - `src/grid.js` — hex-grid geometry, matching, ceiling support and shared hit detection
 - `src/puzzles.js` — handcrafted puzzle layouts, targets, ammunition and fresh board creation
-- `src/supports.js` — gravity support graph, suspended weight and independent ceiling anchors (G1 branch)
+- `src/supports.js` — gravity support graph, suspended weight and independent ceiling anchors (merged in G1)
 - `src/gravity.js` — detached-bubble detection, falling motion and opt-in Surge
 - `src/gravity-lab.js` — independent, deterministic lab demonstration board
 - `src/gravity-hints.js` — support marker data derived from the support graph
