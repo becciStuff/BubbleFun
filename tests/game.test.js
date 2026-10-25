@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   initialShooter, shooterPosition, shooterColumns, connectedShooter,
-  floatingShooter, descendShooter, fireShooter, stepGame,
+  floatingShooter, releaseFloatingShooter, descendShooter, fireShooter, stepGame,
   initialPop, popGroup, popAt, popCellAt, collapsePop, hasPopMoves,
 } from '../src/game.js';
 
@@ -22,6 +22,33 @@ test('matching shooter bubbles connect across rows but different colours do not'
 test('unanchored shooter bubbles are identified after a pop', () => {
   const board = new Map([['0,0','pink'],['1,0','pink'],['3,6','blue']]);
   assert.deepEqual(floatingShooter(board), [[3,6]]);
+});
+
+test('detached bubbles become falling physics objects before bursting', () => {
+  const state = initialShooter(() => .1);
+  state.board = new Map([['0,0','pink'], ['3,4','yellow']]);
+  assert.equal(releaseFloatingShooter(state, [[3,4]], () => .5), 1);
+  assert.equal(state.board.has('3,4'), false);
+  assert.equal(state.falling.length, 1);
+  const startingY = state.falling[0].y;
+  for (let i = 0; i < 10; i++) stepGame(state, .045);
+  assert.ok(state.falling[0].y > startingY, 'gravity moves the detached bubble down');
+  for (let i = 0; i < 30; i++) stepGame(state, .045);
+  assert.equal(state.falling.length, 0, 'falling bubble has exploded');
+  assert.equal(state.lastEvent, 'burst');
+  assert.ok(state.pulses.length > 0 || state.effects.length > 0);
+});
+
+test('board-clear victory waits until detached bubbles finish exploding', () => {
+  const state = initialShooter(() => .1);
+  state.board = new Map([['2,2','blue']]);
+  releaseFloatingShooter(state, [[2,2]], () => .5);
+  state.status = 'clearing';
+  stepGame(state, .045);
+  assert.equal(state.status, 'clearing');
+  for (let i = 0; i < 45; i++) stepGame(state, .045);
+  assert.equal(state.status, 'won');
+  assert.equal(state.lastEvent, 'win');
 });
 
 test('descending the ceiling preserves bubble x positions', () => {

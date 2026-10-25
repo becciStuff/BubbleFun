@@ -1,6 +1,13 @@
 # BubbleFun 🫧
 
-A small, free-to-play bubble arcade built with plain HTML, CSS and JavaScript. No accounts, ads, build tools or paid services required. This is the first classic-arcade prototype, designed so we can expand it later.
+A small, free-to-play bubble arcade built with plain HTML, CSS and JavaScript. No accounts, ads, build tools or paid services required. This is the classic-arcade prototype, designed so we can expand it later.
+
+## What's new in v0.2
+
+- Detached shooter bubbles obey gravity and burst after visibly falling.
+- Gravity combo bonuses, glowing shot trails, expanding blast rings, sparkles and score pop-ups.
+- More polished glass reflections, subtle screen shake and launcher recoil.
+- Extra gameplay tests for falling physics and the delayed board-clear celebration.
 
 ## Play
 
@@ -14,11 +21,11 @@ Then visit `http://localhost:8000/`. Using a local server is recommended because
 
 ## Two modes
 
-**Bubble Shooter** — Aim with your mouse or finger, then click/tap to shoot. Match **3 or more** connected bubbles of the same colour. Bubbles without a connection to the ceiling fall for bonus points. A new row descends after every five shots. Lose if the stack reaches the launcher, or win by clearing it. The **Left/Right** arrow keys and **Space** work on a keyboard too.
+**Bubble Shooter** — Aim with your mouse or finger, then click/tap to shoot. Match **3 or more** connected bubbles of the same colour. Breaking the connection to the ceiling releases other bubbles into a gravity cascade: they tumble down with sparkly trails, then explode for bonus points. A new row descends after every five shots. Lose if the stack reaches the launcher, or win by clearing it. The **Left/Right** arrow keys and **Space** work on a keyboard too.
 
 **Bubble Pop** — Click/tap groups of **2 or more** adjacent bubbles of the same colour. Bigger groups earn more points (`group size² × 5`). Bubbles fall and empty columns shift left. Clear the board for a bonus, or keep going until no groups remain.
 
-Both modes support a restart button, optional sound effects and separate local high scores. The game is responsive for desktop and mobile browsers. Sound starts muted.
+Both modes support a restart button, optional sound effects and separate local high scores. Glossy reflections, particle trails, expanding burst rings, floating score pop-ups and subtle impact feedback add an arcade feel. The game is responsive for desktop and mobile browsers. Sound starts muted, and screen shake is disabled when reduced motion is preferred.
 
 ## Run tests
 

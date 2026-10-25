@@ -19,6 +19,13 @@ const key = (row, col) => `${row},${col}`;
 const randomColour = (colours, random = Math.random) => colours[Math.floor(random() * colours.length)];
 const CLUSTER_THRESHOLD = 2 * RADIUS + 1.2;
 
+function visualState() {
+  return {
+    effects: [], pulses: [], callouts: [], shake: 0, flash: 0,
+    event: 0, lastEvent: '', lastPop: 0,
+  };
+}
+
 export function shooterColumns(row, phase = 0) {
   return (row + phase) % 2 === 0 ? 9 : 8;
 }
@@ -50,7 +57,7 @@ export function initialShooter(random = Math.random) {
     mode: 'shooter', board, phase: 0, angle: 0, projectile: null,
     current: randomColour(colours, random), next: randomColour(colours, random),
     score: 0, shots: 0, shotsUntilRow: SHOTS_PER_ROW, status: 'playing',
-    effects: [], event: 0, lastEvent: '', lastPop: 0,
+    falling: [], lastDrop: 0, recoil: 0, ...visualState(),
   };
 }
 
@@ -97,9 +104,53 @@ export function floatingShooter(board, phase = 0) {
 function addBurst(state, x, y, colour, count = 5) {
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 60 + Math.random() * 140;
-    state.effects.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, colour, life: .55 + Math.random() * .2, maxLife: .75 });
+    const speed = 85 + Math.random() * 200;
+    const life = .45 + Math.random() * .4;
+    state.effects.push({
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      colour, life, maxLife: life, size: 2.8 + Math.random() * 3.4,
+      kind: i % 3 === 0 ? 'star' : 'spark',
+    });
   }
+}
+
+function addSpark(state, x, y, colour, vx = 0, vy = 0) {
+  const life = .17 + Math.random() * .25;
+  state.effects.push({ x, y, vx, vy, colour, life, maxLife: life, size: 1.7 + Math.random() * 2.2, kind: 'spark' });
+}
+
+function addPulse(state, x, y, colour, strength = 1) {
+  state.pulses.push({ x, y, colour, radius: 11, speed: 145 * strength, life: .38, maxLife: .38 });
+  state.flash = Math.max(state.flash, strength * .15);
+}
+
+function addCallout(state, x, y, text, colour = 'yellow') {
+  state.callouts.push({ x, y, text, colour, life: 1.15, maxLife: 1.15 });
+}
+
+// Keep detached bubbles as independent physics objects. They leave the grid
+// immediately for correct collision/match rules, but remain visible until
+// gravity carries them away and they explode. Random is injectable for tests.
+export function releaseFloatingShooter(state, cells, random = Math.random) {
+  let count = 0;
+  for (const [row, col] of cells) {
+    const colour = state.board.get(key(row, col));
+    if (!colour) continue;
+    const { x, y } = shooterPosition(row, col, state.phase);
+    state.board.delete(key(row, col));
+    state.falling.push({
+      x, y, colour,
+      vx: (random() - .5) * 150,
+      vy: -65 - random() * 65,
+      gravity: 870 + random() * 210,
+      spin: (random() - .5) * 5,
+      rotation: 0,
+      burstAt: .75 + random() * .52,
+      sparkleClock: 0,
+    });
+    count++;
+  }
+  return count;
 }
 
 function emit(state, type) {
@@ -120,7 +171,9 @@ export function fireShooter(state) {
     vx: Math.sin(state.angle) * speed,
     vy: -Math.cos(state.angle) * speed,
     colour: state.current,
+    sparkleClock: 0,
   };
+  state.recoil = 1;
   state.current = state.next;
   state.next = pickFromBoard(state);
   emit(state, 'fire');
@@ -156,6 +209,7 @@ function removeCells(state, cells, effectCount) {
     if (!colour) continue;
     const { x, y } = shooterPosition(r, c, state.phase);
     addBurst(state, x, y, colour, effectCount);
+    addPulse(state, x, y, colour, .65);
     state.board.delete(key(r, c));
   }
 }
@@ -190,20 +244,33 @@ function lockShooter(state) {
   if (!slot) { state.status = 'lost'; emit(state, 'lose'); return; }
   const [row, col] = slot;
   state.board.set(key(row, col), shot.colour);
+  const impact = shooterPosition(row, col, state.phase);
   const same = connectedShooter(state.board, row, col, state.phase);
   state.lastPop = 0;
+  state.lastDrop = 0;
   if (same.length >= 3) {
-    removeCells(state, same, 5);
+    removeCells(state, same, 9);
     const floaters = floatingShooter(state.board, state.phase);
-    removeCells(state, floaters, 3);
+    state.lastDrop = releaseFloatingShooter(state, floaters);
     state.lastPop = same.length + floaters.length;
     state.score += same.length * 20 + floaters.length * 30;
-    emit(state, 'pop');
+    state.shake = Math.max(state.shake, Math.min(.9, same.length * .085));
+    addPulse(state, impact.x, impact.y, shot.colour, 1.35);
+    addCallout(state, impact.x, impact.y - 25, `POP! +${same.length * 20}`, 'yellow');
+    if (state.lastDrop) {
+      addCallout(state, WIDTH / 2, Math.max(122, impact.y + 75), `GRAVITY BONUS +${state.lastDrop * 30}`, 'pink');
+    }
+    emit(state, state.lastDrop ? 'cascade' : 'pop');
   } else {
+    addPulse(state, impact.x, impact.y, shot.colour, .38);
     emit(state, 'land');
   }
   state.shots++;
-  if (state.board.size === 0) { state.status = 'won'; emit(state, 'win'); return; }
+  if (state.board.size === 0) {
+    if (state.falling.length) state.status = 'clearing';
+    else { state.status = 'won'; emit(state, 'win'); }
+    return;
+  }
   for (const k of state.board.keys()) {
     const [r, c] = k.split(',').map(Number);
     if (shooterPosition(r, c, state.phase).y + RADIUS >= LAUNCH_Y - 43) {
@@ -216,6 +283,9 @@ function lockShooter(state) {
 
 export function stepGame(state, dt) {
   dt = Math.min(.045, Math.max(0, dt));
+  state.shake = Math.max(0, state.shake - dt * 2.4);
+  state.flash = Math.max(0, state.flash - dt * 1.5);
+  if (state.recoil) state.recoil = Math.max(0, state.recoil - dt * 5);
   for (const particle of state.effects) {
     particle.x += particle.vx * dt;
     particle.y += particle.vy * dt;
@@ -223,6 +293,47 @@ export function stepGame(state, dt) {
     particle.life -= dt;
   }
   state.effects = state.effects.filter(p => p.life > 0);
+  for (const pulse of state.pulses) {
+    pulse.radius += pulse.speed * dt;
+    pulse.life -= dt;
+  }
+  state.pulses = state.pulses.filter(p => p.life > 0);
+  for (const callout of state.callouts) {
+    callout.y -= 46 * dt;
+    callout.life -= dt;
+  }
+  state.callouts = state.callouts.filter(c => c.life > 0);
+
+  if (state.mode === 'shooter') {
+    const remaining = [];
+    let exploded = 0;
+    for (const falling of state.falling) {
+      falling.vy += falling.gravity * dt;
+      falling.x += falling.vx * dt;
+      falling.y += falling.vy * dt;
+      falling.rotation += falling.spin * dt;
+      falling.burstAt -= dt;
+      falling.sparkleClock += dt;
+      if (falling.sparkleClock >= .06) {
+        falling.sparkleClock = 0;
+        addSpark(state, falling.x, falling.y, falling.colour, (Math.random() - .5) * 50, -35);
+      }
+      if (falling.burstAt <= 0 || falling.y + RADIUS >= HEIGHT - 18 || falling.x < -RADIUS || falling.x > WIDTH + RADIUS) {
+        addBurst(state, falling.x, Math.min(falling.y, HEIGHT - 18), falling.colour, 11);
+        addPulse(state, falling.x, Math.min(falling.y, HEIGHT - 18), falling.colour, .85);
+        exploded++;
+      } else remaining.push(falling);
+    }
+    state.falling = remaining;
+    if (exploded) {
+      state.shake = Math.max(state.shake, Math.min(.5, exploded * .09));
+      emit(state, 'burst');
+    }
+    if (state.status === 'clearing' && remaining.length === 0) {
+      state.status = 'won';
+      emit(state, 'win');
+    }
+  }
   if (state.mode !== 'shooter' || !state.projectile || state.status !== 'playing') return;
   // Substeps prevent a fast bubble passing through a row on slower devices.
   const steps = Math.max(1, Math.ceil(dt / .007));
@@ -232,6 +343,11 @@ export function stepGame(state, dt) {
     if (!shot) break;
     shot.x += shot.vx * tick;
     shot.y += shot.vy * tick;
+    shot.sparkleClock += tick;
+    if (shot.sparkleClock > .026) {
+      shot.sparkleClock = 0;
+      addSpark(state, shot.x, shot.y, shot.colour, -shot.vx * .045 + (Math.random() - .5) * 45, -shot.vy * .045);
+    }
     const low = LEFT + RADIUS;
     const high = WIDTH - low;
     if (shot.x < low) { shot.x = low + (low - shot.x); shot.vx = Math.abs(shot.vx); }
@@ -257,7 +373,7 @@ export function initialPop(random = Math.random) {
       board[row].push(randomColour(COLOURS.slice(0, 4), random));
     }
   }
-  return { mode: 'pop', board, score: 0, status: 'playing', effects: [], event: 0, lastEvent: '', lastPop: 0, moves: 0 };
+  return { mode: 'pop', board, score: 0, status: 'playing', moves: 0, ...visualState() };
 }
 
 export function popGroup(board, row, col) {
@@ -306,12 +422,17 @@ export function popAt(state, row, col) {
   if (group.length < 2) return 0;
   for (const [r, c] of group) {
     const { x, y } = popPosition(r, c);
-    addBurst(state, x, y, state.board[r][c], 4);
+    addBurst(state, x, y, state.board[r][c], 7);
+    addPulse(state, x, y, state.board[r][c], .8);
     state.board[r][c] = null;
   }
   state.board = collapsePop(state.board);
   state.score += group.length * group.length * 5;
   state.lastPop = group.length;
+  const [firstRow, firstCol] = group[Math.floor(group.length / 2)];
+  const point = popPosition(firstRow, firstCol);
+  addCallout(state, point.x, point.y, `+${group.length * group.length * 5}`, 'yellow');
+  state.shake = Math.max(state.shake, Math.min(.75, group.length * .065));
   state.moves++;
   emit(state, 'pop');
   if (state.board.every(rowValues => rowValues.every(cell => !cell))) {

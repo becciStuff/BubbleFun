@@ -7,6 +7,7 @@ import { draw } from './render.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game-canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
 const states = { shooter: initialShooter(), pop: initialPop() };
 let mode = 'shooter';
 let hover = null;
@@ -39,6 +40,7 @@ function playSound(type) {
     const tones = {
       fire: [280, 400, .08], land: [205, 140, .11],
       pop: [590, 950, .17], drop: [320, 190, .19],
+      cascade: [430, 1080, .24], burst: [720, 460, .11],
       win: [680, 1100, .35], lose: [230, 90, .4], finish: [380, 240, .25],
     };
     const [from, to, duration] = tones[type] ?? tones.pop;
@@ -129,13 +131,13 @@ function setMode(nextMode) {
   $('next-area').hidden = !shooter;
   $('instructions-title').textContent = shooter ? 'Make your shot count.' : 'Find the big groups.';
   $('instructions-copy').textContent = shooter
-    ? 'Aim at the bubbles above. Match three or more of the same colour to pop them and keep the ceiling at bay.'
+    ? 'Aim and match three or more colours. Break a connection to the ceiling and watch the loose bubbles fall, sparkle and explode!'
     : 'Tap any connected group of two or more matching bubbles. They disappear, the rest fall, and empty columns slide together.';
   $('control-primary').textContent = shooter ? 'Move to aim' : 'Find matching neighbours';
   $('control-secondary').textContent = shooter ? 'Click or tap to shoot' : 'Click or tap a group to pop';
   $('control-keyboard').textContent = shooter ? 'Arrow keys + Space also work' : 'Bigger groups earn more points';
   $('tip-copy').textContent = shooter
-    ? 'Pop a group holding other bubbles up and the loose ones fall too. Bonus points!'
+    ? 'Target the bubbles that hold a cluster to the ceiling. Detach the lot for a gravity combo and bonus points!'
     : 'A group of 5 earns much more than five groups of 2. Plan a few moves ahead!';
   announce(`${shooter ? 'Bubble Shooter' : 'Bubble Pop'} selected.`);
   updateUI();
@@ -173,12 +175,14 @@ function updateUI() {
     putText('turns-value', state.board.flat().filter(Boolean).length);
   }
   const status = mode === 'shooter'
-    ? (state.lastPop ? `${state.lastPop} popped! Keep going!` : 'Aim and shoot to match 3+')
+    ? (state.status === 'clearing' ? 'Final bubbles tumbling down!'
+      : state.lastDrop ? `Gravity combo! ${state.lastDrop} falling!`
+      : state.lastPop ? `${state.lastPop} popped! Keep going!` : 'Aim and shoot to match 3+')
     : (state.lastPop ? `${state.lastPop} popped! Nice one!` : 'Tap matching groups of 2+');
   putText('game-status', `✦ ${status}`);
 
   const overlay = $('result-overlay');
-  const finished = state.status !== 'playing';
+  const finished = state.status === 'won' || state.status === 'lost' || state.status === 'finished';
   overlay.classList.toggle('hidden', !finished);
   if (finished) {
     const victory = state.status === 'won';
@@ -212,10 +216,11 @@ function frame(timestamp) {
     seenEvents[mode] = state.event;
     playSound(state.lastEvent);
     if (state.lastEvent === 'pop') announce(`${state.lastPop} bubbles popped. Score ${state.score}.`);
-    if (state.status !== 'playing') announce(`Game over. Score ${state.score}.`);
+    if (state.lastEvent === 'cascade') announce(`Gravity combo! ${state.lastDrop} disconnected bubbles are falling. Score ${state.score}.`);
+    if (['won', 'lost', 'finished'].includes(state.status)) announce(`Game over. Score ${state.score}.`);
   }
   updateUI();
-  draw(ctx, state, hover, timestamp / 1000);
+  draw(ctx, state, hover, timestamp / 1000, reducedMotion);
   requestAnimationFrame(frame);
 }
 

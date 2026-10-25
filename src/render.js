@@ -45,11 +45,17 @@ function bubble(ctx, x, y, colour, radius = RADIUS, highlight = false, opacity =
   ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.fill();
   ctx.beginPath(); ctx.arc(x + radius * .43, y + radius * .4, radius * .085, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(255,255,255,.43)'; ctx.fill();
+  // Curved glass reflection and a thin bright edge add an arcade-toy finish.
+  ctx.beginPath();
+  ctx.arc(x - radius * .06, y - radius * .04, radius * .75, 3.45, 4.95);
+  ctx.strokeStyle = 'rgba(255,255,255,.26)';
+  ctx.lineWidth = Math.max(1, radius * .065);
+  ctx.stroke();
   ctx.restore();
 }
 
-function star(ctx, x, y, radius, alpha = 1) {
-  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#c5d9ff';
+function star(ctx, x, y, radius, alpha = 1, colour = '#c5d9ff') {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = colour;
   ctx.beginPath();
   ctx.moveTo(x, y - radius); ctx.quadraticCurveTo(x + radius * .13, y - radius * .13, x + radius, y);
   ctx.quadraticCurveTo(x + radius * .13, y + radius * .13, x, y + radius);
@@ -70,6 +76,17 @@ function background(ctx, seconds) {
   glow.addColorStop(1, 'rgba(51,73,173,0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  // Low-contrast drifting orbs give the still board a lively backdrop.
+  for (let i = 0; i < 13; i++) {
+    const x = 25 + (i * 97) % 385 + Math.sin(seconds * .37 + i) * 11;
+    const y = ((i * 121 - seconds * (7 + i % 4 * 2)) % (HEIGHT + 90) + HEIGHT + 90) % (HEIGHT + 90) - 45;
+    const radius = 5 + (i * 7) % 12;
+    ctx.strokeStyle = `rgba(180,196,255,${.055 + i % 3 * .025})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x - radius * .23, y - radius * .35, radius * .2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.055)'; ctx.fill();
+  }
   ctx.strokeStyle = 'rgba(188,200,255,.037)';
   ctx.lineWidth = 1;
   for (let x = 15; x < WIDTH; x += 28) {
@@ -132,10 +149,10 @@ function aimGuide(ctx, state) {
   }
 }
 
-function shooter(ctx, state) {
+function shooter(ctx, state, seconds) {
   roundRect(ctx, 100, 17, WIDTH - 200, 24, 12, 'rgba(13,20,72,.4)');
   label(ctx, 'MATCH 3+ TO POP', WIDTH/2, 29, '#acbdfa', 11);
-  ctx.strokeStyle = 'rgba(229,135,186,.22)'; ctx.lineWidth = 1.3;
+  ctx.strokeStyle = `rgba(255,148,198,${.17 + Math.sin(seconds * 2) * .045})`; ctx.lineWidth = 1.3;
   ctx.setLineDash([8,10]);
   ctx.beginPath(); ctx.moveTo(30,LAUNCH_Y-47); ctx.lineTo(WIDTH-30,LAUNCH_Y-47); ctx.stroke();
   ctx.setLineDash([]);
@@ -145,9 +162,18 @@ function shooter(ctx, state) {
     const {x,y} = shooterPosition(row,col,state.phase);
     bubble(ctx,x,y,colour);
   }
+  // Detached bubbles no longer disappear: gravity takes over until they burst.
+  for (const falling of state.falling) {
+    ctx.save();
+    ctx.translate(falling.x, falling.y);
+    ctx.rotate(falling.rotation);
+    bubble(ctx, 0, 0, falling.colour, RADIUS, true);
+    star(ctx, -12, 14, 3.1, .75, '#fff5df');
+    ctx.restore();
+  }
   const x = WIDTH/2;
   ctx.save();
-  ctx.translate(x,LAUNCH_Y+8);
+  ctx.translate(x,LAUNCH_Y+8+state.recoil*7);
   ctx.rotate(state.angle);
   roundRect(ctx,-25,-22,50,61,24,'#654394');
   roundRect(ctx,-17,-29,34,54,15,'#9071c6');
@@ -155,8 +181,14 @@ function shooter(ctx, state) {
   ctx.restore();
   ctx.fillStyle='#1d1245'; ctx.beginPath(); ctx.ellipse(x,LAUNCH_Y+40,48,15,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#805baa'; ctx.beginPath();ctx.ellipse(x,LAUNCH_Y+34,43,12,0,0,Math.PI*2);ctx.fill();
-  bubble(ctx,x,LAUNCH_Y,state.current,21);
-  if (state.projectile) bubble(ctx,state.projectile.x,state.projectile.y,state.projectile.colour);
+  bubble(ctx,x,LAUNCH_Y+state.recoil*5,state.current,21);
+  if (state.projectile) {
+    ctx.save();
+    ctx.shadowBlur = 22;
+    ctx.shadowColor = SWATCHES[state.projectile.colour];
+    bubble(ctx,state.projectile.x,state.projectile.y,state.projectile.colour,21,true);
+    ctx.restore();
+  }
   label(ctx,'BUBBLE LAUNCHER',x,HEIGHT-17,'#8e85c8',10);
 }
 
@@ -183,19 +215,60 @@ function popBoard(ctx, state, hover) {
 }
 
 function effects(ctx,state) {
+  for (const pulse of state.pulses) {
+    const strength = Math.max(0, pulse.life / pulse.maxLife);
+    ctx.save();
+    ctx.globalAlpha = strength * .73;
+    ctx.strokeStyle = SWATCHES[pulse.colour] ?? pulse.colour;
+    ctx.lineWidth = 1.6 + strength * 3.1;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.arc(pulse.x, pulse.y, pulse.radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   for(const p of state.effects) {
-    ctx.save();ctx.globalAlpha=Math.max(0,p.life/p.maxLife);
-    ctx.fillStyle=SWATCHES[p.colour]??p.colour;
-    ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=10;
-    ctx.beginPath();ctx.arc(p.x,p.y,2.8+Math.max(0,p.life)*3,0,Math.PI*2);ctx.fill();
+    const alpha = Math.max(0,p.life/p.maxLife);
+    const colour = SWATCHES[p.colour] ?? p.colour;
+    if (p.kind === 'star') {
+      star(ctx,p.x,p.y,p.size * (1.2 + (1-alpha)),alpha,colour);
+    } else {
+      ctx.save(); ctx.globalAlpha = alpha;
+      ctx.fillStyle = colour;
+      ctx.shadowColor = colour; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.size * (.5 + alpha*.5),0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+  for (const callout of state.callouts) {
+    const alpha = Math.min(1,callout.life * 3);
+    const colour = callout.colour === 'pink' ? '#ffb1dc' : '#ffe58c';
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = `900 ${callout.text.length > 13 ? 17 : 24}px Baloo 2, Trebuchet MS, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 5; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#2c1b65';
+    ctx.shadowBlur = 12; ctx.shadowColor = colour;
+    ctx.strokeText(callout.text,callout.x,callout.y);
+    ctx.fillStyle = colour; ctx.fillText(callout.text,callout.x,callout.y);
     ctx.restore();
   }
 }
 
-export function draw(ctx, state, hover, seconds=0) {
+export function draw(ctx, state, hover, seconds=0, reducedMotion=false) {
   ctx.clearRect(0,0,WIDTH,HEIGHT);
-  background(ctx,seconds);
-  if(state.mode==='shooter') shooter(ctx,state);
+  background(ctx,reducedMotion ? 0 : seconds);
+  ctx.save();
+  if (!reducedMotion && state.shake > 0) {
+    const strength = state.shake * 5;
+    ctx.translate(Math.sin(seconds*89)*strength, Math.cos(seconds*71)*strength*.66);
+  }
+  if(state.mode==='shooter') shooter(ctx,state,seconds);
   else popBoard(ctx,state,hover);
   effects(ctx,state);
+  ctx.restore();
+  if (state.flash > 0) {
+    ctx.fillStyle = `rgba(255,241,255,${state.flash * .18})`;
+    ctx.fillRect(0,0,WIDTH,HEIGHT);
+  }
 }
