@@ -4,9 +4,9 @@
 
 **Last reviewed:** 26 October 2026 (NZ)  
 **Repository:** [becciStuff/BubbleFun](https://github.com/becciStuff/BubbleFun)  
-**Working branch:** `fix/version-tracking-051` (version synchronisation PR; gravity support PR #5 merged)  
-**Prototype version:** `0.5.1` (maintenance/refactor release, on version-fix branch)  
-**Current phase:** G1 support/weight calculations merged but dormant in normal play; version display fix pending; G2 visual feedback next  
+**Working branch:** `fix/version-json-header` (simplified header + JSON version source, awaiting review)  
+**Prototype version:** `0.5.1` (released maintenance version; next visible gravity milestone planned as v0.6.0)  
+**Current phase:** G1 support/weight calculations merged but dormant in normal play; version JSON/header update pending; G2 visual gravity work next  
 **Pre-refactor reference commit:** `fe1b23ccabcd7f52261fd3a45e1c73c15be0146c`
 
 ## One-minute summary
@@ -95,7 +95,8 @@ The original refactor modules (`config.js`, `grid.js`, `puzzles.js`, `gravity.js
 - [x] **Phase 4 — tidy orchestration (merged):** Extracted effects and archived Pop logic; `game.js` remains the turn coordinator.
 - [x] **G1 prototype code (on review branch):** Add independent ceiling-anchor and vulnerable-bridge analysis, weight and configurable stickiness, plus an explicit opt-in surge-release API.
 - [x] **G1 merge:** PR #5 merged and the 62-test GitHub Actions suite passed.
-- [ ] **Version release tracking:** PR pending to bring the visible badge and package version to v0.5.1, with a bump script and consistency test.
+- [x] **Version bump infrastructure:** PR #6 merged v0.5.1 and release-bump commands.
+- [ ] **JSON version display:** Review PR for root `version.json` source, `Version` label, and JSON-driven release bumps; tests must pass before merge.
 - [ ] **Future G2:** Visual strain feedback and player activation; G3 load sharing; G4 moving attached clusters with collision/aim/render parity.
 - [ ] **Browser verification:** Recheck desktop/mobile and GitHub Pages once gravity is wired into gameplay.
 
@@ -103,7 +104,7 @@ The G1 prototype intentionally has **no effect on normal play**. The physics eng
 
 ## Verification and current risks
 
-- **G1 verification:** GitHub Actions passed all 62 tests on gravity PR #5. Version-fix PR adds a test comparing the badge, JS version constant and `package.json`; its full CI results must be checked independently.
+- **G1 verification:** GitHub Actions passed all 62 tests on gravity PR #5. Version PR #6 tests passed (64 total). The JSON version-display PR adds new loader and bump tests; check its CI before merging.
 - **Browser behaviour:** No player-facing changes are intentionally wired into the loop. New G1 browser and mobile tests remain pending.
 - **Not yet verified:** A live GitHub Pages deployment, mobile browser interaction and the full manual gameplay checklist. Do not mark them as passed based only on Node tests or a desktop smoke test.
 - **Engineering design:** Keep the dependency chain `config → grid → supports → gravity → game`; avoid circular imports or a growing `game.js`.
@@ -116,7 +117,7 @@ Use the GitHub repository as the source of truth, not the previous chat's memory
 
 > We're continuing BubbleFun: https://github.com/becciStuff/BubbleFun  
 > Please read `PROJECT_STATUS.md`, `REFACTORING.md`, `VISION.md` and the current source before editing.  
-  > All four refactoring phases and G1 support analysis are merged. Version tracking is in `fix/version-tracking-051`; reserve v0.6.0 for the first visible gravity changes. No physics movement or Gravity Surge activation is present during normal play.
+  > All four refactoring phases and G1 support analysis are merged. Version display JSON integration is in `fix/version-json-header`; reserve v0.6.0 for the first visible gravity changes. No physics movement or Gravity Surge activation is present during normal play.
 
 ## Update rules for future sessions
 

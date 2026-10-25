@@ -27,8 +27,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid #75e9ff; outline-offs
 .brand-mark span:nth-child(3) { width: 16px; height: 16px; right: 0; top: 0; background: #fac657; }
 .header-right { display: flex; gap: 19px; align-items: center; }
 .version-pill { border: 1px solid rgba(152,146,217,.25); border-radius: 30px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; color: #c7bbeb; font-size: 10px; letter-spacing: 1.25px; font-weight: 900; white-space: nowrap; }
-.version-number { color: #8378b4; letter-spacing: .3px; }
-.online-dot { width: 7px; height: 7px; border-radius: 100%; background: #53e1ae; box-shadow: 0 0 10px #53e1ae; }
+.version-number { color: #f7f4ff; letter-spacing: .3px; }
 .sound-button { border: 1px solid #5b4b83; border-radius: 13px; padding: 11px 13px; background: #35295f; color: #eee6ff; display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 900; }
 .sound-button:hover { background: #45346f; }
 .sound-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
