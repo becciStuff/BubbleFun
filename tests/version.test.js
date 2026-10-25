@@ -18,6 +18,9 @@ test('browser version, package version and HTML fallback agree', async () => {
 
 test('version bump command advances patch and minor versions together', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'bubblefun-version-'));
+  const [major, minor, patch] = VERSION.split('.').map(Number);
+  const patchVersion = [major, minor, patch + 1].join('.');
+  const minorVersion = [major, minor + 1, 0].join('.');
   try {
     await mkdir(join(folder, 'src'));
     await mkdir(join(folder, 'scripts'));
@@ -27,12 +30,12 @@ test('version bump command advances patch and minor versions together', async ()
     const command = join(folder, 'scripts/bump-version.mjs');
     execFileSync(process.execPath, [command, 'patch'], { stdio: 'pipe' });
     let pkg = JSON.parse(await readFile(join(folder, 'package.json'), 'utf8'));
-    assert.equal(pkg.version, '0.5.2');
-    assert.match(await readFile(join(folder, 'src/version.js'), 'utf8'), /VERSION = '0\.5\.2'/);
+    assert.equal(pkg.version, patchVersion);
+    assert.ok((await readFile(join(folder, 'src/version.js'), 'utf8')).includes("VERSION = '" + patchVersion + "'"));
     execFileSync(process.execPath, [command, 'minor'], { stdio: 'pipe' });
     pkg = JSON.parse(await readFile(join(folder, 'package.json'), 'utf8'));
-    assert.equal(pkg.version, '0.6.0');
-    assert.match(await readFile(join(folder, 'index.html'), 'utf8'), /class="version-number">v0\.6\.0<\/span>/);
+    assert.equal(pkg.version, minorVersion);
+    assert.ok((await readFile(join(folder, 'index.html'), 'utf8')).includes('class="version-number">v' + minorVersion + '</span>'));
     // The command rejects drift rather than silently masking a release error.
     await writeFile(join(folder, 'src/version.js'), "export const VERSION = '9.9.9';\n");
     assert.throws(() => execFileSync(process.execPath, [command, 'patch'], { stdio: 'pipe' }));
