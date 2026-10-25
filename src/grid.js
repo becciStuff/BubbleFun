@@ -57,12 +57,13 @@ export function floatingShooter(board, phase = 0, layout = MOBILE_LAYOUT) {
   return Array.from(board.keys()).filter(k => !connected.has(k)).map(k => k.split(',').map(Number));
 }
 
-// Shared predicate for the actual projectile and the trajectory guide.
+// Shared predicate for the actual projectile and trajectory guide. If moving,
+// use their SAME live positions supplied by the attached-bubble sway engine.
 // Returns the first occupied cell reached, or null if this point is clear.
-export function shotBubbleCollision(board, x, y, phase = 0, layout = MOBILE_LAYOUT) {
+export function shotBubbleCollision(board, x, y, phase = 0, layout = MOBILE_LAYOUT, positions = null) {
   for (const [k] of board) {
     const [row, col] = k.split(',').map(Number);
-    const p = shooterPosition(row, col, phase, layout);
+    const p = positions?.get(k) ?? shooterPosition(row, col, phase, layout);
     if (Math.hypot(x - p.x, y - p.y) < SHOT_HIT_DISTANCE) return [row, col];
   }
   return null;
