@@ -7,7 +7,8 @@ import {
   connectedShooter, shotBubbleCollision,
 } from './grid.js';
 import { createPuzzleBoard } from './puzzles.js';
-import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles } from './gravity.js';
+import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles, releaseGravitySurge } from './gravity.js';
+import { createGravityLabBoard } from './gravity-lab.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -89,6 +90,41 @@ export function initialPuzzle(index = 0, layout = MOBILE_LAYOUT, random = Math.r
   return state;
 }
 
+// A self-contained demonstration of weight versus independent ceiling support.
+export function initialGravityLab(layout = MOBILE_LAYOUT) {
+  const state = initialShooter(() => .35, layout);
+  state.board = createGravityLabBoard(layout);
+  state.bombs = new Set();
+  state.variant = 'lab';
+  state.gravityLabUsed = false;
+  state.lastGravityRelease = 0;
+  return state;
+}
+
+export function canTriggerGravityLabSurge(state) {
+  return state.variant === 'lab' && state.status === 'playing' &&
+    !state.gravityLabUsed && !state.projectile && !state.pendingBombs.length &&
+    !state.falling.length && !state.rowShift && !state.introTime;
+}
+
+// Lab-only physics demonstration; never alters puzzle rules or leaderboard.
+// Falling and support calculations remain in dedicated modules.
+export function triggerGravityLabSurge(state, options = {}) {
+  if (!canTriggerGravityLabSurge(state)) return { activated: false, released: 0 };
+  state.gravityLabUsed = true;
+  const result = releaseGravitySurge(state, options);
+  state.lastGravityRelease = result.released;
+  state.lastDrop = result.released;
+  if (result.released) {
+    addCallout(state, state.layout.width / 2, state.layout.height * .37,
+      `GRAVITY SURGE! ${result.released} FALLING`, 'pink');
+    addPulse(state, state.layout.width / 2, state.layout.height * .30, 'yellow', 1.7);
+    state.shake = Math.max(state.shake, .7);
+  }
+  emit(state, 'surge');
+  return { activated: true, ...result };
+}
+
 function emit(state, type) {
   state.lastEvent = type;
   state.event++;
@@ -101,7 +137,7 @@ function pickFromBoard(state, random = Math.random) {
 
 export function fireShooter(state) {
   // A shot owns its entire bomb sequence and falling cascade.
-  if (state.status !== 'playing' || state.projectile || state.pendingBombs.length || state.falling.length || state.rowShift > 1 || state.introTime > 0) return false;
+  if (state.status !== 'playing' || state.variant === 'lab' || state.projectile || state.pendingBombs.length || state.falling.length || state.rowShift > 1 || state.introTime > 0) return false;
   state.comboLevel = 0;
   state.comboDisplay = 0;
   state.lastChain = null;
