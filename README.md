@@ -6,6 +6,8 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for the staged support/weight physics and the rules that must stay fair. G1 is testable but **not yet active during play**.
+
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
 ## What's new in v0.5 — Puzzles & responsive playfields
@@ -71,7 +73,8 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/config.js` — shared layouts, colours and gameplay constants
 - `src/grid.js` — hex-grid geometry, matching, ceiling support and shared hit detection
 - `src/puzzles.js` — handcrafted puzzle layouts, targets, ammunition and fresh board creation
-- `src/gravity.js` — detached-bubble detection, release, falling motion and impact notifications
+- `src/supports.js` — gravity support graph, suspended weight and independent ceiling anchors (G1 branch)
+- `src/gravity.js` — detached-bubble detection, falling motion and an opt-in surge prototype
 - `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
 - `src/effects.js` — visual effect creation, particles and effect lifetimes
 - `src/pop-mode.js` — archived Bubble Pop logic (not shown in the UI)
@@ -81,6 +84,8 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/grid.test.js` — grid geometry, connectivity and projectile hit testing
 - `tests/puzzles.test.js` — puzzle board definitions, desktop/mobile layouts and real solutions
 - `tests/gravity.test.js` — independent detachment, falling physics, wall bounce and burst timing tests
+- `tests/supports.test.js` — anchors, loaded bonds and surge planning (G1 branch)
+- `tests/surge.test.js` — opt-in gravity detachment and scoring boundaries (G1 branch)
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
 ## Ideas for later
