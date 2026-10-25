@@ -98,6 +98,27 @@ test('a near-graze passes outside the actual hit radius', () => {
   assert.ok(state.projectile,'a grazing shot should keep travelling');
 });
 
+test('a direct projectile hit locks the shot instead of tunnelling through a bubble', () => {
+  const state = initialShooter(() => .2);
+  const p = shooterPosition(1, 4);
+  state.board = new Map([['0,4', 'green'], ['1,4', 'green']]);
+  state.bombs = new Set();
+  state.projectile = { x: p.x, y: p.y + 30, vx: 0, vy: -900, colour: 'pink', sparkleClock: 0 };
+  stepGame(state, .045);
+  assert.equal(state.projectile, null, 'the shot must attach on collision');
+  assert.equal(state.shots, 1);
+  assert.equal(state.board.size, 3);
+});
+
+test('support traverses differently coloured bubbles and stops after a bridge is removed', () => {
+  const board = new Map([
+    ['0,3', 'pink'], ['1,3', 'blue'], ['2,3', 'yellow'], ['3,3', 'green'],
+  ]);
+  assert.deepEqual(floatingShooter(board), [], 'different colours can hold up a chain');
+  board.delete('1,3');
+  assert.deepEqual(floatingShooter(board), [[2,3], [3,3]], 'the orphaned chain must detach');
+});
+
 test('matching shooter bubbles connect across rows but different colours do not', () => {
   const board = new Map([['0,0','pink'],['0,1','pink'],['1,0','pink'],['1,1','green']]);
   assert.equal(connectedShooter(board, 0, 0).length, 3);
