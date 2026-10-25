@@ -50,10 +50,9 @@ the support analyser.
   *existing* detached-bubble falling engine. It does not award points,
   trigger a sound or decide game outcomes.
 
-The normal turn loop does **not** call `releaseGravitySurge`. There is no button
-or keyboard shortcut for this prototype, and no visible gameplay change yet.
-That's intentional: the new behaviour gets validated before we connect it to a
-special shot or a level.
+The normal Arcade and puzzle turn loops **do not** call `releaseGravitySurge`.
+G2 adds a **lab-only** button and a deterministic comparison board. There is
+still no earned special shot or gravity-induced breakage in standard gameplay.
 
 **Initial prototype settings** (`force: 1.5`, `threshold: 1`,
 `bondStrength: 1`) are placeholders for playtesting, not final balance values.
@@ -112,4 +111,6 @@ staggered phases, desktop/mobile geometry, side-effect-free planning and error
 cases. `tests/surge.test.js` checks the opt-in release and keeps scoring with
 the game coordinator. The GitHub Action runs `npm test` on PRs.
 
-Only label G1 complete after its tests have passed and its PR is merged.
+G1 was merged in PR #5. G2's automated tests cover physics and both board
+layouts; its Chromium desktop/mobile smoke workflow confirms the lab controls,
+Surge falling and puzzle isolation. A separate real-device playtest remains useful.
