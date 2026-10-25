@@ -3,6 +3,8 @@
 // audio and turn completion stay in game.js.
 import { MOBILE_LAYOUT, RADIUS } from './config.js';
 import { cellKey, floatingShooter, shooterPosition } from './grid.js';
+import { planGravitySurge } from './supports.js';
+export { analyseSupports, planGravitySurge } from './supports.js';
 
 // Currently, anything without a ceiling path drops. Future support-strength
 // rules can be introduced here without changing grid geometry.
@@ -65,4 +67,15 @@ export function stepFallingBubbles(fallingBubbles, layout, dt, {
     } else remaining.push(falling);
   }
   return { remaining, exploded };
+}
+
+// Explicit opt-in extreme gravity. This is a physics-only entry point for a
+// future special: callers decide when to activate it, scoring, FX and turns.
+// Normal gameplay does not call it, so its gravity remains unchanged.
+export function releaseGravitySurge(state, { random = Math.random, ...settings } = {}) {
+  const plan = planGravitySurge(state.board, {
+    phase: state.phase, layout: state.layout, ...settings,
+  });
+  const released = releaseFloatingShooter(state, plan.detached, random);
+  return { ...plan, released };
 }

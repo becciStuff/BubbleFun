@@ -4,16 +4,16 @@
 
 **Last reviewed:** 26 October 2026 (NZ)  
 **Repository:** [becciStuff/BubbleFun](https://github.com/becciStuff/BubbleFun)  
-**Working branch:** `refactor/final-cleanup-phase4` (Phase 4 for review; phases 0–3 merged)
+**Working branch:** `feature/gravity-supports-g1` (first new gravity prototype for review; refactor PR #4 merged)  
 **Prototype version:** `0.5.0` (from `package.json`)  
-**Current phase:** Phase 4 module clean-up on review branch; advanced gravity is not implemented
+**Current phase:** G1 support-weight analysis and optional surge release prototype; gameplay integration pending  
 **Pre-refactor reference commit:** `fe1b23ccabcd7f52261fd3a45e1c73c15be0146c`
 
 ## One-minute summary
 
 BubbleFun is a free, static browser bubble-shooter prototype, written in plain HTML, CSS and JavaScript. The playable modes are **Arcade** and **Puzzles**. We want to grow it into a polished, physics-led rescue adventure about cute creatures called **Fizzlings**, with clever gravity, strategic special shots, bosses and earned-only in-game coins.
 
-**The immediate priority:** improve the code structure *before* adding more features. Configuration, grid and puzzle setup are separated on `main`; basic detachment and falling physics now live in `gravity.js`. The working branch separates visual effects and archived Bubble Pop into their own modules. Scoring and turn outcomes remain in `game.js`. Preserve v0.5 behaviour throughout. The detailed steps and acceptance criteria are in [REFACTORING.md](REFACTORING.md).
+**The immediate priority:** validate weight and independent support analysis in `src/supports.js` before connecting extreme gravity to gameplay. The modular refactor is merged. `game.js` still owns scoring and turns. See [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for the new physics roadmap.
 
 ## What is working now
 
@@ -28,11 +28,11 @@ BubbleFun is a free, static browser bubble-shooter prototype, written in plain H
 | Input and settings | Mouse, touch, keyboard, optional sound and browser-local best scores. |
 | Hosting | Static HTML/CSS/ES modules with no runtime dependency or build requirement; GitHub Pages setup is documented in README. A live Pages deployment has **not** been confirmed in this review. |
 
-**Bubble Pop/Burst is not an active mode.** Its older rules remain in `src/game.js` and its tests for possible future use. Do not reintroduce it as part of the refactor.
+**Bubble Pop/Burst remains hidden** and its older rules live in `src/pop-mode.js`. Do not reintroduce it without a separate decision.
 
 ## What is *not* implemented yet
 
-- A full attached-bubble gravity engine: physical swinging, support strength, stickiness and breakage under **Extreme Gravity**.
+- A playable attached-bubble gravity engine: movement, springy sway, live hitboxes, visual strain and an activatable Extreme Gravity special. **G1 adds support/weight calculations and an opt-in release API only**.
 - Piercing Fireball, horizontal/vertical blasts, Gravity Surge and the planned purchasable special shots.
 - Guide-off scoring bonus and multi-colour collateral bonus.
 - Fizzling characters, trapped friends/family, rescue animations, story progression, worlds and boss levels.
@@ -63,44 +63,51 @@ src/render.js    Canvas rendering and effects drawing
 src/config.js    Layouts, colours and shared constants
 src/grid.js      Hex-grid geometry, matching, ceiling connectivity and shot hits
 src/puzzles.js   Puzzle designs and pure board/target setup
-src/gravity.js   Detached-cluster decisions, falling motion and event callbacks
+src/gravity.js   Detached-cluster decisions, falling motion and optional surge release
+src/supports.js  Pure support graph, weights, roof anchors and strain (G1 branch)
 src/game.js      Shooter orchestration, scoring and bomb chains
 tests/game.test.js
 tests/grid.test.js     Grid geometry, connectivity and collision tests
 tests/puzzles.test.js  Puzzle regression tests
 tests/gravity.test.js  Gravity regression tests
-src/effects.js    Visual effect data and animation updates (Phase 4 branch)
-src/pop-mode.js   Archived Bubble Pop mode (Phase 4 branch)
-tests/modules.test.js  Extraction regression checks (Phase 4 branch)
+src/effects.js    Visual effect data and animation updates
+src/pop-mode.js   Archived Bubble Pop mode
+tests/modules.test.js   Extraction regression tests
+tests/supports.test.js Support structure, load and surge planning (G1 branch)
+tests/surge.test.js    Physics integration without scoring (G1 branch)
 package.json     ES modules; npm test uses node --test
+GRAVITY_DESIGN.md  Support model, limitations and staged physics roadmap
 VISION.md        Game vision and feature roadmap
 REFACTORING.md   Proposed technical reorganisation
 PROJECT_STATUS.md  This handover
 ```
 
-`config.js`, `grid.js` and `puzzles.js` are on `main`; `gravity.js` is on `main`; `effects.js` and `pop-mode.js` are on the current review branch. Optional `specials.js` **does not** exist yet. The purpose and order are recorded in [REFACTORING.md](REFACTORING.md). Existing `game.js` imports remain compatible through temporary re-exports.
+The original refactor modules (`config.js`, `grid.js`, `puzzles.js`, `gravity.js`, `effects.js`, and `pop-mode.js`) are merged on `main`. The new `supports.js` and G1 tests are on the review branch; no player-facing gravity controls were added.
 
 ## Next development work
 
-**Active milestone: structural refactor with no intended gameplay changes.** Phases 0–3 have merged; Phase 4 is on a review branch. Do not treat Phase 4 as merged until its PR lands.
+**Active milestone: G1 physics prototype, separate from the structural refactor.** PR #4 was merged. The G1 work is on a review branch; do not treat it as shipped before its PR merges.
 
 - [x] **Phase 0 — baseline:** Existing bomb/cascade/falling/row-timing tests retained, with added direct-hit and detached-chain regression cases.
 - [x] **Phase 1 — configuration and grid:** Extracted shared constants, hex coordinates, neighbour traversal and ceiling connectivity to `config.js` and `grid.js`; guide and projectile now share one collision predicate, with focused grid tests.
 - [x] **Phase 2 — puzzles:** Isolated puzzle data and fresh board/target construction; added focused tests, including all three real solutions on both layouts.
 - [x] **Phase 3 — gravity (merged):** Moved current ceiling-detachment policy and falling simulation to `gravity.js`, exposing synchronous spark/burst callbacks while scoring and game outcomes stay in `game.js`.
-- [x] **Phase 4 — tidy orchestration (on review branch):** Extracted effects and archived Pop logic; `game.js` remains the turn coordinator.
-- [ ] **Refactor verification:** Run Node tests and browser checks on desktop/mobile, then confirm GitHub Pages compatibility.
+- [x] **Phase 4 — tidy orchestration (merged):** Extracted effects and archived Pop logic; `game.js` remains the turn coordinator.
+- [x] **G1 prototype code (on review branch):** Add independent ceiling-anchor and vulnerable-bridge analysis, weight and configurable stickiness, plus an explicit opt-in surge-release API.
+- [ ] **G1 merge:** Confirm full CI checks and review the new calculations before merging.
+- [ ] **Future G2:** Visual strain feedback and player activation; G3 load sharing; G4 moving attached clusters with collision/aim/render parity.
+- [ ] **Browser verification:** Recheck desktop/mobile and GitHub Pages once gravity is wired into gameplay.
 
-**Only after that milestone** should we begin the separate advanced-gravity feature: attached-cluster sway, gravity strengths, support breakage and Gravity Surge. Then continue the priorities in [VISION.md](VISION.md).
+The G1 prototype intentionally has **no effect on normal play**. The physics engine can release vulnerable cells if an external caller explicitly requests it. See [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md).
 
 ## Verification and current risks
 
-- **Previous Phase 3 verification:** 44 tests passed. Phase 4 code has been committed through the GitHub connector; full `npm test` and browser execution have **not yet been run** in this environment.
-- **Previous Phase 3 browser smoke test:** Desktop Arcade and Twin Towers loaded without application errors. Phase 4 browser behaviour remains unverified.
+- **G1 isolated verification:** 12 support tests passed locally with Node 22, using the current `config.js`/`grid.js` geometry reproduced for the test harness. GitHub Actions ran the complete `npm test` suite on PR #5: **62 tests passed, 0 failed** (run `40238119663`).
+- **Browser behaviour:** No player-facing changes are intentionally wired into the loop. New G1 browser and mobile tests remain pending.
 - **Not yet verified:** A live GitHub Pages deployment, mobile browser interaction and the full manual gameplay checklist. Do not mark them as passed based only on Node tests or a desktop smoke test.
-- **Engineering risk:** `src/game.js` mixes several responsibilities; extracting gravity without moving shared grid rules could create circular imports.
-- **Gameplay risk for future physics:** Moving attached bubbles while keeping old fixed hitboxes would make aiming feel unfair. Resolve position ownership before implementing sway.
-- **Scope risk:** Refactoring and feature work must be separate checkpoints. A clean module split is not evidence that advanced gravity has shipped.
+- **Engineering design:** Keep the dependency chain `config → grid → supports → gravity → game`; avoid circular imports or a growing `game.js`.
+- **Future risk:** Visually moving attached bubbles must use the same live positions for rendering, projectile collision and aim guide.
+- **Model limitation:** The first support model captures single roof-anchor regions and cut bonds, but does not yet distribute load across multiple ceiling supports.
 
 ## How to resume in a new chat
 
@@ -108,7 +115,7 @@ Use the GitHub repository as the source of truth, not the previous chat's memory
 
 > We're continuing BubbleFun: https://github.com/becciStuff/BubbleFun  
 > Please read `PROJECT_STATUS.md`, `REFACTORING.md`, `VISION.md` and the current source before editing.  
- > Phases 0–3 are merged into `main`. Phase 4 (effects and archived Pop extraction) is on `refactor/final-cleanup-phase4`. Review and test it before merge; advanced attached-cluster gravity is a later feature milestone.
+  > The four structural refactoring phases are merged. G1 is on `feature/gravity-supports-g1`; read `GRAVITY_DESIGN.md` and its new tests before integrating any player controls. Do not assume weight physics is active in normal gameplay.
 
 ## Update rules for future sessions
 
@@ -122,4 +129,4 @@ After each meaningful implementation or design session:
 
 ---
 
-*Updated for Phase 4 review. Advanced attached-bubble gravity has not been implemented.*
+*Updated for the G1 support-analysis review. Gravity swaying and player-triggered Surge are not implemented.*
