@@ -1,6 +1,6 @@
 # BubbleFun — refactoring plan
 
-> **Status: Proposed; not implemented.** This is the engineering plan to agree on **before** adding the advanced gravity system, more special bubbles or the Fizzlings adventure. Keep [VISION.md](VISION.md) for the game design and feature priorities.
+> **Status: In progress.** Regression coverage and configuration/grid extraction are implemented on the `refactor/config-grid-phase1` review branch; puzzle and gravity extraction are still pending. This is the engineering plan **before** adding advanced gravity, more specials or the Fizzlings adventure. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current checkpoint and [VISION.md](VISION.md) for design priorities.
 
 ## Why refactor now?
 

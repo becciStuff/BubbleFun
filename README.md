@@ -4,7 +4,7 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Where we're going:** Read [VISION.md](VISION.md) for the agreed Fizzlings rescue-adventure concept, gravity and special-shot ideas, earn-only coin economy, boss levels and prioritised roadmap. Those future ideas are not all implemented yet.
 
-**Before new features:** Read [REFACTORING.md](REFACTORING.md) for the proposed module split, gravity-engine extraction and regression-test plan. This is a plan only; the refactor has not started.
+**Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split, gravity-engine extraction and regression-test plan. The configuration/grid extraction is the first checkpoint; the gravity engine is still to come.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
@@ -68,10 +68,13 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 
 - `index.html` — accessible menu, score display and game layout
 - `styles.css` — classic arcade styling and responsive layout
-- `src/game.js` — game rules and state (kept independent of display)
+- `src/config.js` — shared layouts, colours and gameplay constants
+- `src/grid.js` — hex-grid geometry, matching, ceiling support and shared hit detection
+- `src/game.js` — game rules and state, with legacy grid exports retained during the refactor
 - `src/render.js` — responsive canvas bubble graphics, aim guide and effects
 - `src/app.js` — input, menus, scores, optional sound and persistence
 - `tests/game.test.js` — gameplay regression tests, desktop geometry and verified puzzle solutions
+- `tests/grid.test.js` — grid geometry, connectivity and projectile hit testing
 
 ## Ideas for later
 

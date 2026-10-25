@@ -1,7 +1,5 @@
-import {
-  MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES, PUZZLES,
-  initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame,
-} from './game.js';
+import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES } from './config.js';
+import { PUZZLES, initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame } from './game.js';
 import { draw } from './render.js';
 
 const $ = id => document.getElementById(id);
