@@ -1,9 +1,9 @@
 # BubbleFun gravity development
 
-**Checkpoint: G2 — experimental Gravity Lab in v0.6.0 (review branch).**
-G1 weight/support analysis is merged. G2 introduces an interactive, visual
-lab demonstration without altering normal Arcade or puzzle difficulty.
-Attached-bubble swinging is **not implemented**.
+**Checkpoint: G3 — gentle live attached sway in v0.7.0 (review branch).**
+G1 support analysis and G2 Gravity Lab are merged. G3 begins integrating
+support-sensitive swaying into **normal Arcade and all three Puzzles**, not as
+a separate game mode. Lab remains a controlled diagnostic only.
 
 ## Modular design
 
@@ -12,6 +12,8 @@ config.js      board dimensions and stable tunables
 grid.js        staggered geometry, neighbours and ordinary connectivity
 supports.js    roof anchors, load-bearing regions, vulnerable bonds, stress
 gravity.js     existing detachment/falling physics + explicit surge entry point
+sway.js        constrained support-sensitive live attached motion
+positions.js   shared live bubble coordinate lookup
 game.js        shooting, turn sequence, scores, wins and effects coordination
 render.js      drawing and eventual live physical position visualisation
 ```
@@ -76,20 +78,50 @@ prepares marker geometry from `analyseSupports`, and
 `gravity-overlay.js` draws the markers without owning game logic.
 `game.js` handles the explicit test action and its turn-safety checks.
 
+## G3: actual gentle sway in ordinary play (v0.7.0)
+
+Attached bubble positions now move slightly and smoothly in ordinary Arcade
+and all puzzles. Physics remains conservative: ceiling anchors are fixed;
+singly supported hanging regions move more than multiple-anchor regions; shot
+impacts trigger local ripples which decay. Connection weight affects the
+movement amplitude, not automatic bond failure.
+
+**Position invariant:**
+- `sway.js` updates `state.attachedPositions` once per simulation tick.
+- `positions.js` exposes `bubblePosition(state, row, col)` for drawing,
+  explosions and release to the falling engine.
+- The aiming guide and live projectile pass that **same map** to the shared
+  `grid.js/shotBubbleCollision` predicate, so they see what players see.
+- Grid cell centres and graph adjacency still own matching and the final
+  snap location; visual movement is deliberately limited to stay fair.
+- During opening/row animations the aim guide is hidden, since the board is
+  temporarily presented with a separate entrance/row transition.
+- **Reduced motion** disables sway, leaving canonical positions.
+- The G2 Lab continues to use fixed board positions for accurate anchor
+  diagnostics. The Lab is not required to use normal game gravity.
+
+New support-aware movement is **not** a full elastic solver. It does not
+redistribute real tension over multiple anchors, physically stretch links,
+automatically sever connections, or provide earned Gravity Surge in levels.
+
+**CI for the G3 review branch:** 82 Node tests passed and Chromium browser
+checks passed at desktop 1300px / phone-sized 390px viewports. These are
+automated checks; hands-on mobile and GitHub Pages deployment remain separate.
+
 ## Known limitations and next work
 
 1. **Load is coarse:** region weight and single-link tributary weight are
    measured, but continuous force distribution across multiple anchors is not
    solved. Extremely heavy **multiply supported** regions do not yet tear free.
    They may need a separate overloading model.
-2. **No attached-body movement:** there is no spring solver, live displacement,
-   visible stretching, or swaying in G1.
+2. **Movement is not a spring solver:** G3 supports small, visibly live sway
+   but not continuous elastic link strain or realistic weight distribution.
 3. **Experimental activation only:** G2 has a lab-only button and falling
    feedback; a balanced, earned Gravity Surge special for actual levels and
    scoring still needs separate design.
-4. **Collision fairness:** attached moving bubbles must later share the *same
-   current physical coordinates* with projectile collisions, aim guide and
-   renderer. Keep that invariant non-negotiable.
+4. **Collision fairness:** G3 uses the *same current attached positions* for
+   rendering, projectile collision, aim guide and fall origins. All future
+   motion changes must keep that invariant.
 5. **Browser verification:** tests for support geometry run for desktop and
    mobile layouts, but real-device behaviour still requires checking.
 
@@ -97,11 +129,13 @@ prepares marker geometry from `analyseSupports`, and
 
 - **G2: visual stress diagnostic and deliberate activation (v0.6.0).**
   Isolated Gravity Lab with warnings and button; normal levels remain unchanged.
-- **G3: improved load sharing, stickiness and support failure.** Tune force
-  thresholds against isolated test boards including heavy dual supports.
-- **G4: constrained, damped sway.** Add a single authoritative live position
-  query shared by rendering, shot collision and aiming; test stability on mobile.
-- **G5: integrate into puzzles, special shots, boss encounters and Fizzlings.**
+- **G3: constrained, damped sway (v0.7.0 review).** Integrated into normal
+  Arcade and puzzles, with a shared live-position query.
+- **G4: improve multi-anchor load sharing, stickiness and support failure.**
+  Tune isolated heavy dual-support boards; no arbitrary collapse under normal gravity.
+- **G5: more convincing elastic swinging and link stretch.** Evolve the
+  constrained solver while maintaining renderer/guide/collision parity.
+- **G6: gravity-led puzzles, earned specials, boss encounters and Fizzlings.**
 
 ## Tests
 

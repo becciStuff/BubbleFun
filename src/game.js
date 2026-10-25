@@ -9,6 +9,8 @@ import {
 import { createPuzzleBoard } from './puzzles.js';
 import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles, releaseGravitySurge } from './gravity.js';
 import { createGravityLabBoard } from './gravity-lab.js';
+import { bubblePosition } from './positions.js';
+import { stepAttachedSway, kickAttachedSway } from './sway.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -68,6 +70,7 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
     falling: [], lastDrop: 0, lastBombs: 0, recoil: 0, comboLevel: 0, highestCombo: 1,
     comboDisplay: 0, lastChain: null, pendingRow: false, pendingDanger: false,
     wobble: new Map(), rowShift: 0, introTime: 0, pendingPuzzleLoss: false,
+    attachedPositions: new Map(), swayKicks: new Map(), swayClock: 0,
     ...visualState(),
   };
 }
@@ -188,7 +191,7 @@ function removeCells(state, cells, effectCount) {
   for (const [r, c] of cells) {
     const colour = state.board.get(key(r, c));
     if (!colour) continue;
-    const { x, y } = shooterPosition(r, c, state.phase, state.layout);
+    const { x, y } = bubblePosition(state, r, c);
     if (state.bombs.delete(key(r, c))) bombs.push({ x, y, row: r, col: c });
     addBurst(state, x, y, colour, effectCount);
     addPulse(state, x, y, colour, .65);
@@ -205,7 +208,7 @@ export function detonateNextBomb(state) {
   const victims = [];
   for (const k of state.board.keys()) {
     const [r, c] = k.split(',').map(Number);
-    const p = shooterPosition(r, c, state.phase, state.layout);
+    const p = bubblePosition(state, r, c);
     if (Math.hypot(p.x - bomb.x, p.y - bomb.y) <= BOMB_RADIUS) victims.push([r, c]);
   }
   state.pendingBombs.push(...removeCells(state, victims, 11));
@@ -296,11 +299,11 @@ function lockShooter(state) {
   if (!slot) { state.status = 'lost'; emit(state, 'lose'); return; }
   const [row, col] = slot;
   state.board.set(key(row, col), shot.colour);
-  const impact = shooterPosition(row, col, state.phase, state.layout);
+  const impact = bubblePosition(state, row, col);
   const same = connectedShooter(state.board, row, col, state.phase, true, state.layout);
   for (const [k] of state.board) {
     const [r, c] = k.split(',').map(Number);
-    const p = shooterPosition(r, c, state.phase, state.layout);
+    const p = bubblePosition(state, r, c);
     const proximity = Math.hypot(p.x - impact.x, p.y - impact.y);
     if (proximity < PITCH * 3.1) state.wobble.set(k, .85 * (1 - proximity / (PITCH * 4)));
   }
@@ -319,6 +322,7 @@ function lockShooter(state) {
     addPulse(state, impact.x, impact.y, shot.colour, .38);
     emit(state, 'land');
   }
+  kickAttachedSway(state, row, col);
   state.shots++;
   state.shotsUntilRow--;
   if (!state.pendingBombs.length) settleShooter(state);
@@ -339,6 +343,7 @@ export function stepGame(state, dt) {
     }
   }
   if (state.comboDisplay) state.comboDisplay = Math.max(0, state.comboDisplay - dt);
+  if (state.mode === 'shooter') stepAttachedSway(state, dt);
   updateVisualEffects(state, dt);
 
   if (state.mode === 'shooter') {
@@ -402,7 +407,7 @@ export function stepGame(state, dt) {
     if (shot.x < low) { shot.x = low + (low - shot.x); shot.vx = Math.abs(shot.vx); }
     if (shot.x > high) { shot.x = high - (shot.x - high); shot.vx = -Math.abs(shot.vx); }
     if (shot.y <= state.layout.top + RADIUS) { shot.y = state.layout.top + RADIUS; lockShooter(state); break; }
-    if (shotBubbleCollision(state.board, shot.x, shot.y, state.phase, state.layout)) {
+    if (shotBubbleCollision(state.board, shot.x, shot.y, state.phase, state.layout, state.attachedPositions)) {
       lockShooter(state);
       break;
     }

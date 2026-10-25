@@ -2,7 +2,8 @@
 // what detaches and how those objects move until they burst. Scoring, effects,
 // audio and turn completion stay in game.js.
 import { MOBILE_LAYOUT, RADIUS } from './config.js';
-import { cellKey, floatingShooter, shooterPosition } from './grid.js';
+import { cellKey, floatingShooter } from './grid.js';
+import { bubblePosition } from './positions.js';
 import { planGravitySurge } from './supports.js';
 export { analyseSupports, planGravitySurge } from './supports.js';
 
@@ -19,7 +20,7 @@ export function releaseFloatingShooter(state, cells, random = Math.random) {
   for (const [row, col] of cells) {
     const colour = state.board.get(cellKey(row, col));
     if (!colour) continue;
-    const { x, y } = shooterPosition(row, col, state.phase, state.layout);
+    const { x, y } = bubblePosition(state, row, col);
     const bomb = state.bombs.delete(cellKey(row, col));
     state.board.delete(cellKey(row, col));
     state.falling.push({

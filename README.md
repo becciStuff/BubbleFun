@@ -6,9 +6,27 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for the staged support/weight physics and the rules that must stay fair. G1 support analysis powers the **isolated v0.6.0 Gravity Lab**, but normal Arcade and puzzle rules are unchanged.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.7.0 enables gentle attached-bubble sway in regular Arcade and Puzzles**; the isolated Lab still demonstrates Extreme Gravity support breakage.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
+
+## v0.7.0 — Attached bubble sway in the real game (G3)
+
+**Gravity is not a separate game mode.** Arcade and all three Puzzles now have
+gentle, support-sensitive movement while bubbles are still attached. Hanging
+branches move more, separately braced structures move less, and ceiling bubbles
+stay fixed. Impacts add small, damped ripples.
+
+The **aiming guide**, **actual projectile collisions**, **rendered bubbles** and
+**falling launch points** use the **same frame's live attached positions**.
+The hex grid still owns colour matching, adjacency and where new shots snap,
+so existing puzzle solutions and fair gameplay are preserved. Reduced-motion
+settings turn off attached sway.
+
+Gravity Lab remains available as a **diagnostic** for support strength and
+experimental Surge. Real-level connections do not yet snap from weight or
+Gravity Surge; multi-anchor load sharing and realistic stretching are future
+physics milestones.
 
 ## v0.6.0 — Gravity Lab (G2 prototype)
 
@@ -20,19 +38,17 @@ watch the weak chain detach and fall while the braced structure survives.
 Reload the test board to repeat. The lab deliberately pauses shooting and
 does not save scores.
 
-Normal Arcade and all three puzzles retain their existing rules: the Surge
-action is restricted to the test board for now. The visual warnings show
-*support stress*, not animated bending. Actual attached-bubble **sway and
-live hitbox movement are still future work**.
+The Surge action stays restricted to the test board; standard Arcade and
+puzzles use gentle sway only. The Lab's warning rings still show
+*support stress*, not simulated bending or snapping.
 
 ## Release tracking
 
-**Current version: v0.6.0.** Gravity Lab provides a first visible Surge
-experiment; the new physics is intentionally isolated from regular Arcade
-and puzzles. Swinging attached bubbles and actual live-motion collision remain
-future features.
+**Current version: v0.7.0** on the G3 review branch. Gentle attached sway is
+integrated into regular Arcade and Puzzles; the lab remains a diagnostic.
+Realistic elastic stretching and dynamic bond breaking remain future features.
 
-The header badge now simply reads **Version 0.6.0**, loading the number from
+The header badge reads **Version 0.7.0**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -40,9 +56,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.5.1 → 0.5.2
+npm run version:patch   # e.g. 0.7.0 → 0.7.1
 # or
-npm run version:minor   # e.g. 0.5.1 → 0.6.0
+npm run version:minor   # e.g. 0.7.0 → 0.8.0
 npm test
 ```
 
@@ -116,6 +132,8 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/puzzles.js` — handcrafted puzzle layouts, targets, ammunition and fresh board creation
 - `src/supports.js` — gravity support graph, suspended weight and independent ceiling anchors (merged in G1)
 - `src/gravity.js` — detached-bubble detection, falling motion and opt-in Surge
+- `src/sway.js` — damped supported-cluster sway with impact impulses (G3)
+- `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
 - `src/gravity-lab.js` — independent, deterministic lab demonstration board
 - `src/gravity-hints.js` — support marker data derived from the support graph
 - `src/gravity-overlay.js` — canvas-only visual strain and bracing indicators
@@ -131,6 +149,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/supports.test.js` — anchors, loaded bonds and surge planning (G1 branch)
 - `tests/surge.test.js` — opt-in gravity detachment and scoring boundaries
 - `tests/gravity-lab.test.js` — interactive lab workflow, both layouts and normal-mode isolation
+- `tests/sway.test.js` — live collision points, support-sensitive sway and reduced motion
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
 ## Ideas for later
