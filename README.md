@@ -132,6 +132,8 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/puzzles.js` — handcrafted puzzle layouts, targets, ammunition and fresh board creation
 - `src/supports.js` — gravity support graph, suspended weight and independent ceiling anchors (merged in G1)
 - `src/gravity.js` — detached-bubble detection, falling motion and opt-in Surge
+- `src/sway.js` — damped supported-cluster sway with impact impulses (G3)
+- `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
 - `src/gravity-lab.js` — independent, deterministic lab demonstration board
 - `src/gravity-hints.js` — support marker data derived from the support graph
 - `src/gravity-overlay.js` — canvas-only visual strain and bracing indicators
@@ -147,6 +149,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/supports.test.js` — anchors, loaded bonds and surge planning (G1 branch)
 - `tests/surge.test.js` — opt-in gravity detachment and scoring boundaries
 - `tests/gravity-lab.test.js` — interactive lab workflow, both layouts and normal-mode isolation
+- `tests/sway.test.js` — live collision points, support-sensitive sway and reduced motion
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
 ## Ideas for later
