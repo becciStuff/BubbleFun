@@ -142,13 +142,6 @@ The richer connected-cluster gravity, special shop, Fizzling rescue story and bo
 - How should boss objectives, progression, hints, retries and accessibility work?
 - Should the movable bottle catch falling bubbles to charge specials, or be a separate active mechanic?
 
-## Reference inspirations
-
-- [Panda Pop — Jam City](https://www.jamcity.com/game/panda-pop/) — character-driven rescue objectives, themed progression and presentation.
-- [Bubble Fun Shooting Dragon — Google Play](https://play.google.com/store/apps/details?id=com.RPE.Bubble) — simpler creature-led bubble shooting.
-
-These are **inspirations for studying the genre**, not visual assets, storylines or characters to copy. BubbleFun should develop its own Fizzling world and physics-led identity.
-
 ---
 
 *Keep updating this document as we make decisions. When an idea becomes a real feature, link its implementation or test plan here and mark it as shipped.*
