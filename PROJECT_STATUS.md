@@ -102,7 +102,7 @@ The G1 prototype intentionally has **no effect on normal play**. The physics eng
 
 ## Verification and current risks
 
-- **G1 isolated verification:** 12 support tests passed locally with Node 22, using the current `config.js`/`grid.js` geometry reproduced for the test harness. The new GitHub Actions workflow will run the complete repository suite on the PR. Full-suite results are not yet confirmed.
+- **G1 isolated verification:** 12 support tests passed locally with Node 22, using the current `config.js`/`grid.js` geometry reproduced for the test harness. GitHub Actions ran the complete `npm test` suite on PR #5: **62 tests passed, 0 failed** (run `40238119663`).
 - **Browser behaviour:** No player-facing changes are intentionally wired into the loop. New G1 browser and mobile tests remain pending.
 - **Not yet verified:** A live GitHub Pages deployment, mobile browser interaction and the full manual gameplay checklist. Do not mark them as passed based only on Node tests or a desktop smoke test.
 - **Engineering design:** Keep the dependency chain `config → grid → supports → gravity → game`; avoid circular imports or a growing `game.js`.
