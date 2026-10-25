@@ -25,7 +25,7 @@ try {
     assert.match(await page.locator('#gravity-lab-message').textContent(), /3 bubbles falling/);
     await page.waitForFunction(() =>
       document.querySelector('#gravity-lab-message')?.textContent?.includes('Mint bracing held'),
-      { timeout: 8000 });
+      null, { timeout: 8000 });
     assert.equal(await page.locator('#result-overlay').isVisible(), false);
     // Reload gives a fresh repeatable experiment.
     await page.locator('#gravity-demo-button').click();
