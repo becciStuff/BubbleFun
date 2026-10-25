@@ -4,7 +4,7 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Where we're going:** Read [VISION.md](VISION.md) for the agreed Fizzlings rescue-adventure concept, gravity and special-shot ideas, earn-only coin economy, boss levels and prioritised roadmap. Those future ideas are not all implemented yet.
 
-**Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid and puzzle setup are separate modules; the gravity-engine extraction is next.
+**Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
@@ -71,12 +71,14 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/config.js` — shared layouts, colours and gameplay constants
 - `src/grid.js` — hex-grid geometry, matching, ceiling support and shared hit detection
 - `src/puzzles.js` — handcrafted puzzle layouts, targets, ammunition and fresh board creation
-- `src/game.js` — game rules and state, with legacy grid/puzzle exports retained during the refactor
+- `src/gravity.js` — detached-bubble detection, release, falling motion and impact notifications
+- `src/game.js` — game rules, scoring, effects and turn orchestration, retaining legacy exports during the refactor
 - `src/render.js` — responsive canvas bubble graphics, aim guide and effects
 - `src/app.js` — input, menus, scores, optional sound and persistence
 - `tests/game.test.js` — gameplay regression tests, desktop geometry and verified puzzle solutions
 - `tests/grid.test.js` — grid geometry, connectivity and projectile hit testing
 - `tests/puzzles.test.js` — puzzle board definitions, desktop/mobile layouts and real solutions
+- `tests/gravity.test.js` — independent detachment, falling physics, wall bounce and burst timing tests
 
 ## Ideas for later
 

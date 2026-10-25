@@ -1,6 +1,6 @@
 # BubbleFun — refactoring plan
 
-> **Status: In progress.** Regression coverage and configuration/grid extraction are merged into `main`. Puzzle definitions and board setup are extracted on the `refactor/puzzles-phase2` review branch; gravity extraction remains pending. This is the engineering plan **before** adding advanced gravity, more specials or the Fizzlings adventure. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current checkpoint and [VISION.md](VISION.md) for design priorities.
+> **Status: In progress.** Regression coverage, configuration/grid and puzzle extraction are merged into `main`. The existing detached-bubble gravity engine is extracted on the `refactor/gravity-phase3` review branch; final module clean-up remains. **Attached-cluster sway, stickiness and Extreme Gravity have not been implemented.** See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current checkpoint and [VISION.md](VISION.md) for design priorities.
 
 ## Why refactor now?
 
