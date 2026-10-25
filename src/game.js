@@ -5,6 +5,7 @@ import {
   cellKey as key, shooterColumns, shooterPosition, shooterNeighbours as neighbours,
   connectedShooter, floatingShooter, shotBubbleCollision,
 } from './grid.js';
+import { createPuzzleBoard } from './puzzles.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -14,6 +15,7 @@ export {
   COLOURS, SWATCHES,
 } from './config.js';
 export { shooterColumns, shooterPosition, connectedShooter, floatingShooter } from './grid.js';
+export { PUZZLES } from './puzzles.js';
 
 const randomColour = (colours, random = Math.random) => colours[Math.floor(random() * colours.length)];
 
@@ -76,40 +78,11 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
   };
 }
 
-const PUZZLE_COLOURS = { P: 'pink', B: 'blue', Y: 'yellow', G: 'green', V: 'purple' };
-export const PUZZLES = Object.freeze([
-  {
-    name: 'Twin Towers', goal: 'Bring down both glowing supports', shots: 16,
-    rows: ['..PPPPP..', '..PYYYP..', '..P...P..', '..B...B..', '..B...B..', '..B...B..'],
-    bombs: [[3, 2], [3, 6]],
-    ammo: ['blue', 'blue', 'pink', 'blue', 'yellow', 'pink', 'blue', 'yellow'],
-  },
-  {
-    name: 'Heartbreaker', goal: 'Find the two weak points', shots: 18,
-    rows: ['..PP.PP..', '.PYY.YYP.', '.PYYYYYP.', '..PBBBP..', '...BBB...', '....B....'],
-    bombs: [[2, 2], [2, 6]],
-    ammo: ['blue', 'yellow', 'pink', 'blue', 'yellow', 'pink', 'yellow', 'blue'],
-  },
-  {
-    name: 'The Crown', goal: 'Destroy the three royal bombs', shots: 20,
-    rows: ['P..Y.Y..P', 'PP.YYY.P.', 'PPYYYYYPP', '.PBBBBBP.', '..BBBBB..', '...GGG...', '....G....'],
-    bombs: [[2, 1], [2, 4], [2, 7]],
-    ammo: ['green', 'blue', 'pink', 'yellow', 'pink', 'blue', 'yellow', 'green'],
-  },
-]);
-
 export function initialPuzzle(index = 0, layout = MOBILE_LAYOUT, random = Math.random) {
-  const safeIndex = Math.max(0, Math.min(PUZZLES.length - 1, index));
-  const puzzle = PUZZLES[safeIndex];
+  const { index: safeIndex, puzzle, board, bombs } = createPuzzleBoard(index, layout);
   const state = initialShooter(random, layout);
-  const offset = Math.floor((layout.columns - 9) / 2);
-  state.board = new Map();
-  puzzle.rows.forEach((line, row) => {
-    Array.from(line).forEach((symbol, col) => {
-      if (PUZZLE_COLOURS[symbol]) state.board.set(key(row, col + offset), PUZZLE_COLOURS[symbol]);
-    });
-  });
-  state.bombs = new Set(puzzle.bombs.map(([row, col]) => key(row, col + offset)));
+  state.board = board;
+  state.bombs = bombs;
   state.variant = 'puzzle';
   state.puzzleIndex = safeIndex;
   state.puzzleName = puzzle.name;
