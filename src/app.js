@@ -161,6 +161,7 @@ function updatePlayUI() {
 
 function reset() {
   state = playStyle === 'puzzle' ? initialPuzzle(puzzleIndex, chosenLayout()) : initialShooter(Math.random, chosenLayout());
+  state.reducedMotion = reducedMotion;
   if (reducedMotion) state.introTime = 0;
   canvas.width = state.layout.width;
   canvas.height = state.layout.height;
@@ -176,6 +177,7 @@ function reset() {
 function loadGravityLab() {
   if (playStyle !== 'arcade') return;
   state = initialGravityLab(chosenLayout());
+  state.reducedMotion = reducedMotion;
   canvas.width = state.layout.width;
   canvas.height = state.layout.height;
   canvas.style.aspectRatio = `${state.layout.width} / ${state.layout.height}`;
