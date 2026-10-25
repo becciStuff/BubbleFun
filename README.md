@@ -2,7 +2,15 @@
 
 A small, free-to-play bubble arcade built with plain HTML, CSS and JavaScript. No accounts, ads, build tools or paid services required. This is the classic-arcade prototype, designed so we can expand it later.
 
-## What's new in v0.2
+## What's new in v0.3
+
+- Falling bubbles can collide with attached clusters. Hitting a same-colour pair triggers a secondary pop, and can release further bubbles.
+- Chain-reaction multipliers grow from **×2** to **×8**, with animated score call-outs and a temporary combo display.
+- Non-matching collisions now ricochet; controlled downward trajectories and substep collision checks make cascades more predictable.
+- Each falling cascade resolves before the next shot, so scoring and chain timing are clear.
+- More regression tests cover chaining, ricochets, multiplier scoring and chain completion.
+
+## Earlier improvements from v0.2
 
 - Detached shooter bubbles obey gravity and burst after visibly falling.
 - Gravity combo bonuses, glowing shot trails, expanding blast rings, sparkles and score pop-ups.

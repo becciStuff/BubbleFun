@@ -150,13 +150,16 @@ function aimGuide(ctx, state) {
 }
 
 function shooter(ctx, state, seconds) {
-  roundRect(ctx, 100, 17, WIDTH - 200, 24, 12, 'rgba(13,20,72,.4)');
-  label(ctx, 'MATCH 3+ TO POP', WIDTH/2, 29, '#acbdfa', 11);
+  const chainActive = state.comboLevel >= 2 && state.comboDisplay > 0;
+  roundRect(ctx, chainActive ? 119 : 100, 17, chainActive ? WIDTH - 238 : WIDTH - 200, 24, 12,
+    chainActive ? 'rgba(225,61,154,.65)' : 'rgba(13,20,72,.4)');
+  label(ctx, chainActive ? `CHAIN REACTION ×${state.comboLevel}` : 'MATCH 3+ TO POP', WIDTH/2, 29,
+    chainActive ? '#fff0b3' : '#acbdfa', 11);
   ctx.strokeStyle = `rgba(255,148,198,${.17 + Math.sin(seconds * 2) * .045})`; ctx.lineWidth = 1.3;
   ctx.setLineDash([8,10]);
   ctx.beginPath(); ctx.moveTo(30,LAUNCH_Y-47); ctx.lineTo(WIDTH-30,LAUNCH_Y-47); ctx.stroke();
   ctx.setLineDash([]);
-  if (!state.projectile && state.status === 'playing') aimGuide(ctx,state);
+  if (!state.projectile && !state.falling.length && state.status === 'playing') aimGuide(ctx,state);
   for (const [k,colour] of state.board) {
     const [row,col] = k.split(',').map(Number);
     const {x,y} = shooterPosition(row,col,state.phase);

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   initialShooter, shooterPosition, shooterColumns, connectedShooter,
-  floatingShooter, releaseFloatingShooter, descendShooter, fireShooter, stepGame,
+  floatingShooter, releaseFloatingShooter, triggerChainReaction,
+  descendShooter, fireShooter, stepGame,
   initialPop, popGroup, popAt, popCellAt, collapsePop, hasPopMoves,
 } from '../src/game.js';
 
@@ -49,6 +50,84 @@ test('board-clear victory waits until detached bubbles finish exploding', () => 
   for (let i = 0; i < 45; i++) stepGame(state, .045);
   assert.equal(state.status, 'won');
   assert.equal(state.lastEvent, 'win');
+});
+
+test('a falling bubble completes a matching pair and starts a ×2 chain', () => {
+  const state = initialShooter(() => .1);
+  state.board = new Map([['0,0','pink'], ['0,1','pink'], ['0,5','green']]);
+  state.comboLevel = 1;
+  const falling = { x: 90, y: 94, colour: 'pink' };
+  assert.equal(triggerChainReaction(state, falling, 0, 0), true);
+  assert.equal(state.comboLevel, 2);
+  assert.equal(state.score, 80);
+  assert.equal(state.board.has('0,0'), false);
+  assert.equal(state.board.has('0,1'), false);
+  assert.equal(state.board.has('0,5'), true);
+  assert.equal(state.lastChain.multiplier, 2);
+  assert.ok(state.comboDisplay > 0);
+});
+
+test('successive secondary matches raise the multiplier and points', () => {
+  const state = initialShooter(() => .1);
+  state.board = new Map([['0,0','pink'],['0,1','pink'],['0,5','blue'],['0,6','blue']]);
+  state.comboLevel = 1;
+  assert.equal(triggerChainReaction(state,{x:60,y:77,colour:'pink'},0,0),true);
+  assert.equal(triggerChainReaction(state,{x:290,y:77,colour:'blue'},0,5),true);
+  assert.equal(state.comboLevel,3);
+  assert.equal(state.highestCombo,3);
+  assert.equal(state.score,200); // 40×2 then 40×3
+});
+
+test('a lone bubble or mismatched colour cannot trigger a chain', () => {
+  const state = initialShooter(() => .1);
+  state.board = new Map([['0,0','pink'],['0,1','blue']]);
+  state.comboLevel = 1;
+  assert.equal(triggerChainReaction(state,{x:48,y:77,colour:'blue'},0,0),false);
+  assert.equal(triggerChainReaction(state,{x:48,y:77,colour:'pink'},0,0),false);
+  assert.equal(state.score,0);
+});
+
+test('falling bubbles ricochet off mismatched bubbles instead of popping them', () => {
+  const state = initialShooter(() => .1);
+  const target = shooterPosition(5,4);
+  state.board = new Map([['5,4','pink']]);
+  state.falling = [{ x:target.x, y:target.y - 42, colour:'blue', vx:0,vy:200,gravity:900,
+    rotation:0, spin:0, burstAt:1.5, sparkleClock:0, hitCooldown:0 }];
+  stepGame(state,.03);
+  assert.equal(state.board.get('5,4'),'pink');
+  assert.equal(state.falling.length,1);
+  assert.ok(state.falling[0].vy < 0, 'the bubble bounced upwards');
+});
+
+test('physical collisions trigger chains and eventually finish a cleared board', () => {
+  const state = initialShooter(() => .1);
+  const target = shooterPosition(5,4);
+  state.board = new Map([['5,4','green'],['6,4','green']]);
+  state.comboLevel = 1;
+  state.falling = [{ x:target.x, y:target.y-55, colour:'green', vx:0,vy:30,gravity:900,
+    rotation:0, spin:0, burstAt:1.5, sparkleClock:0, hitCooldown:0 }];
+  assert.equal(fireShooter(state),false, 'the next turn waits for the cascade');
+  for (let i=0;i<30 && state.status!=='won';i++) stepGame(state,.025);
+  assert.equal(state.score,80);
+  assert.equal(state.comboLevel,2);
+  assert.equal(state.status,'won');
+  assert.equal(state.board.size,0);
+});
+
+test('a scheduled new row waits until the falling cascade has settled', () => {
+  const state = initialShooter(() => .1);
+  state.shotsUntilRow = 0;
+  state.pendingRow = true;
+  state.falling = [{ x:216,y:480,colour:'purple',vx:0,vy:50,gravity:800,
+    rotation:0,spin:0,burstAt:.11,sparkleClock:0,hitCooldown:0 }];
+  stepGame(state,.03);
+  assert.equal(state.phase,0);
+  assert.equal(state.pendingRow,true);
+  for(let i=0;i<6;i++) stepGame(state,.03);
+  assert.equal(state.falling.length,0);
+  assert.equal(state.phase,1);
+  assert.equal(state.pendingRow,false);
+  assert.equal(state.shotsUntilRow,5);
 });
 
 test('descending the ceiling preserves bubble x positions', () => {

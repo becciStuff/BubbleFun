@@ -41,6 +41,7 @@ function playSound(type) {
       fire: [280, 400, .08], land: [205, 140, .11],
       pop: [590, 950, .17], drop: [320, 190, .19],
       cascade: [430, 1080, .24], burst: [720, 460, .11],
+      chain: [620, 1320, .29],
       win: [680, 1100, .35], lose: [230, 90, .4], finish: [380, 240, .25],
     };
     const [from, to, duration] = tones[type] ?? tones.pop;
@@ -131,13 +132,13 @@ function setMode(nextMode) {
   $('next-area').hidden = !shooter;
   $('instructions-title').textContent = shooter ? 'Make your shot count.' : 'Find the big groups.';
   $('instructions-copy').textContent = shooter
-    ? 'Aim and match three or more colours. Break a connection to the ceiling and watch the loose bubbles fall, sparkle and explode!'
+    ? 'Match three or more colours. Detached bubbles can now ricochet into matching groups below, triggering chain reactions and growing score multipliers!'
     : 'Tap any connected group of two or more matching bubbles. They disappear, the rest fall, and empty columns slide together.';
   $('control-primary').textContent = shooter ? 'Move to aim' : 'Find matching neighbours';
   $('control-secondary').textContent = shooter ? 'Click or tap to shoot' : 'Click or tap a group to pop';
   $('control-keyboard').textContent = shooter ? 'Arrow keys + Space also work' : 'Bigger groups earn more points';
   $('tip-copy').textContent = shooter
-    ? 'Target the bubbles that hold a cluster to the ceiling. Detach the lot for a gravity combo and bonus points!'
+    ? 'Aim for supporting bubbles above same-colour pairs. A falling bubble can become the third match and multiply your points!'
     : 'A group of 5 earns much more than five groups of 2. Plan a few moves ahead!';
   announce(`${shooter ? 'Bubble Shooter' : 'Bubble Pop'} selected.`);
   updateUI();
@@ -164,7 +165,9 @@ function updateUI() {
   putText('score-value', state.score.toLocaleString('en-NZ'));
   putText('best-value', best[mode].toLocaleString('en-NZ'));
   if (mode === 'shooter') {
-    putText('turns-value', `${state.shotsUntilRow} shot${state.shotsUntilRow === 1 ? '' : 's'}`);
+    const showCombo = state.comboDisplay > 0 && state.comboLevel >= 2;
+    putText('turn-label', showCombo ? 'CHAIN REACTION' : 'NEXT ROW IN');
+    putText('turns-value', showCombo ? `×${state.comboLevel} COMBO` : `${state.shotsUntilRow} shot${state.shotsUntilRow === 1 ? '' : 's'}`);
     const orb = $('next-orb');
     if (orb.dataset.colour !== state.next) {
       orb.style.backgroundColor = SWATCHES[state.next];
@@ -176,7 +179,9 @@ function updateUI() {
   }
   const status = mode === 'shooter'
     ? (state.status === 'clearing' ? 'Final bubbles tumbling down!'
-      : state.lastDrop ? `Gravity combo! ${state.lastDrop} falling!`
+      : state.comboDisplay > 0 && state.lastChain ? `Chain ×${state.lastChain.multiplier}! +${state.lastChain.points} points!`
+      : state.falling.length ? 'Cascade in progress — watch for matches!'
+      : state.lastDrop ? `${state.lastDrop} bubble${state.lastDrop === 1 ? '' : 's'} dropped!`
       : state.lastPop ? `${state.lastPop} popped! Keep going!` : 'Aim and shoot to match 3+')
     : (state.lastPop ? `${state.lastPop} popped! Nice one!` : 'Tap matching groups of 2+');
   putText('game-status', `✦ ${status}`);
@@ -217,6 +222,7 @@ function frame(timestamp) {
     playSound(state.lastEvent);
     if (state.lastEvent === 'pop') announce(`${state.lastPop} bubbles popped. Score ${state.score}.`);
     if (state.lastEvent === 'cascade') announce(`Gravity combo! ${state.lastDrop} disconnected bubbles are falling. Score ${state.score}.`);
+    if (state.lastEvent === 'chain') announce(`Chain reaction times ${state.lastChain.multiplier}! ${state.lastChain.points} points. Total score ${state.score}.`);
     if (['won', 'lost', 'finished'].includes(state.status)) announce(`Game over. Score ${state.score}.`);
   }
   updateUI();
