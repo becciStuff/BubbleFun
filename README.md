@@ -2,15 +2,16 @@
 
 A small, free-to-play bubble arcade built with plain HTML, CSS and JavaScript. No accounts, ads, build tools or paid services required. This is the classic-arcade prototype, designed so we can expand it later.
 
-## What's new in v0.3
+## What's new in v0.4 — Explosive Cascades
 
-- Falling bubbles can collide with attached clusters. Hitting a same-colour pair triggers a secondary pop, and can release further bubbles.
-- Chain-reaction multipliers grow from **×2** to **×8**, with animated score call-outs and a temporary combo display.
-- Non-matching collisions now ricochet; controlled downward trajectories and substep collision checks make cascades more predictable.
-- Each falling cascade resolves before the next shot, so scoring and chain timing are clear.
-- More regression tests cover chaining, ricochets, multiplier scoring and chain completion.
+- **Bomb bubbles** appear as glowing, marked coloured bubbles on the shooter board. Include one in a normal match of 3+, or hit it with another bomb's blast, to detonate it.
+- A bomb clears nearby bubbles regardless of colour, triggering any other bombs in its radius. A short delay between detonations makes chains readable.
+- Bomb combos grow from **×2** to **×8**, with bonus points and visible combo announcements.
+- Once the blasts finish, unsupported bubbles tumble all the way to the floor and burst into colourful particles, expanding shockwaves and bright flashes.
+- The previous falling-bubble collision system was removed: it relied on an unlikely board configuration, so it didn't give players meaningful control over chains.
+- Detonations and gravity cascades finish before the next shot; row descents also wait for the effects to settle.
 
-## Earlier improvements from v0.2
+## Earlier improvements from v0.2–v0.3
 
 - Detached shooter bubbles obey gravity and burst after visibly falling.
 - Gravity combo bonuses, glowing shot trails, expanding blast rings, sparkles and score pop-ups.
@@ -29,7 +30,7 @@ Then visit `http://localhost:8000/`. Using a local server is recommended because
 
 ## Two modes
 
-**Bubble Shooter** — Aim with your mouse or finger, then click/tap to shoot. Match **3 or more** connected bubbles of the same colour. Breaking the connection to the ceiling releases other bubbles into a gravity cascade: they tumble down with sparkly trails, then explode for bonus points. A new row descends after every five shots. Lose if the stack reaches the launcher, or win by clearing it. The **Left/Right** arrow keys and **Space** work on a keyboard too.
+**Bubble Shooter** — Aim with your mouse or finger, then click/tap to shoot. Match **3 or more** connected bubbles of the same colour. Glowing marked bubbles are bombs: if a matched group contains one, it explodes and removes surrounding bubbles, potentially setting off more bombs. Disconnected bubbles tumble down and burst on the floor for a gravity bonus. A new row descends after every five shots. Lose if the stack reaches the launcher, or win by clearing it. The **Left/Right** arrow keys and **Space** work on a keyboard too.
 
 **Bubble Pop** — Click/tap groups of **2 or more** adjacent bubbles of the same colour. Bigger groups earn more points (`group size² × 5`). Bubbles fall and empty columns shift left. Clear the board for a bonus, or keep going until no groups remain.
 
@@ -59,7 +60,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 ## Ideas for later
 
 - Levels, difficulty settings and saved progress
-- Special bubbles, boosters and combo animations
+- A movable catching bottle and charged power shots
 - New visual themes and music
 - Daily challenges, leaderboards and accessibility improvements
 

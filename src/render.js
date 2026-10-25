@@ -54,6 +54,23 @@ function bubble(ctx, x, y, colour, radius = RADIUS, highlight = false, opacity =
   ctx.restore();
 }
 
+function bombMark(ctx, x, y, seconds) {
+  const beat = (Math.sin(seconds * 5 + x * .07) + 1) * .5;
+  ctx.save();
+  ctx.shadowBlur = 13 + beat * 10;
+  ctx.shadowColor = '#ffe59e';
+  ctx.fillStyle = '#36234e';
+  ctx.strokeStyle = '#ffe296';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y + 2, 11.7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#ffdb83'; ctx.lineWidth = 2.7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x + 5, y - 9); ctx.quadraticCurveTo(x + 8, y - 17, x + 13, y - 16); ctx.stroke();
+  star(ctx, x + 15, y - 17, 4.1 + beat * 1.8, .92, '#fff0ae');
+  star(ctx, x - 1, y + 2, 5.7, 1, '#ffe39c');
+  ctx.restore();
+}
+
 function star(ctx, x, y, radius, alpha = 1, colour = '#c5d9ff') {
   ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = colour;
   ctx.beginPath();
@@ -153,7 +170,7 @@ function shooter(ctx, state, seconds) {
   const chainActive = state.comboLevel >= 2 && state.comboDisplay > 0;
   roundRect(ctx, chainActive ? 119 : 100, 17, chainActive ? WIDTH - 238 : WIDTH - 200, 24, 12,
     chainActive ? 'rgba(225,61,154,.65)' : 'rgba(13,20,72,.4)');
-  label(ctx, chainActive ? `CHAIN REACTION ×${state.comboLevel}` : 'MATCH 3+ TO POP', WIDTH/2, 29,
+  label(ctx, chainActive ? `EXPLOSIVE COMBO ×${state.comboLevel}` : 'MATCH 3+ · DETONATE BOMBS', WIDTH/2, 29,
     chainActive ? '#fff0b3' : '#acbdfa', 11);
   ctx.strokeStyle = `rgba(255,148,198,${.17 + Math.sin(seconds * 2) * .045})`; ctx.lineWidth = 1.3;
   ctx.setLineDash([8,10]);
@@ -164,6 +181,7 @@ function shooter(ctx, state, seconds) {
     const [row,col] = k.split(',').map(Number);
     const {x,y} = shooterPosition(row,col,state.phase);
     bubble(ctx,x,y,colour);
+    if (state.bombs.has(k)) bombMark(ctx,x,y,seconds);
   }
   // Detached bubbles no longer disappear: gravity takes over until they burst.
   for (const falling of state.falling) {
@@ -171,6 +189,7 @@ function shooter(ctx, state, seconds) {
     ctx.translate(falling.x, falling.y);
     ctx.rotate(falling.rotation);
     bubble(ctx, 0, 0, falling.colour, RADIUS, true);
+    if (falling.bomb) bombMark(ctx,0,0,seconds);
     star(ctx, -12, 14, 3.1, .75, '#fff5df');
     ctx.restore();
   }
@@ -218,6 +237,21 @@ function popBoard(ctx, state, hover) {
 }
 
 function effects(ctx,state) {
+  for (const wave of state.shockwaves) {
+    const alpha = Math.max(0, wave.life / wave.maxLife);
+    ctx.save();
+    const aura = ctx.createRadialGradient(wave.x,wave.y,2,wave.x,wave.y,wave.radius);
+    aura.addColorStop(0,`rgba(255,254,231,${.33*alpha})`);
+    aura.addColorStop(.35,`rgba(255,183,75,${.26*alpha})`);
+    aura.addColorStop(1,'rgba(255,90,115,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath(); ctx.arc(wave.x,wave.y,wave.radius,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,239,175,${.88*alpha})`;
+    ctx.lineWidth = 3.5 + 4 * alpha;
+    ctx.shadowBlur = 23; ctx.shadowColor = '#ffca68';
+    ctx.stroke();
+    ctx.restore();
+  }
   for (const pulse of state.pulses) {
     const strength = Math.max(0, pulse.life / pulse.maxLife);
     ctx.save();

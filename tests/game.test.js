@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   initialShooter, shooterPosition, shooterColumns, connectedShooter,
-  floatingShooter, releaseFloatingShooter, triggerChainReaction,
-  descendShooter, fireShooter, stepGame,
+  floatingShooter, releaseFloatingShooter, detonateNextBomb,
+  descendShooter, fireShooter, aimShooter, stepGame,
   initialPop, popGroup, popAt, popCellAt, collapsePop, hasPopMoves,
 } from '../src/game.js';
 
@@ -20,12 +20,23 @@ test('matching shooter bubbles connect across rows but different colours do not'
   assert.equal(connectedShooter(board, 1, 1).length, 1);
 });
 
+test('a normal starting board has visible, matchable bombs rather than a new colour', () => {
+  const state = initialShooter(() => .42);
+  assert.equal(state.bombs.size,2,'the opening board offers a deliberate two-bomb chain');
+  for (const cell of state.bombs) {
+    assert.ok(state.board.has(cell));
+    assert.ok(['pink', 'blue', 'green', 'yellow'].includes(state.board.get(cell)));
+  }
+  const positions = Array.from(state.bombs, k => shooterPosition(...k.split(',').map(Number)));
+  assert.ok(Math.hypot(positions[0].x-positions[1].x,positions[0].y-positions[1].y) <= 86);
+});
+
 test('unanchored shooter bubbles are identified after a pop', () => {
   const board = new Map([['0,0','pink'],['1,0','pink'],['3,6','blue']]);
   assert.deepEqual(floatingShooter(board), [[3,6]]);
 });
 
-test('detached bubbles become falling physics objects before bursting', () => {
+test('detached bubbles fall all the way to the floor before a large burst', () => {
   const state = initialShooter(() => .1);
   state.board = new Map([['0,0','pink'], ['3,4','yellow']]);
   assert.equal(releaseFloatingShooter(state, [[3,4]], () => .5), 1);
@@ -34,10 +45,14 @@ test('detached bubbles become falling physics objects before bursting', () => {
   const startingY = state.falling[0].y;
   for (let i = 0; i < 10; i++) stepGame(state, .045);
   assert.ok(state.falling[0].y > startingY, 'gravity moves the detached bubble down');
-  for (let i = 0; i < 30; i++) stepGame(state, .045);
+  let sawShockwave = false;
+  for (let i = 0; i < 30; i++) {
+    stepGame(state, .045);
+    if (state.shockwaves.length) sawShockwave = true;
+  }
   assert.equal(state.falling.length, 0, 'falling bubble has exploded');
   assert.equal(state.lastEvent, 'burst');
-  assert.ok(state.pulses.length > 0 || state.effects.length > 0);
+  assert.ok(sawShockwave, 'a visible floor shockwave is drawn');
 });
 
 test('board-clear victory waits until detached bubbles finish exploding', () => {
@@ -52,66 +67,94 @@ test('board-clear victory waits until detached bubbles finish exploding', () => 
   assert.equal(state.lastEvent, 'win');
 });
 
-test('a falling bubble completes a matching pair and starts a ×2 chain', () => {
+test('a bomb blast clears nearby colours but leaves distant bubbles alone', () => {
   const state = initialShooter(() => .1);
-  state.board = new Map([['0,0','pink'], ['0,1','pink'], ['0,5','green']]);
+  state.board = new Map([['0,0','pink'],['0,1','blue'],['0,2','yellow'],['0,8','green']]);
+  state.bombs = new Set();
+  const {x,y} = shooterPosition(0,0);
+  state.pendingBombs = [{x,y,row:0,col:0}];
   state.comboLevel = 1;
-  const falling = { x: 90, y: 94, colour: 'pink' };
-  assert.equal(triggerChainReaction(state, falling, 0, 0), true);
+  assert.equal(detonateNextBomb(state), true);
   assert.equal(state.comboLevel, 2);
-  assert.equal(state.score, 80);
+  assert.equal(state.score, (50 + 3 * 25) * 2);
   assert.equal(state.board.has('0,0'), false);
   assert.equal(state.board.has('0,1'), false);
-  assert.equal(state.board.has('0,5'), true);
-  assert.equal(state.lastChain.multiplier, 2);
-  assert.ok(state.comboDisplay > 0);
+  assert.equal(state.board.has('0,2'), false);
+  assert.equal(state.board.has('0,8'), true);
+  assert.ok(state.shockwaves.length);
 });
 
-test('successive secondary matches raise the multiplier and points', () => {
+test('an actual aimed colour match triggers a bomb and a second bomb in its blast', () => {
   const state = initialShooter(() => .1);
-  state.board = new Map([['0,0','pink'],['0,1','pink'],['0,5','blue'],['0,6','blue']]);
+  state.board = new Map([
+    ['0,0','pink'],['1,0','pink'],['0,1','blue'],['0,2','green'],
+    ['1,2','blue'],['0,5','purple'],
+  ]);
+  state.bombs = new Set(['1,0','1,2']);
+  state.current = 'pink';
+  state.next = 'green';
+  aimShooter(state,48,150);
+  assert.equal(fireShooter(state),true);
+  let sawFirstBlast = false;
+  let sawSecondBlast = false;
+  for (let i=0; i<170; i++) {
+    stepGame(state,.016);
+    if (state.lastBombs >= 1) sawFirstBlast = true;
+    if (state.lastBombs >= 2) sawSecondBlast = true;
+  }
+  assert.equal(sawFirstBlast,true,'the launched shot should match the marked pink bubble');
+  assert.equal(sawSecondBlast,true,'the first blast should detonate the second bomb');
+  assert.equal(state.comboLevel,3);
+  assert.ok(state.score > 200);
+  assert.equal(state.bombs.size,0);
+  assert.equal(state.board.get('0,5'),'purple');
+});
+
+test('subsequent bombs increment the combo and cannot fire out of turn', () => {
+  const state = initialShooter(() => .1);
+  state.board = new Map([['0,0','pink'], ['0,1','pink'], ['0,5','green']]);
+  state.bombs = new Set();
+  state.pendingBombs = [{...shooterPosition(0,0)}];
   state.comboLevel = 1;
-  assert.equal(triggerChainReaction(state,{x:60,y:77,colour:'pink'},0,0),true);
-  assert.equal(triggerChainReaction(state,{x:290,y:77,colour:'blue'},0,5),true);
+  assert.equal(fireShooter(state),false);
+  detonateNextBomb(state);
+  state.pendingBombs = [{...shooterPosition(0,5)}];
+  detonateNextBomb(state);
   assert.equal(state.comboLevel,3);
   assert.equal(state.highestCombo,3);
-  assert.equal(state.score,200); // 40×2 then 40×3
-});
-
-test('a lone bubble or mismatched colour cannot trigger a chain', () => {
-  const state = initialShooter(() => .1);
-  state.board = new Map([['0,0','pink'],['0,1','blue']]);
-  state.comboLevel = 1;
-  assert.equal(triggerChainReaction(state,{x:48,y:77,colour:'blue'},0,0),false);
-  assert.equal(triggerChainReaction(state,{x:48,y:77,colour:'pink'},0,0),false);
-  assert.equal(state.score,0);
-});
-
-test('falling bubbles ricochet off mismatched bubbles instead of popping them', () => {
-  const state = initialShooter(() => .1);
-  const target = shooterPosition(5,4);
-  state.board = new Map([['5,4','pink']]);
-  state.falling = [{ x:target.x, y:target.y - 42, colour:'blue', vx:0,vy:200,gravity:900,
-    rotation:0, spin:0, burstAt:1.5, sparkleClock:0, hitCooldown:0 }];
-  stepGame(state,.03);
-  assert.equal(state.board.get('5,4'),'pink');
-  assert.equal(state.falling.length,1);
-  assert.ok(state.falling[0].vy < 0, 'the bubble bounced upwards');
-});
-
-test('physical collisions trigger chains and eventually finish a cleared board', () => {
-  const state = initialShooter(() => .1);
-  const target = shooterPosition(5,4);
-  state.board = new Map([['5,4','green'],['6,4','green']]);
-  state.comboLevel = 1;
-  state.falling = [{ x:target.x, y:target.y-55, colour:'green', vx:0,vy:30,gravity:900,
-    rotation:0, spin:0, burstAt:1.5, sparkleClock:0, hitCooldown:0 }];
-  assert.equal(fireShooter(state),false, 'the next turn waits for the cascade');
-  for (let i=0;i<30 && state.status!=='won';i++) stepGame(state,.025);
-  assert.equal(state.score,80);
-  assert.equal(state.comboLevel,2);
-  assert.equal(state.status,'won');
+  assert.ok(state.score>0);
+  assert.equal(state.lastBombs,2);
   assert.equal(state.board.size,0);
+});
+
+test('a new ceiling row waits while bombs are detonating', () => {
+  const state = initialShooter(() => .1);
+  state.board = new Map([['0,0','pink'], ['1,0','pink'], ['0,7','green']]);
+  state.bombs = new Set(['1,0']);
+  state.current = 'pink';
+  state.shotsUntilRow = 1;
+  aimShooter(state,48,150);
+  fireShooter(state);
+  for (let i=0;i<100 && !state.pendingBombs.length;i++) stepGame(state,.016);
+  assert.equal(state.pendingBombs.length,1);
+  assert.equal(state.phase,0,'the row must not descend during a bomb countdown');
+  assert.equal(fireShooter(state),false);
+  for (let i=0;i<100;i++) stepGame(state,.016);
+  assert.equal(state.pendingBombs.length,0);
+  assert.equal(state.phase,1,'the row can descend once the blast and gravity finish');
+});
+
+test('detached bubbles never magically pop a different hanging cluster', () => {
+  const state = initialShooter(() => .1);
+  const target = shooterPosition(5,4);
+  state.board = new Map([['0,0','pink'],['5,4','green'],['6,4','green']]);
+  state.bombs = new Set();
+  state.falling = [{ x:target.x, y:target.y-55, colour:'green', vx:0,vy:30,gravity:900,
+    rotation:0, spin:0, burstAt:2.5, sparkleClock:0 }];
+  for (let i=0;i<75;i++) stepGame(state,.025);
+  assert.equal(state.board.size,3,'falling bubbles no longer remove on-board matches');
+  assert.equal(state.comboLevel,0);
+  assert.equal(state.falling.length,0);
 });
 
 test('a scheduled new row waits until the falling cascade has settled', () => {
@@ -132,11 +175,13 @@ test('a scheduled new row waits until the falling cascade has settled', () => {
 
 test('descending the ceiling preserves bubble x positions', () => {
   const state = initialShooter(() => .1);
+  state.bombs = new Set(['0,0']);
   const before = shooterPosition(0, 0, state.phase).x;
   descendShooter(state, () => .1);
   assert.equal(shooterPosition(1, 0, state.phase).x, before);
   assert.equal(state.shotsUntilRow, 5);
   assert.equal(state.board.get('1,0'), 'pink');
+  assert.ok(state.bombs.has('1,0'));
 });
 
 test('shooter fire creates an upward projectile and prevents double firing', () => {

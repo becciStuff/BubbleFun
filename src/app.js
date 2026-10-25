@@ -40,21 +40,33 @@ function playSound(type) {
     const tones = {
       fire: [280, 400, .08], land: [205, 140, .11],
       pop: [590, 950, .17], drop: [320, 190, .19],
-      cascade: [430, 1080, .24], burst: [720, 460, .11],
-      chain: [620, 1320, .29],
+      cascade: [430, 740, .24], burst: [310, 105, .25],
+      chain: [245, 68, .37],
       win: [680, 1100, .35], lose: [230, 90, .4], finish: [380, 240, .25],
     };
     const [from, to, duration] = tones[type] ?? tones.pop;
     const oscillator = audioContext.createOscillator();
     const volume = audioContext.createGain();
-    oscillator.type = type === 'pop' ? 'sine' : 'triangle';
+    const explosion = type === 'chain' || type === 'burst';
+    oscillator.type = explosion ? 'sawtooth' : type === 'pop' ? 'sine' : 'triangle';
     oscillator.frequency.setValueAtTime(from, now);
     oscillator.frequency.exponentialRampToValueAtTime(to, now + duration);
     volume.gain.setValueAtTime(.0001, now);
-    volume.gain.exponentialRampToValueAtTime(.075, now + .012);
+    volume.gain.exponentialRampToValueAtTime(explosion ? .105 : .075, now + .012);
     volume.gain.exponentialRampToValueAtTime(.0001, now + duration);
     oscillator.connect(volume).connect(audioContext.destination);
     oscillator.start(now); oscillator.stop(now + duration + .02);
+    if (explosion) {
+      const crackle = audioContext.createOscillator();
+      const crackleGain = audioContext.createGain();
+      crackle.type = 'square';
+      crackle.frequency.setValueAtTime(990, now);
+      crackle.frequency.exponentialRampToValueAtTime(220, now + .09);
+      crackleGain.gain.setValueAtTime(.045, now);
+      crackleGain.gain.exponentialRampToValueAtTime(.0001, now + .11);
+      crackle.connect(crackleGain).connect(audioContext.destination);
+      crackle.start(now); crackle.stop(now + .12);
+    }
   } catch { /* Audio is an enhancement, never a gameplay requirement. */ }
 }
 
@@ -132,13 +144,13 @@ function setMode(nextMode) {
   $('next-area').hidden = !shooter;
   $('instructions-title').textContent = shooter ? 'Make your shot count.' : 'Find the big groups.';
   $('instructions-copy').textContent = shooter
-    ? 'Match three or more colours. Detached bubbles can now ricochet into matching groups below, triggering chain reactions and growing score multipliers!'
+    ? 'Match three or more colours. Pop a glowing bomb bubble to blast nearby bubbles and set off explosive chains. Anything disconnected tumbles down and bursts!'
     : 'Tap any connected group of two or more matching bubbles. They disappear, the rest fall, and empty columns slide together.';
   $('control-primary').textContent = shooter ? 'Move to aim' : 'Find matching neighbours';
   $('control-secondary').textContent = shooter ? 'Click or tap to shoot' : 'Click or tap a group to pop';
   $('control-keyboard').textContent = shooter ? 'Arrow keys + Space also work' : 'Bigger groups earn more points';
   $('tip-copy').textContent = shooter
-    ? 'Aim for supporting bubbles above same-colour pairs. A falling bubble can become the third match and multiply your points!'
+    ? 'Glowing bubbles are bombs! Include one in a colour match, or detonate it with another bomb. Each blast multiplies your score.'
     : 'A group of 5 earns much more than five groups of 2. Plan a few moves ahead!';
   announce(`${shooter ? 'Bubble Shooter' : 'Bubble Pop'} selected.`);
   updateUI();
@@ -166,7 +178,7 @@ function updateUI() {
   putText('best-value', best[mode].toLocaleString('en-NZ'));
   if (mode === 'shooter') {
     const showCombo = state.comboDisplay > 0 && state.comboLevel >= 2;
-    putText('turn-label', showCombo ? 'CHAIN REACTION' : 'NEXT ROW IN');
+    putText('turn-label', showCombo ? 'EXPLOSIVE COMBO' : 'NEXT ROW IN');
     putText('turns-value', showCombo ? `×${state.comboLevel} COMBO` : `${state.shotsUntilRow} shot${state.shotsUntilRow === 1 ? '' : 's'}`);
     const orb = $('next-orb');
     if (orb.dataset.colour !== state.next) {
@@ -179,10 +191,11 @@ function updateUI() {
   }
   const status = mode === 'shooter'
     ? (state.status === 'clearing' ? 'Final bubbles tumbling down!'
-      : state.comboDisplay > 0 && state.lastChain ? `Chain ×${state.lastChain.multiplier}! +${state.lastChain.points} points!`
-      : state.falling.length ? 'Cascade in progress — watch for matches!'
-      : state.lastDrop ? `${state.lastDrop} bubble${state.lastDrop === 1 ? '' : 's'} dropped!`
-      : state.lastPop ? `${state.lastPop} popped! Keep going!` : 'Aim and shoot to match 3+')
+      : state.pendingBombs.length ? 'Bombs are going off — here comes the chain!'
+      : state.comboDisplay > 0 && state.lastChain ? `${state.lastBombs} bomb${state.lastBombs === 1 ? '' : 's'}! Combo ×${state.lastChain.multiplier}!`
+      : state.falling.length ? 'Gravity cascade — wait for the floor bursts!'
+      : state.lastDrop ? `${state.lastDrop} bubble${state.lastDrop === 1 ? '' : 's'} dropped and bursting!`
+      : state.lastPop ? `${state.lastPop} popped! Keep going!` : 'Match 3+ — glowing bubbles are bombs!')
     : (state.lastPop ? `${state.lastPop} popped! Nice one!` : 'Tap matching groups of 2+');
   putText('game-status', `✦ ${status}`);
 
@@ -222,7 +235,7 @@ function frame(timestamp) {
     playSound(state.lastEvent);
     if (state.lastEvent === 'pop') announce(`${state.lastPop} bubbles popped. Score ${state.score}.`);
     if (state.lastEvent === 'cascade') announce(`Gravity combo! ${state.lastDrop} disconnected bubbles are falling. Score ${state.score}.`);
-    if (state.lastEvent === 'chain') announce(`Chain reaction times ${state.lastChain.multiplier}! ${state.lastChain.points} points. Total score ${state.score}.`);
+    if (state.lastEvent === 'chain') announce(`Bomb explosion! Combo times ${state.lastChain.multiplier}! ${state.lastChain.points} points. Total score ${state.score}.`);
     if (['won', 'lost', 'finished'].includes(state.status)) announce(`Game over. Score ${state.score}.`);
   }
   updateUI();

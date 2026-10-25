@@ -9,6 +9,7 @@ export const LEFT = 27;
 export const TOP = 56;
 export const LAUNCH_Y = 639;
 export const SHOTS_PER_ROW = 5;
+export const BOMB_RADIUS = 86;
 export const COLOURS = ['pink', 'blue', 'yellow', 'green', 'purple'];
 export const SWATCHES = {
   pink: '#ff559c', blue: '#4ac6ff', yellow: '#ffc44b',
@@ -21,7 +22,7 @@ const CLUSTER_THRESHOLD = 2 * RADIUS + 1.2;
 
 function visualState() {
   return {
-    effects: [], pulses: [], callouts: [], shake: 0, flash: 0,
+    effects: [], pulses: [], shockwaves: [], callouts: [], shake: 0, flash: 0,
     event: 0, lastEvent: '', lastPop: 0,
   };
 }
@@ -53,11 +54,36 @@ export function initialShooter(random = Math.random) {
     }
   }
   const colours = Array.from(new Set(board.values()));
+  // Mark existing coloured cells, rather than adding a sixth colour. Players
+  // can aim at the marked bubbles using the normal match-three rules.
+  const bombs = new Set();
+  const candidates = row => Array.from(board.keys()).filter(k => {
+    const [r, c] = k.split(',').map(Number);
+    return r === row && connectedShooter(board, r, c).length >= 2;
+  });
+  const lower = candidates(4);
+  if (lower.length) {
+    const first = lower[Math.floor(random() * lower.length)];
+    bombs.add(first);
+    const [firstRow, firstCol] = first.split(',').map(Number);
+    const centre = shooterPosition(firstRow, firstCol);
+    const nearby = candidates(3).filter(k => {
+      const [r, c] = k.split(',').map(Number);
+      const p = shooterPosition(r, c);
+      return Math.hypot(p.x - centre.x, p.y - centre.y) <= BOMB_RADIUS;
+    });
+    // A nearby bomb of another colour gives players a discoverable, real
+    // two-stage chain without needing an unlikely falling-bubble collision.
+    const different = nearby.filter(k => board.get(k) !== board.get(first));
+    const secondOptions = different.length ? different : nearby;
+    if (secondOptions.length) bombs.add(secondOptions[Math.floor(random() * secondOptions.length)]);
+  }
   return {
-    mode: 'shooter', board, phase: 0, angle: 0, projectile: null,
+    mode: 'shooter', board, bombs, pendingBombs: [], bombClock: 0,
+    phase: 0, angle: 0, projectile: null,
     current: randomColour(colours, random), next: randomColour(colours, random),
     score: 0, shots: 0, shotsUntilRow: SHOTS_PER_ROW, status: 'playing',
-    falling: [], lastDrop: 0, recoil: 0, comboLevel: 0, highestCombo: 1,
+    falling: [], lastDrop: 0, lastBombs: 0, recoil: 0, comboLevel: 0, highestCombo: 1,
     comboDisplay: 0, lastChain: null, pendingRow: false, pendingDanger: false,
     ...visualState(),
   };
@@ -126,30 +152,38 @@ function addPulse(state, x, y, colour, strength = 1) {
   state.flash = Math.max(state.flash, strength * .15);
 }
 
+function addExplosion(state, x, y, colour, strength = 1) {
+  addBurst(state, x, y, colour, Math.round(23 * strength));
+  addPulse(state, x, y, colour, 1.7 * strength);
+  state.pulses.push({ x, y, colour: 'yellow', radius: 5, speed: 320 * strength, life: .47, maxLife: .47 });
+  state.shockwaves.push({ x, y, radius: 10, life: .46, maxLife: .46, strength });
+  state.shake = Math.max(state.shake, 1.1 * strength);
+  state.flash = Math.max(state.flash, .95 * strength);
+}
+
 function addCallout(state, x, y, text, colour = 'yellow') {
   state.callouts.push({ x, y, text, colour, life: 1.15, maxLife: 1.15 });
 }
 
-// Keep detached bubbles as independent physics objects. They leave the grid
-// immediately for correct collision/match rules, but remain visible until
-// gravity carries them away and they explode. Random is injectable for tests.
+// Detached bubbles fall to the floor and burst. They cannot magically match
+// another hanging group on the way down; bomb chains happen on the grid.
 export function releaseFloatingShooter(state, cells, random = Math.random) {
   let count = 0;
   for (const [row, col] of cells) {
     const colour = state.board.get(key(row, col));
     if (!colour) continue;
     const { x, y } = shooterPosition(row, col, state.phase);
+    const bomb = state.bombs.delete(key(row, col));
     state.board.delete(key(row, col));
     state.falling.push({
-      x, y, colour,
-      // Mostly downward paths let players set up intentional chain reactions.
-      vx: (x - WIDTH / 2) * .13 + (random() - .5) * 42,
-      vy: -30 - random() * 42,
-      gravity: 825 + random() * 140,
+      x, y, colour, bomb,
+      vx: (x - WIDTH / 2) * .09 + (random() - .5) * 50,
+      vy: -25 - random() * 40,
+      gravity: 885 + random() * 140,
       spin: (random() - .5) * 3.5,
       rotation: 0,
-      burstAt: 1.28 + random() * .38,
-      sparkleClock: 0, hitCooldown: 0,
+      burstAt: 3.2,
+      sparkleClock: 0,
     });
     count++;
   }
@@ -167,14 +201,14 @@ function pickFromBoard(state, random = Math.random) {
 }
 
 export function fireShooter(state) {
-  // Each cascade finishes before the next turn. Otherwise overlapping shots
-  // would make combo scoring unpredictable and difficult to understand.
-  if (state.status !== 'playing' || state.projectile || state.falling.length) return false;
+  // A shot owns its entire bomb sequence and falling cascade.
+  if (state.status !== 'playing' || state.projectile || state.pendingBombs.length || state.falling.length) return false;
   state.comboLevel = 0;
   state.comboDisplay = 0;
   state.lastChain = null;
   state.lastPop = 0;
   state.lastDrop = 0;
+  state.lastBombs = 0;
   const speed = 810;
   state.projectile = {
     x: WIDTH / 2, y: LAUNCH_Y,
@@ -214,54 +248,61 @@ function landingSlot(state, x, y) {
 }
 
 function removeCells(state, cells, effectCount) {
+  const bombs = [];
   for (const [r, c] of cells) {
     const colour = state.board.get(key(r, c));
     if (!colour) continue;
     const { x, y } = shooterPosition(r, c, state.phase);
+    if (state.bombs.delete(key(r, c))) bombs.push({ x, y, row: r, col: c });
     addBurst(state, x, y, colour, effectCount);
     addPulse(state, x, y, colour, .65);
     state.board.delete(key(r, c));
   }
+  return bombs;
 }
 
-// A falling bubble counts as the third bubble if it strikes an anchored pair
-// (or a larger same-colour group). It is consumed by the reaction, and any
-// newly detached bubbles begin falling on the next physics frame.
-export function triggerChainReaction(state, falling, row, col) {
-  if (state.board.get(key(row, col)) !== falling.colour) return false;
-  const group = connectedShooter(state.board, row, col, state.phase);
-  if (group.length < 2) return false;
-  const { x, y } = shooterPosition(row, col, state.phase);
-  removeCells(state, group, 10);
-  const floating = floatingShooter(state.board, state.phase);
-  const newlyDetached = releaseFloatingShooter(state, floating);
+// A matched bomb explodes on the board. The blast reaches neighbouring cells
+// regardless of colour, and caught bombs are queued for subsequent blasts.
+export function detonateNextBomb(state) {
+  const bomb = state.pendingBombs.shift();
+  if (!bomb) return false;
+  const victims = [];
+  for (const k of state.board.keys()) {
+    const [r, c] = k.split(',').map(Number);
+    const p = shooterPosition(r, c, state.phase);
+    if (Math.hypot(p.x - bomb.x, p.y - bomb.y) <= BOMB_RADIUS) victims.push([r, c]);
+  }
+  state.pendingBombs.push(...removeCells(state, victims, 11));
   state.comboLevel = Math.min(8, Math.max(2, state.comboLevel + 1));
   state.highestCombo = Math.max(state.highestCombo, state.comboLevel);
-  state.comboDisplay = 2.4;
-  const points = (group.length * 20 + newlyDetached * 30) * state.comboLevel;
+  state.comboDisplay = 2.8;
+  state.lastBombs++;
+  const points = (50 + victims.length * 25) * state.comboLevel;
   state.score += points;
-  state.lastPop += group.length + newlyDetached + 1;
-  state.lastDrop += newlyDetached;
-  state.lastChain = { multiplier: state.comboLevel, points, popped: group.length, detached: newlyDetached };
-  state.shake = Math.max(state.shake, Math.min(1.3, .35 + state.comboLevel * .12));
-  addBurst(state, falling.x, falling.y, falling.colour, 13);
-  addPulse(state, falling.x, falling.y, falling.colour, 1.5);
-  addCallout(state, x, y + 23, `CHAIN ×${state.comboLevel}! +${points}`, 'pink');
+  state.lastPop += victims.length;
+  state.lastChain = { multiplier: state.comboLevel, points, popped: victims.length, detonated: state.lastBombs };
+  addExplosion(state, bomb.x, bomb.y, 'yellow', 1.15 + Math.min(.35, state.comboLevel * .05));
+  addCallout(state, bomb.x, bomb.y - 76, `BOOM ×${state.comboLevel}! +${points}`, 'pink');
+  state.bombClock = .22;
   emit(state, 'chain');
   return true;
 }
 
 export function descendShooter(state, random = Math.random) {
   const shifted = new Map();
+  const shiftedBombs = new Set();
   for (const [k, colour] of state.board) {
     const [row, col] = k.split(',').map(Number);
     shifted.set(key(row + 1, col), colour);
+    if (state.bombs.has(k)) shiftedBombs.add(key(row + 1, col));
   }
   state.phase = 1 - state.phase; // Preserves the x positions of existing rows.
   state.board = shifted;
   for (let col = 0; col < shooterColumns(0, state.phase); col++) {
     state.board.set(key(0, col), randomColour(COLOURS.slice(0, 4), random));
+    if (shiftedBombs.size < 4 && random() < .09) shiftedBombs.add(key(0, col));
   }
+  state.bombs = shiftedBombs;
   state.shotsUntilRow = SHOTS_PER_ROW;
   state.pendingRow = false;
   emit(state, 'drop');
@@ -279,6 +320,31 @@ function ceilingReachedLauncher(state) {
   return false;
 }
 
+function settleShooter(state) {
+  const floaters = floatingShooter(state.board, state.phase);
+  const detached = releaseFloatingShooter(state, floaters);
+  state.lastDrop += detached;
+  state.lastPop += detached;
+  state.score += detached * 30;
+  if (detached) {
+    addCallout(state, WIDTH / 2, 370, `GRAVITY! ${detached} FALLING +${detached * 30}`, 'pink');
+    if (!state.lastBombs) emit(state, 'cascade');
+  }
+  if (state.board.size === 0) {
+    if (state.falling.length) state.status = 'clearing';
+    else { state.status = 'won'; emit(state, 'win'); }
+    return;
+  }
+  if (ceilingReachedLauncher(state)) {
+    if (state.falling.length) state.pendingDanger = true;
+    else { state.status = 'lost'; emit(state, 'lose'); return; }
+  }
+  if (state.shotsUntilRow <= 0) {
+    if (state.falling.length) state.pendingRow = true;
+    else descendShooter(state);
+  }
+}
+
 function lockShooter(state) {
   const shot = state.projectile;
   state.projectile = null;
@@ -292,37 +358,20 @@ function lockShooter(state) {
   state.lastDrop = 0;
   if (same.length >= 3) {
     state.comboLevel = 1;
-    removeCells(state, same, 9);
-    const floaters = floatingShooter(state.board, state.phase);
-    state.lastDrop = releaseFloatingShooter(state, floaters);
-    state.lastPop = same.length + floaters.length;
-    state.score += same.length * 20 + floaters.length * 30;
+    state.pendingBombs.push(...removeCells(state, same, 13));
+    state.lastPop = same.length;
+    state.score += same.length * 20;
     state.shake = Math.max(state.shake, Math.min(.9, same.length * .085));
     addPulse(state, impact.x, impact.y, shot.colour, 1.35);
     addCallout(state, impact.x, impact.y - 25, `POP! +${same.length * 20}`, 'yellow');
-    if (state.lastDrop) {
-      addCallout(state, WIDTH / 2, Math.max(122, impact.y + 75), `GRAVITY BONUS +${state.lastDrop * 30}`, 'pink');
-    }
-    emit(state, state.lastDrop ? 'cascade' : 'pop');
+    emit(state, 'pop');
   } else {
     addPulse(state, impact.x, impact.y, shot.colour, .38);
     emit(state, 'land');
   }
   state.shots++;
-  if (state.board.size === 0) {
-    if (state.falling.length) state.status = 'clearing';
-    else { state.status = 'won'; emit(state, 'win'); }
-    return;
-  }
-  if (ceilingReachedLauncher(state)) {
-    if (state.falling.length) state.pendingDanger = true;
-    else { state.status = 'lost'; emit(state, 'lose'); return; }
-  }
   state.shotsUntilRow--;
-  if (state.shotsUntilRow <= 0) {
-    if (state.falling.length) state.pendingRow = true;
-    else descendShooter(state);
-  }
+  if (!state.pendingBombs.length) settleShooter(state);
 }
 
 export function stepGame(state, dt) {
@@ -343,6 +392,11 @@ export function stepGame(state, dt) {
     pulse.life -= dt;
   }
   state.pulses = state.pulses.filter(p => p.life > 0);
+  for (const wave of state.shockwaves) {
+    wave.radius += dt * 285 * wave.strength;
+    wave.life -= dt;
+  }
+  state.shockwaves = state.shockwaves.filter(w => w.life > 0);
   for (const callout of state.callouts) {
     callout.y -= 46 * dt;
     callout.life -= dt;
@@ -350,76 +404,41 @@ export function stepGame(state, dt) {
   state.callouts = state.callouts.filter(c => c.life > 0);
 
   if (state.mode === 'shooter') {
-    // New fallers created by secondary explosions go into state.falling,
-    // while this snapshot is processed exactly once. No double integration.
-    const active = state.falling;
-    state.falling = [];
+    let detonated = false;
+    if (state.pendingBombs.length) {
+      state.bombClock -= dt;
+      if (state.bombClock <= 0) {
+        detonated = detonateNextBomb(state);
+        if (!state.pendingBombs.length) settleShooter(state);
+      }
+    }
     const remaining = [];
     let exploded = 0;
-    let chained = 0;
-    for (const falling of active) {
-      let consumed = false;
-      // Small substeps prevent fast-moving bubbles tunnelling through groups.
-      const steps = Math.max(1, Math.ceil(dt / .009));
-      const tick = dt / steps;
-      for (let step = 0; step < steps; step++) {
-        falling.vy += falling.gravity * tick;
-        falling.x += falling.vx * tick;
-        falling.y += falling.vy * tick;
-        falling.rotation += falling.spin * tick;
-        falling.hitCooldown = Math.max(0, falling.hitCooldown - tick);
-        const leftWall = LEFT + RADIUS;
-        const rightWall = WIDTH - leftWall;
-        if (falling.x < leftWall) { falling.x = leftWall; falling.vx = Math.abs(falling.vx) * .82; }
-        if (falling.x > rightWall) { falling.x = rightWall; falling.vx = -Math.abs(falling.vx) * .82; }
-        if (falling.hitCooldown > 0) continue;
-        for (const [k] of state.board) {
-          const [r, c] = k.split(',').map(Number);
-          const target = shooterPosition(r, c, state.phase);
-          const dx = falling.x - target.x;
-          const dy = falling.y - target.y;
-          const distance = Math.hypot(dx, dy);
-          if (distance >= PITCH - 1.5) continue;
-          if (triggerChainReaction(state, falling, r, c)) {
-            consumed = true;
-            chained++;
-            break;
-          }
-          // Mismatched or lone bubbles ricochet rather than popping.
-          // Resolve the overlap first to avoid being trapped in the board.
-          const nx = distance > .001 ? dx / distance : 0;
-          const ny = distance > .001 ? dy / distance : -1;
-          const overlap = PITCH - 1.5 - distance;
-          falling.x += nx * overlap;
-          falling.y += ny * overlap;
-          const approach = falling.vx * nx + falling.vy * ny;
-          if (approach < 0) {
-            falling.vx -= 1.56 * approach * nx;
-            falling.vy -= 1.56 * approach * ny;
-          }
-          falling.hitCooldown = .095;
-          addSpark(state, falling.x, falling.y, falling.colour, -nx * 65, -ny * 65);
-          break;
-        }
-        if (consumed) break;
+    for (const falling of state.falling) {
+      falling.vy += falling.gravity * dt;
+      falling.x += falling.vx * dt;
+      falling.y += falling.vy * dt;
+      falling.rotation += falling.spin * dt;
+      if (falling.x < LEFT + RADIUS || falling.x > WIDTH - LEFT - RADIUS) {
+        falling.x = Math.max(LEFT + RADIUS, Math.min(WIDTH - LEFT - RADIUS, falling.x));
+        falling.vx *= -.7;
       }
-      if (consumed) continue;
       falling.burstAt -= dt;
       falling.sparkleClock += dt;
       if (falling.sparkleClock >= .06) {
         falling.sparkleClock = 0;
         addSpark(state, falling.x, falling.y, falling.colour, (Math.random() - .5) * 50, -35);
       }
-      if (falling.burstAt <= 0 || falling.y + RADIUS >= HEIGHT - 18) {
-        addBurst(state, falling.x, Math.min(falling.y, HEIGHT - 18), falling.colour, 11);
-        addPulse(state, falling.x, Math.min(falling.y, HEIGHT - 18), falling.colour, .85);
+      if (falling.burstAt <= 0 || falling.y + RADIUS >= HEIGHT - 22) {
+        const floorY = HEIGHT - 22 - RADIUS;
+        addExplosion(state, falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75);
         exploded++;
       } else remaining.push(falling);
     }
-    state.falling.push(...remaining);
+    state.falling = remaining;
     if (exploded) {
-      state.shake = Math.max(state.shake, Math.min(.5, exploded * .09));
-      if (!chained) emit(state, 'burst');
+      state.shake = Math.max(state.shake, Math.min(1.25, exploded * .18));
+      if (!detonated) emit(state, 'burst');
     }
     if (state.board.size === 0 && state.status === 'playing' && !state.projectile) {
       if (state.falling.length) state.status = 'clearing';
