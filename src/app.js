@@ -2,12 +2,19 @@ import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES } from './config.js';
 import { PUZZLES } from './puzzles.js';
 import { initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame } from './game.js';
 import { draw } from './render.js';
-import { VERSION } from './version.js';
+import { loadVersion } from './version.js';
 
 const $ = id => document.getElementById(id);
-// Keep the visible badge in sync with the tested release identifier.
+// The version badge reads a JSON manifest; nothing here needs updating at release time.
 const versionBadge = document.querySelector('.version-number');
-if (versionBadge) versionBadge.textContent = `v${VERSION}`;
+if (versionBadge) {
+  loadVersion()
+    .then(version => { versionBadge.textContent = version; })
+    .catch(error => {
+      console.warn('Could not read BubbleFun version.json', error);
+      versionBadge.textContent = '—';
+    });
+}
 const canvas = $('game-canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
 const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
