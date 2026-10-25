@@ -1,5 +1,6 @@
 import { WIDTH, HEIGHT, RADIUS, SWATCHES } from './config.js';
-import { shooterPosition, shotBubbleCollision } from './grid.js';
+import { shotBubbleCollision } from './grid.js';
+import { bubblePosition } from './positions.js';
 import { drawGravitySupportOverlay } from './gravity-overlay.js';
 import { popPosition, popGroup } from './game.js';
 
@@ -172,7 +173,7 @@ function aimGuide(ctx, state) {
     if (x > high) { x = high - (x - high); vx = -Math.abs(vx); }
     trail.push([x,y]);
     if (y <= top + RADIUS) break;
-    if (shotBubbleCollision(state.board,x,y,state.phase,state.layout)) break;
+    if (shotBubbleCollision(state.board,x,y,state.phase,state.layout,state.attachedPositions)) break;
   }
   for (let i = 5; i < trail.length; i += 5) {
     const [px,py] = trail[i];
@@ -201,10 +202,10 @@ function shooter(ctx, state, seconds, reducedMotion = false) {
   ctx.setLineDash([8,10]);
   ctx.beginPath(); ctx.moveTo(30,launchY-47); ctx.lineTo(width-30,launchY-47); ctx.stroke();
   ctx.setLineDash([]);
-  if (state.variant !== 'lab' && !state.projectile && !state.falling.length && !state.pendingBombs.length && state.status === 'playing') aimGuide(ctx,state);
+  if (state.variant !== 'lab' && !state.projectile && !state.falling.length && !state.pendingBombs.length && !state.introTime && state.rowShift < .5 && state.status === 'playing') aimGuide(ctx,state);
   for (const [k,colour] of state.board) {
     const [row,col] = k.split(',').map(Number);
-    const {x,y:baseY} = shooterPosition(row,col,state.phase,state.layout);
+    const {x,y:baseY} = bubblePosition(state,row,col);
     const entrance = state.introTime ? Math.min(1,Math.max(0,(.78-state.introTime-row*.052)/.3)) : 1;
     const y = baseY - state.rowShift - Math.pow(1 - entrance, 2) * 90;
     const power = state.wobble.get(k) ?? 0;
