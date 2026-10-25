@@ -13,23 +13,28 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 ## Release tracking
 
 **Current maintenance release: v0.5.1.** The refactor and first gravity
-support/weight calculations are internal work; swinging and Gravity Surge
-are **not active** in the playable game yet. We will use **v0.6.0**
-when the first visible gravity mechanics are ready.
+support/weight calculations are internal work. Swaying and Gravity Surge
+are **not active** in the playable game yet. We plan to use **v0.6.0**
+for the first visible gravity mechanics.
 
-The badge, `package.json` and `src/version.js` must always agree.
-Before any future release, bump all three from a Node.js terminal:
+The header badge now simply reads **Version 0.5.1**, loading the number from
+the root `version.json` file. That JSON file is the single source for the
+on-screen version; `package.json` mirrors it for developer tooling and tests
+prevent the two from drifting.
+
+To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch
-# or, when introducing a visible feature:
-npm run version:minor
+npm run version:patch   # e.g. 0.5.1 → 0.5.2
+# or
+npm run version:minor   # e.g. 0.5.1 → 0.6.0
 npm test
 ```
 
-The release helper updates the HTML fallback as well; `tests/version.test.js`
-prevents inconsistent identifiers from being merged. A version bump is
-**intentional for each release**, not every individual git commit.
+Commit both changed files (`version.json` and `package.json`) with
+the release. The version increases for releases, **not automatically
+for every Git commit**. The browser fetches `version.json` without
+using the browser cache, so a deployed release shows its updated number.
 
 ## What's new in v0.5 — Puzzles & responsive playfields
 
