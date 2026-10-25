@@ -1,5 +1,6 @@
 import { WIDTH, HEIGHT, RADIUS, SWATCHES } from './config.js';
 import { shooterPosition, shotBubbleCollision } from './grid.js';
+import { drawGravitySupportOverlay } from './gravity-overlay.js';
 import { popPosition, popGroup } from './game.js';
 
 const shade = (hex, amount) => {
@@ -188,19 +189,19 @@ function aimGuide(ctx, state) {
   }
 }
 
-function shooter(ctx, state, seconds) {
+function shooter(ctx, state, seconds, reducedMotion = false) {
   const {width,height,launchY} = state.layout;
   const chainActive = state.comboLevel >= 2 && state.comboDisplay > 0;
-  const bannerWidth = state.variant === 'puzzle' ? 310 : chainActive ? 235 : 227;
+  const bannerWidth = state.variant === 'puzzle' ? 310 : state.variant === 'lab' ? 330 : chainActive ? 235 : 227;
   roundRect(ctx, (width - bannerWidth)/2, 17, bannerWidth, 24, 12,
     chainActive ? 'rgba(225,61,154,.65)' : 'rgba(13,20,72,.4)');
-  label(ctx, chainActive ? `EXPLOSIVE COMBO ×${state.comboLevel}` : state.variant === 'puzzle' ? `PUZZLE ${state.puzzleIndex + 1} · ${state.puzzleName.toUpperCase()}` : 'MATCH 3+ · DETONATE BOMBS', width/2, 29,
+  label(ctx, state.variant === 'lab' ? 'GRAVITY LAB · SUPPORT EXPERIMENT' : chainActive ? `EXPLOSIVE COMBO ×${state.comboLevel}` : state.variant === 'puzzle' ? `PUZZLE ${state.puzzleIndex + 1} · ${state.puzzleName.toUpperCase()}` : 'MATCH 3+ · DETONATE BOMBS', width/2, 29,
     chainActive ? '#fff0b3' : '#acbdfa', 11);
   ctx.strokeStyle = `rgba(255,148,198,${.17 + Math.sin(seconds * 2) * .045})`; ctx.lineWidth = 1.3;
   ctx.setLineDash([8,10]);
   ctx.beginPath(); ctx.moveTo(30,launchY-47); ctx.lineTo(width-30,launchY-47); ctx.stroke();
   ctx.setLineDash([]);
-  if (!state.projectile && !state.falling.length && !state.pendingBombs.length && state.status === 'playing') aimGuide(ctx,state);
+  if (state.variant !== 'lab' && !state.projectile && !state.falling.length && !state.pendingBombs.length && state.status === 'playing') aimGuide(ctx,state);
   for (const [k,colour] of state.board) {
     const [row,col] = k.split(',').map(Number);
     const {x,y:baseY} = shooterPosition(row,col,state.phase,state.layout);
@@ -213,6 +214,7 @@ function shooter(ctx, state, seconds) {
     if (state.bombs.has(k)) bombMark(ctx,0,0,seconds);
     ctx.restore();
   }
+  if (state.variant === 'lab') drawGravitySupportOverlay(ctx, state, seconds, reducedMotion);
   // Detached bubbles no longer disappear: gravity takes over until they burst.
   for (const falling of state.falling) {
     ctx.save();
@@ -223,6 +225,7 @@ function shooter(ctx, state, seconds) {
     star(ctx, -12, 14, 3.1, .75, '#fff5df');
     ctx.restore();
   }
+  if (state.variant !== 'lab') {
   const x = width/2;
   ctx.save();
   ctx.translate(x,launchY+8+state.recoil*7);
@@ -242,6 +245,10 @@ function shooter(ctx, state, seconds) {
     ctx.restore();
   }
   label(ctx,state.variant === 'puzzle' ? `${state.bombs.size} TARGET${state.bombs.size===1?'':'S'} REMAINING` : 'BUBBLE LAUNCHER',x,height-17,'#a596d1',10);
+  } else {
+    label(ctx, state.gravityLabUsed ? 'PRESS LOAD TEST BOARD TO TRY AGAIN' : 'PRESS GRAVITY SURGE TO TEST SUPPORTS',
+      width / 2, height - 17, '#e7d5ff', 11);
+  }
 }
 
 function popBoard(ctx, state, hover) {
@@ -331,7 +338,7 @@ export function draw(ctx, state, hover, seconds=0, reducedMotion=false) {
     const strength = state.shake * 5;
     ctx.translate(Math.sin(seconds*89)*strength, Math.cos(seconds*71)*strength*.66);
   }
-  if(state.mode==='shooter') shooter(ctx,state,seconds);
+  if(state.mode==='shooter') shooter(ctx,state,seconds,reducedMotion);
   else popBoard(ctx,state,hover);
   effects(ctx,state);
   ctx.restore();

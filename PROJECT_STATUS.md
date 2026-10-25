@@ -4,16 +4,16 @@
 
 **Last reviewed:** 26 October 2026 (NZ)  
 **Repository:** [becciStuff/BubbleFun](https://github.com/becciStuff/BubbleFun)  
-**Working branch:** `fix/version-json-header` (simplified header + JSON version source, awaiting review)  
-**Prototype version:** `0.5.1` (released maintenance version; next visible gravity milestone planned as v0.6.0)  
-**Current phase:** G1 support/weight calculations merged but dormant in normal play; version JSON/header update pending; G2 visual gravity work next  
+**Working branch:** `feature/gravity-lab-g2` (v0.6.0 experimental Gravity Lab for review)  
+**Prototype version:** `0.6.0` on G2 review branch (`version.json` + `package.json`)  
+**Current phase:** G2 visible Gravity Lab and test-only Surge added on review branch. Normal modes remain unchanged.  
 **Pre-refactor reference commit:** `fe1b23ccabcd7f52261fd3a45e1c73c15be0146c`
 
 ## One-minute summary
 
 BubbleFun is a free, static browser bubble-shooter prototype, written in plain HTML, CSS and JavaScript. The playable modes are **Arcade** and **Puzzles**. We want to grow it into a polished, physics-led rescue adventure about cute creatures called **Fizzlings**, with clever gravity, strategic special shots, bosses and earned-only in-game coins.
 
-**The immediate priority:** validate weight and independent support analysis in `src/supports.js` before connecting extreme gravity to gameplay. The modular refactor is merged. `game.js` still owns scoring and turns. See [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for the new physics roadmap.
+**The immediate priority:** review the G2 experimental lab, verify CI and manually test visuals on desktop/mobile. `supports.js` owns support calculations; `gravity.js` owns falling; `gravity-lab.js` owns preset data; the UI is isolated from game physics. See [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md).
 
 ## What is working now
 
@@ -32,7 +32,7 @@ BubbleFun is a free, static browser bubble-shooter prototype, written in plain H
 
 ## What is *not* implemented yet
 
-- A playable attached-bubble gravity engine: movement, springy sway, live hitboxes, visual strain and an activatable Extreme Gravity special. **G1 adds support/weight calculations and an opt-in release API only**.
+- A finished attached-bubble physics system: springy sway, live moving hitboxes and a balanced Gravity Surge special for real levels. **G2 adds a visible diagnostic and a deliberately isolated test button only**.
 - Piercing Fireball, horizontal/vertical blasts, Gravity Surge and the planned purchasable special shots.
 - Guide-off scoring bonus and multi-colour collateral bonus.
 - Fizzling characters, trapped friends/family, rescue animations, story progression, worlds and boss levels.
@@ -64,7 +64,7 @@ src/config.js    Layouts, colours and shared constants
 src/grid.js      Hex-grid geometry, matching, ceiling connectivity and shot hits
 src/puzzles.js   Puzzle designs and pure board/target setup
 src/gravity.js   Detached-cluster decisions, falling motion and optional surge release
-src/supports.js  Pure support graph, weights, roof anchors and strain (G1 branch)
+src/supports.js  Pure support graph, weights, roof anchors and strain
 src/game.js      Shooter orchestration, scoring and bomb chains
 tests/game.test.js
 tests/grid.test.js     Grid geometry, connectivity and collision tests
@@ -73,8 +73,12 @@ tests/gravity.test.js  Gravity regression tests
 src/effects.js    Visual effect data and animation updates
 src/pop-mode.js   Archived Bubble Pop mode
 tests/modules.test.js   Extraction regression tests
-tests/supports.test.js Support structure, load and surge planning (G1 branch)
-tests/surge.test.js    Physics integration without scoring (G1 branch)
+tests/supports.test.js Support structure, load and surge planning
+tests/surge.test.js    Physics integration without scoring
+src/gravity-lab.js   Test-board definition (G2 branch)
+src/gravity-hints.js Support marker data (G2 branch)
+src/gravity-overlay.js Canvas warning graphics (G2 branch)
+tests/gravity-lab.test.js Lab workflow and safety checks (G2 branch)
 package.json     ES modules; npm test uses node --test
 GRAVITY_DESIGN.md  Support model, limitations and staged physics roadmap
 VISION.md        Game vision and feature roadmap
@@ -82,31 +86,34 @@ REFACTORING.md   Proposed technical reorganisation
 PROJECT_STATUS.md  This handover
 ```
 
-The original refactor modules (`config.js`, `grid.js`, `puzzles.js`, `gravity.js`, `effects.js`, and `pop-mode.js`) are merged on `main`. The new `supports.js` and G1 tests are on the review branch; no player-facing gravity controls were added.
+All structural refactor modules plus G1 `supports.js` are merged on `main`. G2's lab board, warning overlay, Arcade test controls and browser smoke tests are on the review branch.
 
 ## Next development work
 
-**Active milestone: G1 physics prototype, separate from the structural refactor.** PR #4 was merged. G1 was merged in PR #5. The new version synchronisation fix is on a separate review branch.
+**Active milestone: G2 Gravity Lab (review branch).** The structural refactor, G1 support model, version fix and JSON header are merged. PR #8 proposes v0.6.0 with lab-only visible gravity.
 
 - [x] **Phase 0 — baseline:** Existing bomb/cascade/falling/row-timing tests retained, with added direct-hit and detached-chain regression cases.
 - [x] **Phase 1 — configuration and grid:** Extracted shared constants, hex coordinates, neighbour traversal and ceiling connectivity to `config.js` and `grid.js`; guide and projectile now share one collision predicate, with focused grid tests.
 - [x] **Phase 2 — puzzles:** Isolated puzzle data and fresh board/target construction; added focused tests, including all three real solutions on both layouts.
 - [x] **Phase 3 — gravity (merged):** Moved current ceiling-detachment policy and falling simulation to `gravity.js`, exposing synchronous spark/burst callbacks while scoring and game outcomes stay in `game.js`.
 - [x] **Phase 4 — tidy orchestration (merged):** Extracted effects and archived Pop logic; `game.js` remains the turn coordinator.
-- [x] **G1 prototype code (on review branch):** Add independent ceiling-anchor and vulnerable-bridge analysis, weight and configurable stickiness, plus an explicit opt-in surge-release API.
+- [x] **G1 prototype code (merged in PR #5):** Add independent ceiling-anchor and vulnerable-bridge analysis, weight and configurable stickiness, plus an explicit opt-in surge-release API.
 - [x] **G1 merge:** PR #5 merged and the 62-test GitHub Actions suite passed.
 - [x] **Version bump infrastructure:** PR #6 merged v0.5.1 and release-bump commands.
 - [ ] **JSON version display:** Review PR for root `version.json` source, `Version` label, and JSON-driven release bumps; tests must pass before merge.
-- [ ] **Future G2:** Visual strain feedback and player activation; G3 load sharing; G4 moving attached clusters with collision/aim/render parity.
+- [x] **G2 prototype (review branch):** Show amber weak-support and mint independent-brace indicators; load a deterministic board; trigger one test Surge; retain scoring and gameplay separation.
+- [x] **G2 automated verification:** `npm test` passed (72 tests). Chromium browser smoke passed at 1300px desktop and 390px mobile viewport (workflow run `40244663784`).
+- [ ] **G2 PR merge and hands-on playtesting:** Merge PR #8 after reviewing its interface; check real devices and GitHub Pages deployment.
+- [ ] **Future G3/G4:** Improve load sharing, then introduce moving attached clusters with collision/aim/render parity.
 - [ ] **Browser verification:** Recheck desktop/mobile and GitHub Pages once gravity is wired into gameplay.
 
-The G1 prototype intentionally has **no effect on normal play**. The physics engine can release vulnerable cells if an external caller explicitly requests it. See [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md).
+The G2 Gravity Lab allows a player to try Surge on a dedicated test board. Arcade and puzzle rules are unchanged. See [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md).
 
 ## Verification and current risks
 
-- **G1 verification:** GitHub Actions passed all 62 tests on gravity PR #5. Version PR #6 tests passed (64 total). The JSON version-display PR adds new loader and bump tests; check its CI before merging.
-- **Browser behaviour:** No player-facing changes are intentionally wired into the loop. New G1 browser and mobile tests remain pending.
-- **Not yet verified:** A live GitHub Pages deployment, mobile browser interaction and the full manual gameplay checklist. Do not mark them as passed based only on Node tests or a desktop smoke test.
+- **Automated verification:** G2 CI passed 72 Node tests, zero failures; the Chromium browser smoke passed on desktop and mobile viewports. The separate version JSON PR #7 is merged.
+- **Browser behaviour:** Gravity Lab opens, markers render, Surge releases the weak chain, the independently braced structure remains, and choosing a puzzle hides the lab. Browser automation checked both 1300px and 390px viewports.
+- **Not yet verified:** A live GitHub Pages deployment and hands-on mobile/touch playtesting. Browser automation is not a substitute for those checks.
 - **Engineering design:** Keep the dependency chain `config → grid → supports → gravity → game`; avoid circular imports or a growing `game.js`.
 - **Future risk:** Visually moving attached bubbles must use the same live positions for rendering, projectile collision and aim guide.
 - **Model limitation:** The first support model captures single roof-anchor regions and cut bonds, but does not yet distribute load across multiple ceiling supports.
@@ -117,7 +124,7 @@ Use the GitHub repository as the source of truth, not the previous chat's memory
 
 > We're continuing BubbleFun: https://github.com/becciStuff/BubbleFun  
 > Please read `PROJECT_STATUS.md`, `REFACTORING.md`, `VISION.md` and the current source before editing.  
-  > All four refactoring phases and G1 support analysis are merged. Version display JSON integration is in `fix/version-json-header`; reserve v0.6.0 for the first visible gravity changes. No physics movement or Gravity Surge activation is present during normal play.
+  > All four refactoring phases and G1 support analysis are merged. JSON version display was merged in PR #7. G2 Gravity Lab is in `feature/gravity-lab-g2` targeting **v0.6.0**. It is a demo only, not a real level special. No physics movement or Gravity Surge activation is present during normal play.
 
 ## Update rules for future sessions
 
@@ -131,4 +138,4 @@ After each meaningful implementation or design session:
 
 ---
 
-*Updated for version tracking after the G1 merge. Gravity swaying and player-triggered Surge are not implemented.*
+*Updated for G2 Gravity Lab review. Lab-only Surge is interactive; moving attached bubbles and a balanced in-game special are not yet implemented.*

@@ -1,8 +1,9 @@
 # BubbleFun gravity development
 
-**Checkpoint: G1 — support and weight model on a review branch.**
-This describes the first new physics code, not a claim that the playable gravity
-mechanic, swinging, or Gravity Surge special is finished.
+**Checkpoint: G2 — experimental Gravity Lab in v0.6.0 (review branch).**
+G1 weight/support analysis is merged. G2 introduces an interactive, visual
+lab demonstration without altering normal Arcade or puzzle difficulty.
+Attached-bubble swinging is **not implemented**.
 
 ## Modular design
 
@@ -49,13 +50,31 @@ the support analyser.
   *existing* detached-bubble falling engine. It does not award points,
   trigger a sound or decide game outcomes.
 
-The normal turn loop does **not** call `releaseGravitySurge`. There is no button
-or keyboard shortcut for this prototype, and no visible gameplay change yet.
-That's intentional: the new behaviour gets validated before we connect it to a
-special shot or a level.
+The normal Arcade and puzzle turn loops **do not** call `releaseGravitySurge`.
+G2 adds a **lab-only** button and a deterministic comparison board. There is
+still no earned special shot or gravity-induced breakage in standard gameplay.
 
 **Initial prototype settings** (`force: 1.5`, `threshold: 1`,
 `bondStrength: 1`) are placeholders for playtesting, not final balance values.
+
+## G2: what players can actually see
+
+- In **Arcade**, press **Load test board** in Gravity Lab.
+- Amber-marked attachments show an overloaded single-ceiling-support chain.
+  Mint-marked attachments identify the stronger, independently braced group.
+- Press **Gravity Surge** once to release the vulnerable chain. The supported
+  group remains attached. Detached objects use the existing falling physics.
+- Press **Load test board** to try again. Restart returns to normal Arcade.
+- The lab pauses firing and never saves a high score. Puzzles and standard
+  Arcade cannot trigger the experimental Surge.
+- Markers are a **diagnostic visual** on fixed grid positions, not simulated
+  bending or sway. Hit detection and rendering still share the fixed grid
+  geometry, preserving aiming fairness.
+
+`gravity-lab.js` provides a deterministic board; `gravity-hints.js`
+prepares marker geometry from `analyseSupports`, and
+`gravity-overlay.js` draws the markers without owning game logic.
+`game.js` handles the explicit test action and its turn-safety checks.
 
 ## Known limitations and next work
 
@@ -65,8 +84,9 @@ special shot or a level.
    They may need a separate overloading model.
 2. **No attached-body movement:** there is no spring solver, live displacement,
    visible stretching, or swaying in G1.
-3. **No user activation:** Gravity Surge will need an explicit game action,
-   ownership of scoring, a turn lifecycle and audiovisual warnings.
+3. **Experimental activation only:** G2 has a lab-only button and falling
+   feedback; a balanced, earned Gravity Surge special for actual levels and
+   scoring still needs separate design.
 4. **Collision fairness:** attached moving bubbles must later share the *same
    current physical coordinates* with projectile collisions, aim guide and
    renderer. Keep that invariant non-negotiable.
@@ -75,9 +95,8 @@ special shot or a level.
 
 ## Proposed follow-up milestones
 
-- **G2: visual stress diagnostic and deliberate activation.** Show weak links
-  legibly; let a player trigger a temporary prototype Surge without making
-  puzzles impossible; award outcomes through `game.js` only.
+- **G2: visual stress diagnostic and deliberate activation (v0.6.0).**
+  Isolated Gravity Lab with warnings and button; normal levels remain unchanged.
 - **G3: improved load sharing, stickiness and support failure.** Tune force
   thresholds against isolated test boards including heavy dual supports.
 - **G4: constrained, damped sway.** Add a single authoritative live position
@@ -92,4 +111,6 @@ staggered phases, desktop/mobile geometry, side-effect-free planning and error
 cases. `tests/surge.test.js` checks the opt-in release and keeps scoring with
 the game coordinator. The GitHub Action runs `npm test` on PRs.
 
-Only label G1 complete after its tests have passed and its PR is merged.
+G1 was merged in PR #5. G2's automated tests cover physics and both board
+layouts; its Chromium desktop/mobile smoke workflow confirms the lab controls,
+Surge falling and puzzle isolation. A separate real-device playtest remains useful.

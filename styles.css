@@ -92,6 +92,19 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
 .score-cell:last-child { background: #fde1eb; }
 .score-cell:last-child span { color: #bf7594; }
 .score-cell:last-child strong { font-size: 17px; color: #9c476f; }
+/* Small, independent Gravity Lab UI. Hidden in puzzle mode. */
+.gravity-lab-panel { margin: 9px 0 10px; padding: 11px 13px; border-radius: 14px; border: 1px solid #c8b1e3; background: #ede5fa; }
+.gravity-lab-panel[hidden] { display: none; }
+.gravity-lab-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: #594281; font-size: 10px; letter-spacing: .5px; }
+.gravity-lab-heading span { color: #917cae; font-size: 8px; font-weight: 900; letter-spacing: .9px; }
+.gravity-lab-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+.gravity-lab-actions button { flex: 1; min-width: 130px; border: 1px solid #bda9d7; border-radius: 10px; background: #fffafd; color: #49336b; padding: 9px; font-size: 11px; font-weight: 900; }
+.gravity-lab-actions button:not(:disabled):hover { background: #fff0fa; }
+.gravity-lab-actions .gravity-surge-button:not(:disabled) { background: #633f96; color: #fff; border-color: #633f96; }
+.gravity-lab-actions .gravity-surge-button:not(:disabled):hover { background: #7d4caf; }
+.gravity-lab-actions button:disabled { opacity: .53; cursor: not-allowed; }
+.gravity-lab-panel p { margin: 8px 0 0; color: #77638f; line-height: 1.4; font-size: 10px; }
+
 .mission-strip { padding: 11px 17px; margin-bottom: 9px; border-radius: 12px; background: linear-gradient(105deg,#5b3d87,#75519b); color:#fff1cc; font-size:12px; font-weight:900; letter-spacing:.35px; box-shadow:inset 0 1px #ffffff2b; }
 .mission-strip[hidden] { display:none; }
 .stage-wrap { position: relative; overflow: hidden; border-radius: 13px; background: #192258; box-shadow: 0 2px 0 #fff9, inset 0 1px 10px #091032; isolation: isolate; }
