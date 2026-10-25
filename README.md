@@ -50,7 +50,7 @@ Then visit `http://localhost:8000/`. Using a local server is recommended because
 
 Both play styles support a restart button, optional sound effects and separate local high scores. **Left/Right** arrow keys and **Space** work on a keyboard. Glossy reflections, particle trails, expanding burst rings, floating score pop-ups and subtle impact feedback add an arcade feel. Sound starts muted, and screen shake is disabled when reduced motion is preferred.
 
-The archived **Bubble Pop** rules and tests remain in `src/game.js` but the mode is not presented in the UI.
+The archived **Bubble Pop** rules remain in `src/pop-mode.js` and are tested but the mode is not presented in the UI.
 
 ## Run tests
 
@@ -72,13 +72,16 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/grid.js` — hex-grid geometry, matching, ceiling support and shared hit detection
 - `src/puzzles.js` — handcrafted puzzle layouts, targets, ammunition and fresh board creation
 - `src/gravity.js` — detached-bubble detection, release, falling motion and impact notifications
-- `src/game.js` — game rules, scoring, effects and turn orchestration, retaining legacy exports during the refactor
+- `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
+- `src/effects.js` — visual effect creation, particles and effect lifetimes
+- `src/pop-mode.js` — archived Bubble Pop logic (not shown in the UI)
 - `src/render.js` — responsive canvas bubble graphics, aim guide and effects
 - `src/app.js` — input, menus, scores, optional sound and persistence
 - `tests/game.test.js` — gameplay regression tests, desktop geometry and verified puzzle solutions
 - `tests/grid.test.js` — grid geometry, connectivity and projectile hit testing
 - `tests/puzzles.test.js` — puzzle board definitions, desktop/mobile layouts and real solutions
 - `tests/gravity.test.js` — independent detachment, falling physics, wall bounce and burst timing tests
+- `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
 ## Ideas for later
 
