@@ -1,6 +1,6 @@
 # BubbleFun — refactoring plan
 
- > **Status: Phase 4 ready for review.** Phases 0–3 are merged into `main`; visual effects and the archived Pop mode have been extracted on `refactor/final-cleanup-phase4`. The final regression checks and merge are pending. Advanced gravity is still future feature work.
+  > **Status: All four structural phases merged.** New gravity features now live in a separate, staged plan: [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md). G1 support analysis is on a review branch.
 
 ## Why refactor now?
 
@@ -99,7 +99,7 @@ For a small initial migration, wrapper functions or re-exports from `game.js` ar
 
 **Checkpoint:** no gameplay changes, no phantom collisions, and no shots allowed during unresolved cascades.
 
-### 4. Reduce `game.js` to orchestration (implemented on review branch)
+### 4. Reduce `game.js` to orchestration (merged)
 
 - Extract effect creation/update code to `effects.js`, if the extraction makes dependencies cleaner.
 - Isolate dormant Bubble Pop functions in `pop-mode.js`; keep them tested but do **not** put Bubble Pop back on the menu.
