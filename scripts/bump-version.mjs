@@ -23,7 +23,7 @@ if (!['patch', 'minor', 'major'].includes(part)) {
   else parts[2]++;
   const next = parts.join('.');
   const outputs = [
-    packageSource.replace(/("version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")/, '$1' + next + '$2'),
+    packageSource.replace(/("version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")/, (_match, before, after) => before + next + after),
     moduleSource.replace(/export const VERSION = '[0-9]+\.[0-9]+\.[0-9]+';/, "export const VERSION = '" + next + "';"),
     htmlSource.replace(/<span class="version-number">v[0-9]+\.[0-9]+\.[0-9]+<\/span>/, '<span class="version-number">v' + next + '</span>'),
   ];
