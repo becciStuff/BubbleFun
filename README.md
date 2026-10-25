@@ -10,6 +10,27 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
+## Release tracking
+
+**Current maintenance release: v0.5.1.** The refactor and first gravity
+support/weight calculations are internal work; swinging and Gravity Surge
+are **not active** in the playable game yet. We will use **v0.6.0**
+when the first visible gravity mechanics are ready.
+
+The badge, `package.json` and `src/version.js` must always agree.
+Before any future release, bump all three from a Node.js terminal:
+
+```bash
+npm run version:patch
+# or, when introducing a visible feature:
+npm run version:minor
+npm test
+```
+
+The release helper updates the HTML fallback as well; `tests/version.test.js`
+prevents inconsistent identifiers from being merged. A version bump is
+**intentional for each release**, not every individual git commit.
+
 ## What's new in v0.5 — Puzzles & responsive playfields
 
 - **Real landscape desktop board:** the browser width selects a 760 × 580 playfield with 16/15 alternating columns, while narrower screens get the 432 × 700 portrait board with 9/8 columns. Mouse, touch and keyboard remain supported.

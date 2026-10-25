@@ -1,10 +1,12 @@
 {
   "name": "bubblefun",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "type": "module",
   "description": "A free, dependency-free bubble arcade for the browser",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "version:patch": "node scripts/bump-version.mjs patch",
+    "version:minor": "node scripts/bump-version.mjs minor"
   }
 }
