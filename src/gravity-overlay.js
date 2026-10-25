@@ -22,18 +22,8 @@ export function drawGravitySupportOverlay(ctx, state, seconds, reducedMotion = f
     ctx.beginPath();
     ctx.arc(mark.start.x, mark.start.y, RADIUS + 4 * pulse, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.font = 'bold 10px Nunito, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const text = danger ? `LOAD ${mark.weight}` : 'BRACED';
-    const x = mark.start.x;
-    const y = mark.start.y - RADIUS - 18;
-    const half = danger ? 27 : 29;
-    ctx.fillStyle = 'rgba(15,18,55,.92)';
-    ctx.fillRect(x - half, y - 8, half * 2, 16);
-    ctx.fillStyle = stroke;
-    ctx.fillText(text, x, y);
+    // Keep warnings graphical; labels up here would overlap the game banner.
+    // The accessible HTML panel explains amber vs mint and the supported load.
     ctx.restore();
   }
 }
