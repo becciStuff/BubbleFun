@@ -1,45 +1,26 @@
 // Pure-ish game rules. Rendering, input, audio and storage live elsewhere so
 // future power-ups, levels and themes can be added without rewriting the rules.
-export const MOBILE_LAYOUT = Object.freeze({ width: 432, height: 700, left: 27, top: 56, launchY: 639, columns: 9 });
-export const DESKTOP_LAYOUT = Object.freeze({ width: 760, height: 580, left: 44, top: 54, launchY: 527, columns: 16 });
-export const WIDTH = MOBILE_LAYOUT.width;
-export const HEIGHT = MOBILE_LAYOUT.height;
-export const RADIUS = 21;
-export const PITCH = RADIUS * 2;
-export const ROW_HEIGHT = Math.sqrt(3) * RADIUS;
-export const LEFT = 27;
-export const TOP = 56;
-export const LAUNCH_Y = 639;
-export const SHOTS_PER_ROW = 5;
-export const BOMB_RADIUS = 86;
-// A few pixels of grace let near-tangent shots skim past. The guide uses the
-// exact same distance; packed clusters remain physically impassable.
-export const SHOT_HIT_DISTANCE = PITCH - 4.5;
-export const COLOURS = ['pink', 'blue', 'yellow', 'green', 'purple'];
-export const SWATCHES = {
-  pink: '#ff559c', blue: '#4ac6ff', yellow: '#ffc44b',
-  green: '#51de9b', purple: '#a78afb',
-};
+import { MOBILE_LAYOUT, RADIUS, PITCH, ROW_HEIGHT, LEFT, SHOTS_PER_ROW, BOMB_RADIUS, COLOURS } from './config.js';
+import {
+  cellKey as key, shooterColumns, shooterPosition, shooterNeighbours as neighbours,
+  connectedShooter, floatingShooter, shotBubbleCollision,
+} from './grid.js';
 
-const key = (row, col) => `${row},${col}`;
+// Keep the existing public API during the refactor, so current tests and any
+// consumers importing from game.js continue to work.
+export {
+  MOBILE_LAYOUT, DESKTOP_LAYOUT, WIDTH, HEIGHT, RADIUS, PITCH, ROW_HEIGHT,
+  LEFT, TOP, LAUNCH_Y, SHOTS_PER_ROW, BOMB_RADIUS, SHOT_HIT_DISTANCE,
+  COLOURS, SWATCHES,
+} from './config.js';
+export { shooterColumns, shooterPosition, connectedShooter, floatingShooter } from './grid.js';
+
 const randomColour = (colours, random = Math.random) => colours[Math.floor(random() * colours.length)];
-const CLUSTER_THRESHOLD = 2 * RADIUS + 1.2;
 
 function visualState() {
   return {
     effects: [], pulses: [], shockwaves: [], callouts: [], shake: 0, flash: 0,
     event: 0, lastEvent: '', lastPop: 0,
-  };
-}
-
-export function shooterColumns(row, phase = 0, layout = MOBILE_LAYOUT) {
-  return (row + phase) % 2 === 0 ? layout.columns : layout.columns - 1;
-}
-
-export function shooterPosition(row, col, phase = 0, layout = MOBILE_LAYOUT) {
-  return {
-    x: layout.left + RADIUS + col * PITCH + (((row + phase) % 2) ? RADIUS : 0),
-    y: layout.top + RADIUS + row * ROW_HEIGHT,
   };
 }
 
@@ -140,46 +121,6 @@ export function initialPuzzle(index = 0, layout = MOBILE_LAYOUT, random = Math.r
   state.next = puzzle.ammo[1];
   state.introTime = .72;
   return state;
-}
-
-function neighbours(board, row, col, phase, layout = MOBILE_LAYOUT) {
-  const origin = shooterPosition(row, col, phase, layout);
-  const nearby = [];
-  for (let r = Math.max(0, row - 1); r <= row + 1; r++) {
-    for (let c = Math.max(0, col - 1); c <= Math.min(shooterColumns(r, phase, layout) - 1, col + 1); c++) {
-      if (r === row && c === col) continue;
-      if (!board.has(key(r, c))) continue;
-      const p = shooterPosition(r, c, phase, layout);
-      if (Math.hypot(origin.x - p.x, origin.y - p.y) <= CLUSTER_THRESHOLD) nearby.push([r, c]);
-    }
-  }
-  return nearby;
-}
-
-export function connectedShooter(board, row, col, phase = 0, colourOnly = true, layout = MOBILE_LAYOUT) {
-  const original = board.get(key(row, col));
-  if (!original) return [];
-  const found = new Set([key(row, col)]);
-  const queue = [[row, col]];
-  for (let i = 0; i < queue.length; i++) {
-    for (const [nr, nc] of neighbours(board, ...queue[i], phase, layout)) {
-      const k = key(nr, nc);
-      if (found.has(k) || (colourOnly && board.get(k) !== original)) continue;
-      found.add(k);
-      queue.push([nr, nc]);
-    }
-  }
-  return queue;
-}
-
-export function floatingShooter(board, phase = 0, layout = MOBILE_LAYOUT) {
-  const connected = new Set();
-  for (let col = 0; col < shooterColumns(0, phase, layout); col++) {
-    const start = key(0, col);
-    if (!board.has(start) || connected.has(start)) continue;
-    for (const [r, c] of connectedShooter(board, 0, col, phase, false, layout)) connected.add(key(r, c));
-  }
-  return Array.from(board.keys()).filter(k => !connected.has(k)).map(k => k.split(',').map(Number));
 }
 
 function addBurst(state, x, y, colour, count = 5) {
@@ -560,13 +501,9 @@ export function stepGame(state, dt) {
     if (shot.x < low) { shot.x = low + (low - shot.x); shot.vx = Math.abs(shot.vx); }
     if (shot.x > high) { shot.x = high - (shot.x - high); shot.vx = -Math.abs(shot.vx); }
     if (shot.y <= state.layout.top + RADIUS) { shot.y = state.layout.top + RADIUS; lockShooter(state); break; }
-    for (const [k] of state.board) {
-      const [row, col] = k.split(',').map(Number);
-      const p = shooterPosition(row, col, state.phase, state.layout);
-      if (Math.hypot(shot.x - p.x, shot.y - p.y) < SHOT_HIT_DISTANCE) {
-        lockShooter(state);
-        break;
-      }
+    if (shotBubbleCollision(state.board, shot.x, shot.y, state.phase, state.layout)) {
+      lockShooter(state);
+      break;
     }
   }
 }

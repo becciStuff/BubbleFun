@@ -1,7 +1,6 @@
-import {
-  WIDTH, HEIGHT, RADIUS, SHOT_HIT_DISTANCE,
-  SWATCHES, shooterPosition, popPosition, popGroup,
-} from './game.js';
+import { WIDTH, HEIGHT, RADIUS, SWATCHES } from './config.js';
+import { shooterPosition, shotBubbleCollision } from './grid.js';
+import { popPosition, popGroup } from './game.js';
 
 const shade = (hex, amount) => {
   const n = parseInt(hex.slice(1), 16);
@@ -172,13 +171,7 @@ function aimGuide(ctx, state) {
     if (x > high) { x = high - (x - high); vx = -Math.abs(vx); }
     trail.push([x,y]);
     if (y <= top + RADIUS) break;
-    let hit = false;
-    for (const [k] of state.board) {
-      const [row,col] = k.split(',').map(Number);
-      const p = shooterPosition(row,col,state.phase,state.layout);
-      if (Math.hypot(x-p.x,y-p.y) < SHOT_HIT_DISTANCE) { hit=true; break; }
-    }
-    if (hit) break;
+    if (shotBubbleCollision(state.board,x,y,state.phase,state.layout)) break;
   }
   for (let i = 5; i < trail.length; i += 5) {
     const [px,py] = trail[i];
