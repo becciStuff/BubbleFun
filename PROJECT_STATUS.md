@@ -4,9 +4,9 @@
 
 **Last reviewed:** 26 October 2026 (NZ)  
 **Repository:** [becciStuff/BubbleFun](https://github.com/becciStuff/BubbleFun)  
-**Working branch:** `feature/gravity-supports-g1` (first new gravity prototype for review; refactor PR #4 merged)  
-**Prototype version:** `0.5.0` (from `package.json`)  
-**Current phase:** G1 support-weight analysis and optional surge release prototype; gameplay integration pending  
+**Working branch:** `fix/version-tracking-051` (version synchronisation PR; gravity support PR #5 merged)  
+**Prototype version:** `0.5.1` (maintenance/refactor release, on version-fix branch)  
+**Current phase:** G1 support/weight calculations merged but dormant in normal play; version display fix pending; G2 visual feedback next  
 **Pre-refactor reference commit:** `fe1b23ccabcd7f52261fd3a45e1c73c15be0146c`
 
 ## One-minute summary
@@ -86,7 +86,7 @@ The original refactor modules (`config.js`, `grid.js`, `puzzles.js`, `gravity.js
 
 ## Next development work
 
-**Active milestone: G1 physics prototype, separate from the structural refactor.** PR #4 was merged. The G1 work is on a review branch; do not treat it as shipped before its PR merges.
+**Active milestone: G1 physics prototype, separate from the structural refactor.** PR #4 was merged. G1 was merged in PR #5. The new version synchronisation fix is on a separate review branch.
 
 - [x] **Phase 0 — baseline:** Existing bomb/cascade/falling/row-timing tests retained, with added direct-hit and detached-chain regression cases.
 - [x] **Phase 1 — configuration and grid:** Extracted shared constants, hex coordinates, neighbour traversal and ceiling connectivity to `config.js` and `grid.js`; guide and projectile now share one collision predicate, with focused grid tests.
@@ -94,7 +94,8 @@ The original refactor modules (`config.js`, `grid.js`, `puzzles.js`, `gravity.js
 - [x] **Phase 3 — gravity (merged):** Moved current ceiling-detachment policy and falling simulation to `gravity.js`, exposing synchronous spark/burst callbacks while scoring and game outcomes stay in `game.js`.
 - [x] **Phase 4 — tidy orchestration (merged):** Extracted effects and archived Pop logic; `game.js` remains the turn coordinator.
 - [x] **G1 prototype code (on review branch):** Add independent ceiling-anchor and vulnerable-bridge analysis, weight and configurable stickiness, plus an explicit opt-in surge-release API.
-- [ ] **G1 merge:** Confirm full CI checks and review the new calculations before merging.
+- [x] **G1 merge:** PR #5 merged and the 62-test GitHub Actions suite passed.
+- [ ] **Version release tracking:** PR pending to bring the visible badge and package version to v0.5.1, with a bump script and consistency test.
 - [ ] **Future G2:** Visual strain feedback and player activation; G3 load sharing; G4 moving attached clusters with collision/aim/render parity.
 - [ ] **Browser verification:** Recheck desktop/mobile and GitHub Pages once gravity is wired into gameplay.
 
@@ -102,7 +103,7 @@ The G1 prototype intentionally has **no effect on normal play**. The physics eng
 
 ## Verification and current risks
 
-- **G1 isolated verification:** 12 support tests passed locally with Node 22, using the current `config.js`/`grid.js` geometry reproduced for the test harness. GitHub Actions ran the complete `npm test` suite on PR #5: **62 tests passed, 0 failed** (run `40238119663`).
+- **G1 verification:** GitHub Actions passed all 62 tests on gravity PR #5. Version-fix PR adds a test comparing the badge, JS version constant and `package.json`; its full CI results must be checked independently.
 - **Browser behaviour:** No player-facing changes are intentionally wired into the loop. New G1 browser and mobile tests remain pending.
 - **Not yet verified:** A live GitHub Pages deployment, mobile browser interaction and the full manual gameplay checklist. Do not mark them as passed based only on Node tests or a desktop smoke test.
 - **Engineering design:** Keep the dependency chain `config → grid → supports → gravity → game`; avoid circular imports or a growing `game.js`.
@@ -115,7 +116,7 @@ Use the GitHub repository as the source of truth, not the previous chat's memory
 
 > We're continuing BubbleFun: https://github.com/becciStuff/BubbleFun  
 > Please read `PROJECT_STATUS.md`, `REFACTORING.md`, `VISION.md` and the current source before editing.  
-  > The four structural refactoring phases are merged. G1 is on `feature/gravity-supports-g1`; read `GRAVITY_DESIGN.md` and its new tests before integrating any player controls. Do not assume weight physics is active in normal gameplay.
+  > All four refactoring phases and G1 support analysis are merged. Version tracking is in `fix/version-tracking-051`; reserve v0.6.0 for the first visible gravity changes. No physics movement or Gravity Surge activation is present during normal play.
 
 ## Update rules for future sessions
 
@@ -129,4 +130,4 @@ After each meaningful implementation or design session:
 
 ---
 
-*Updated for the G1 support-analysis review. Gravity swaying and player-triggered Surge are not implemented.*
+*Updated for version tracking after the G1 merge. Gravity swaying and player-triggered Surge are not implemented.*
