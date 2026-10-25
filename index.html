@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1e1548" />
+    <meta name="description" content="BubbleFun: two colourful, free-to-play bubble popping arcade games." />
+    <title>BubbleFun — The little bubble arcade</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-glow page-glow-one" aria-hidden="true"></div>
+    <div class="page-glow page-glow-two" aria-hidden="true"></div>
+
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="brand" href="#top" aria-label="BubbleFun home">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span>Bubble<span class="brand-accent">Fun!</span></span>
+        </a>
+        <div class="header-right">
+          <span class="version-pill"><span class="online-dot"></span> ARCADE EDITION <span class="version-number">v0.1</span></span>
+          <button class="sound-button" id="sound-button" type="button" aria-pressed="false" aria-label="Turn sound on">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Z"/><path class="sound-wave" d="M15 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/><path class="sound-muted" d="m16 9 5 6m0-6-5 6"/></svg>
+            <span id="sound-label">Sound off</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="arcade-layout" id="top">
+        <aside class="left-panel">
+          <div class="eyebrow"><span class="tiny-star">✦</span> THE LITTLE BUBBLE ARCADE</div>
+          <h1>Ready,<br />set, <span>POP!</span></h1>
+          <p class="intro">A pocketful of colour, a little bit of strategy, and that oh-so-satisfying <em>pop.</em></p>
+
+          <div class="selector-title">CHOOSE YOUR GAME <span>02 MODES</span></div>
+          <div class="mode-selector" role="group" aria-label="Game mode">
+            <button class="mode-card active" data-mode="shooter" aria-pressed="true" type="button">
+              <span class="mode-icon shooter-icon" aria-hidden="true">↗<i></i></span>
+              <span class="mode-copy"><strong>Bubble Shooter</strong><small>Aim · Match · Clear</small></span>
+              <span class="mode-arrow" aria-hidden="true">›</span>
+            </button>
+            <button class="mode-card" data-mode="pop" aria-pressed="false" type="button">
+              <span class="mode-icon pop-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              <span class="mode-copy"><strong>Bubble Pop</strong><small>Find groups · Score big</small></span>
+              <span class="mode-arrow" aria-hidden="true">›</span>
+            </button>
+          </div>
+
+          <div class="side-note"><span class="side-note-icon">✳</span><p><strong>Small beginnings, big bubbles.</strong> This is our first playable arcade prototype. More surprises can come later.</p></div>
+        </aside>
+
+        <section class="game-card" aria-label="BubbleFun game">
+          <div class="game-card-top">
+            <div class="current-game"><span class="game-label">NOW PLAYING</span><h2 id="game-title">Bubble Shooter</h2></div>
+            <button class="restart-button" id="restart-button" type="button" title="Start a new game"><span aria-hidden="true">↻</span> Restart</button>
+          </div>
+
+          <div class="score-bar">
+            <div class="score-cell"><span>SCORE</span><strong id="score-value">0</strong></div>
+            <div class="score-cell"><span>BEST</span><strong id="best-value">0</strong></div>
+            <div class="score-cell"><span id="turn-label">NEXT ROW IN</span><strong id="turns-value">5 shots</strong></div>
+          </div>
+
+          <div class="stage-wrap">
+            <div class="stage-shine" aria-hidden="true"></div>
+            <canvas id="game-canvas" width="432" height="700" tabindex="0" aria-label="Bubble arcade playfield. Aim with the pointer, tap to fire, or use arrow keys and Space."></canvas>
+            <div class="result-overlay hidden" id="result-overlay" aria-live="polite">
+              <div class="result-sparkle" aria-hidden="true">✦ ✳ ✦</div>
+              <h3 id="result-title">Nice popping!</h3>
+              <p id="result-message">Ready for another round?</p>
+              <strong id="result-score">0 points</strong>
+              <button id="play-again-button" class="play-again-button" type="button">Play again <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
+
+          <div class="game-footer">
+            <div class="next-area" id="next-area"><span class="next-orb" id="next-orb"></span><span><small>UP NEXT</small><strong>One more bubble!</strong></span></div>
+            <div class="game-status" id="game-status"><span class="status-spark">✦</span> Aim and shoot to match 3+</div>
+          </div>
+        </section>
+
+        <aside class="right-panel">
+          <div class="instructions-card">
+            <div class="panel-icon" aria-hidden="true">✦</div>
+            <span class="eyebrow">HOW TO PLAY</span>
+            <h3 id="instructions-title">Make your shot count.</h3>
+            <p id="instructions-copy">Aim at the bubbles above. Match three or more of the same colour to pop them and keep the ceiling at bay.</p>
+            <div class="instruction-divider"></div>
+            <div class="control-row"><span class="control-symbol">↗</span><span id="control-primary">Move to aim</span></div>
+            <div class="control-row"><span class="control-symbol">◉</span><span id="control-secondary">Click or tap to shoot</span></div>
+            <div class="control-row"><span class="control-symbol keyboard-symbol">← →</span><span id="control-keyboard">Arrow keys + Space also work</span></div>
+          </div>
+
+          <div class="tip-card"><span class="tip-star">✧</span><div><strong>PRO TIP</strong><p id="tip-copy">Pop a group holding other bubbles up and the loose ones fall too. Bonus points!</p></div></div>
+
+          <div class="coming-soon"><span class="sparkle-dots">✦ &nbsp; ✧ &nbsp; ✦</span><strong>More fun on the way</strong><p>Special bubbles, levels, themes and challenges are on our wish list.</p><span class="soon-pill">THE ADVENTURE BEGINS</span></div>
+        </aside>
+      </main>
+
+      <footer class="site-footer"><span>Made for the joy of popping bubbles <span aria-hidden="true">♥</span></span><span>Free to play · No sign-up · Just bubbles</span></footer>
+    </div>
+
+    <div class="sr-only" id="live-status" aria-live="polite"></div>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

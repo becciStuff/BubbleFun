@@ -1,0 +1,10 @@
+{
+  "name": "bubblefun",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A free, dependency-free bubble arcade for the browser",
+  "scripts": {
+    "test": "node --test"
+  }
+}
