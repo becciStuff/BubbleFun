@@ -1,10 +1,10 @@
 # BubbleFun — refactoring plan
 
-> **Status: In progress.** Regression coverage and configuration/grid extraction are implemented on the `refactor/config-grid-phase1` review branch; puzzle and gravity extraction are still pending. This is the engineering plan **before** adding advanced gravity, more specials or the Fizzlings adventure. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current checkpoint and [VISION.md](VISION.md) for design priorities.
+> **Status: In progress.** Regression coverage and configuration/grid extraction are merged into `main`. Puzzle definitions and board setup are extracted on the `refactor/puzzles-phase2` review branch; gravity extraction remains pending. This is the engineering plan **before** adding advanced gravity, more specials or the Fizzlings adventure. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current checkpoint and [VISION.md](VISION.md) for design priorities.
 
 ## Why refactor now?
 
-The current prototype works, but `src/game.js` is doing several jobs at once: board geometry, connected-colour matching, puzzle setup, shot movement and collision, bomb chains, detached-bubble gravity, effects, scoring, win/loss rules, and the archived Bubble Pop mode.
+The original prototype worked, but `src/game.js` did several jobs at once: board geometry, connected-colour matching, puzzle setup, shot movement and collision, bomb chains, detached-bubble gravity, effects, scoring, win/loss rules, and the archived Bubble Pop mode. The refactor is progressively separating these responsibilities.
 
 That makes it too easy for a change to gravity to accidentally break aiming or scoring. We want smaller, independently testable modules with clear ownership, without making a small browser game need a complicated build system.
 

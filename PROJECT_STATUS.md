@@ -4,16 +4,16 @@
 
 **Last reviewed:** 26 October 2026 (NZ)  
 **Repository:** [becciStuff/BubbleFun](https://github.com/becciStuff/BubbleFun)  
-**Working branch:** `refactor/config-grid-phase1` (awaiting review; `main` stays on v0.5)  
+**Working branch:** `refactor/puzzles-phase2` (awaiting review; phases 0–1 are merged to `main`)  
 **Prototype version:** `0.5.0` (from `package.json`)  
-**Current phase:** Refactor phases 0 and 1 implemented on the working branch; later phases not started  
+**Current phase:** Phases 0–1 merged; Phase 2 puzzle extraction implemented on a review branch; gravity next  
 **Pre-refactor reference commit:** `fe1b23ccabcd7f52261fd3a45e1c73c15be0146c`
 
 ## One-minute summary
 
 BubbleFun is a free, static browser bubble-shooter prototype, written in plain HTML, CSS and JavaScript. The playable modes are **Arcade** and **Puzzles**. We want to grow it into a polished, physics-led rescue adventure about cute creatures called **Fizzlings**, with clever gravity, strategic special shots, bosses and earned-only in-game coins.
 
-**The immediate priority:** improve the code structure *before* adding more features. On the current review branch, common configuration and grid logic have been extracted; the more complex gravity engine is **still in `game.js`**. Preserve v0.5 behaviour throughout. The detailed steps and acceptance criteria are in [REFACTORING.md](REFACTORING.md).
+**The immediate priority:** improve the code structure *before* adding more features. Configuration and grid are already separated on `main`; the working branch also isolates puzzle data and board setup. The gravity engine is **still in `game.js`**. Preserve v0.5 behaviour throughout. The detailed steps and acceptance criteria are in [REFACTORING.md](REFACTORING.md).
 
 ## What is working now
 
@@ -60,26 +60,28 @@ index.html        Menus and canvas
 styles.css       Responsive interface
 src/app.js       Browser input, UI, sound, score persistence
 src/render.js    Canvas rendering and effects drawing
-src/config.js    Layouts, colours and shared constants (working branch)
-src/grid.js      Hex-grid geometry, matching, ceiling connectivity and shot hits (working branch)
-src/game.js      Shooter orchestration, puzzles, gravity and archived Pop logic
+src/config.js    Layouts, colours and shared constants
+src/grid.js      Hex-grid geometry, matching, ceiling connectivity and shot hits
+src/puzzles.js   Puzzle designs and pure board/target setup (working branch)
+src/game.js      Shooter orchestration, bomb chains, falling gravity and archived Pop logic
 tests/game.test.js
-tests/grid.test.js  Grid geometry, connectivity and collision tests (working branch)
+tests/grid.test.js     Grid geometry, connectivity and collision tests
+tests/puzzles.test.js  Puzzle regression tests (working branch)
 package.json     ES modules; npm test uses node --test
 VISION.md        Game vision and feature roadmap
 REFACTORING.md   Proposed technical reorganisation
 PROJECT_STATUS.md  This handover
 ```
 
-On the working branch, `config.js` and `grid.js` now exist. The proposed `gravity.js`, `puzzles.js` and other future modules **do not**. Their purpose and order are recorded in [REFACTORING.md](REFACTORING.md). Existing `game.js` imports remain compatible through temporary re-exports.
+`config.js` and `grid.js` are on `main`; `puzzles.js` is on the current review branch. The proposed `gravity.js` and later modules **do not** exist yet. Their purpose and order are recorded in [REFACTORING.md](REFACTORING.md). Existing `game.js` imports remain compatible through temporary re-exports.
 
 ## Next development work
 
-**Active milestone: structural refactor with no intended gameplay changes.** Phases 0–1 are ready for code review; do not treat them as merged into `main` until the PR is actually merged.
+**Active milestone: structural refactor with no intended gameplay changes.** Phases 0–1 have merged; Phase 2 is ready for code review. Do not treat Phase 2 as merged until that PR actually lands.
 
 - [x] **Phase 0 — baseline:** Existing bomb/cascade/falling/row-timing tests retained, with added direct-hit and detached-chain regression cases.
 - [x] **Phase 1 — configuration and grid:** Extracted shared constants, hex coordinates, neighbour traversal and ceiling connectivity to `config.js` and `grid.js`; guide and projectile now share one collision predicate, with focused grid tests.
-- [ ] **Phase 2 — puzzles:** Isolate puzzle data and add focused tests without changing the three playable solutions.
+- [x] **Phase 2 — puzzles (on review branch):** Isolated puzzle data and fresh board/target construction; added focused tests, including all three real solutions on both layouts.
 - [ ] **Phase 3 — gravity:** Move current detachment and falling-bubble simulation to `gravity.js`; expose clean events/results for scoring and visual effects.
 - [ ] **Phase 4 — tidy orchestration:** Keep `game.js` as the turn coordinator; optionally extract effects and archived Pop logic where helpful.
 - [ ] **Refactor verification:** Run Node tests and browser checks on desktop/mobile, then confirm GitHub Pages compatibility.
@@ -88,8 +90,8 @@ On the working branch, `config.js` and `grid.js` now exist. The proposed `gravit
 
 ## Verification and current risks
 
-- **Verified on 26 October 2026, working branch:** `npm test` passes (two test files: 26 game cases and five grid cases); `node --check` passes for the JavaScript modules.
-- **Browser smoke test on the working branch:** The desktop Arcade playfield renders; switching to Twin Towers works; firing a shot reduces the remaining shot count. No application-origin console errors were observed.
+- **Verified on 26 October 2026, working branch:** `npm test` passes (three test files: 26 game cases, five grid cases and five puzzle cases); `node --check src/puzzles.js` passes.
+- **Browser smoke test on the working branch:** Desktop Arcade loads; Twin Towers, Heartbreaker and The Crown can each be selected and display their correct objectives and shot counts. No application-origin console errors were observed.
 - **Not yet verified:** A live GitHub Pages deployment, mobile browser interaction and the full manual gameplay checklist. Do not mark them as passed based only on Node tests or a desktop smoke test.
 - **Engineering risk:** `src/game.js` mixes several responsibilities; extracting gravity without moving shared grid rules could create circular imports.
 - **Gameplay risk for future physics:** Moving attached bubbles while keeping old fixed hitboxes would make aiming feel unfair. Resolve position ownership before implementing sway.
@@ -101,7 +103,7 @@ Use the GitHub repository as the source of truth, not the previous chat's memory
 
 > We're continuing BubbleFun: https://github.com/becciStuff/BubbleFun  
 > Please read `PROJECT_STATUS.md`, `REFACTORING.md`, `VISION.md` and the current source before editing.  
-> Phases 0 and 1 are on the `refactor/config-grid-phase1` review branch, not yet confirmed merged into `main`. Review/merge that change before starting Phase 2 (puzzle extraction). Avoid gameplay changes, test the result and update `PROJECT_STATUS.md` with what actually shipped.
+> Phases 0 and 1 are merged into `main`. Phase 2 (puzzle extraction) is on the `refactor/puzzles-phase2` review branch. Review/merge that change before starting Phase 3 (gravity extraction). Avoid gameplay changes, test the result and update `PROJECT_STATUS.md` with what actually shipped.
 
 ## Update rules for future sessions
 
@@ -115,4 +117,4 @@ After each meaningful implementation or design session:
 
 ---
 
-*Updated for the first grid/configuration extraction checkpoint. Advanced gravity has not been implemented.*
+*Updated for the puzzle extraction checkpoint. Advanced gravity has not been implemented.*
