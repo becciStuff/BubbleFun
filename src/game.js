@@ -3,9 +3,10 @@
 import { MOBILE_LAYOUT, RADIUS, PITCH, ROW_HEIGHT, LEFT, SHOTS_PER_ROW, BOMB_RADIUS, COLOURS } from './config.js';
 import {
   cellKey as key, shooterColumns, shooterPosition, shooterNeighbours as neighbours,
-  connectedShooter, floatingShooter, shotBubbleCollision,
+  connectedShooter, shotBubbleCollision,
 } from './grid.js';
 import { createPuzzleBoard } from './puzzles.js';
+import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles } from './gravity.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -16,6 +17,7 @@ export {
 } from './config.js';
 export { shooterColumns, shooterPosition, connectedShooter, floatingShooter } from './grid.js';
 export { PUZZLES } from './puzzles.js';
+export { releaseFloatingShooter } from './gravity.js';
 
 const randomColour = (colours, random = Math.random) => colours[Math.floor(random() * colours.length)];
 
@@ -130,31 +132,6 @@ function addExplosion(state, x, y, colour, strength = 1) {
 
 function addCallout(state, x, y, text, colour = 'yellow') {
   state.callouts.push({ x, y, text, colour, life: 1.15, maxLife: 1.15 });
-}
-
-// Detached bubbles fall to the floor and burst. They cannot magically match
-// another hanging group on the way down; bomb chains happen on the grid.
-export function releaseFloatingShooter(state, cells, random = Math.random) {
-  let count = 0;
-  for (const [row, col] of cells) {
-    const colour = state.board.get(key(row, col));
-    if (!colour) continue;
-    const { x, y } = shooterPosition(row, col, state.phase, state.layout);
-    const bomb = state.bombs.delete(key(row, col));
-    state.board.delete(key(row, col));
-    state.falling.push({
-      x, y, colour, bomb,
-      vx: (x - state.layout.width / 2) * .09 + (random() - .5) * 50,
-      vy: -25 - random() * 40,
-      gravity: 885 + random() * 140,
-      spin: (random() - .5) * 3.5,
-      rotation: 0,
-      burstAt: 3.2,
-      sparkleClock: 0,
-    });
-    count++;
-  }
-  return count;
 }
 
 function emit(state, type) {
@@ -290,7 +267,7 @@ function ceilingReachedLauncher(state) {
 }
 
 function settleShooter(state) {
-  const floaters = floatingShooter(state.board, state.phase, state.layout);
+  const floaters = findDetachedBubbles(state.board, state.phase, state.layout);
   const detached = releaseFloatingShooter(state, floaters);
   state.lastDrop += detached;
   state.lastPop += detached;
@@ -403,29 +380,10 @@ export function stepGame(state, dt) {
         if (!state.pendingBombs.length) settleShooter(state);
       }
     }
-    const remaining = [];
-    let exploded = 0;
-    for (const falling of state.falling) {
-      falling.vy += falling.gravity * dt;
-      falling.x += falling.vx * dt;
-      falling.y += falling.vy * dt;
-      falling.rotation += falling.spin * dt;
-      if (falling.x < state.layout.left + RADIUS || falling.x > state.layout.width - state.layout.left - RADIUS) {
-        falling.x = Math.max(state.layout.left + RADIUS, Math.min(state.layout.width - state.layout.left - RADIUS, falling.x));
-        falling.vx *= -.7;
-      }
-      falling.burstAt -= dt;
-      falling.sparkleClock += dt;
-      if (falling.sparkleClock >= .06) {
-        falling.sparkleClock = 0;
-        addSpark(state, falling.x, falling.y, falling.colour, (Math.random() - .5) * 50, -35);
-      }
-      if (falling.burstAt <= 0 || falling.y + RADIUS >= state.layout.height - 22) {
-        const floorY = state.layout.height - 22 - RADIUS;
-        addExplosion(state, falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75);
-        exploded++;
-      } else remaining.push(falling);
-    }
+    const { remaining, exploded } = stepFallingBubbles(state.falling, state.layout, dt, {
+      onSpark: (x, y, colour, vx, vy) => addSpark(state, x, y, colour, vx, vy),
+      onBurst: (x, y, colour, strength) => addExplosion(state, x, y, colour, strength),
+    });
     state.falling = remaining;
     if (exploded) {
       state.shake = Math.max(state.shake, Math.min(1.25, exploded * .18));
