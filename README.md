@@ -4,6 +4,8 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Where we're going:** Read [VISION.md](VISION.md) for the agreed Fizzlings rescue-adventure concept, gravity and special-shot ideas, earn-only coin economy, boss levels and prioritised roadmap. Those future ideas are not all implemented yet.
 
+**Before new features:** Read [REFACTORING.md](REFACTORING.md) for the proposed module split, gravity-engine extraction and regression-test plan. This is a plan only; the refactor has not started.
+
 ## What's new in v0.5 — Puzzles & responsive playfields
 
 - **Real landscape desktop board:** the browser width selects a 760 × 580 playfield with 16/15 alternating columns, while narrower screens get the 432 × 700 portrait board with 9/8 columns. Mouse, touch and keyboard remain supported.
