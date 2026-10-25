@@ -1,8 +1,16 @@
 # BubbleFun 🫧
 
-A small, free-to-play bubble arcade built with plain HTML, CSS and JavaScript. No accounts, ads, build tools or paid services required. This is the classic-arcade prototype, designed so we can expand it later.
+A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. No accounts, ads, build tools or paid services required. It is a growing arcade prototype, designed for desktop and mobile.
 
-## What's new in v0.4 — Explosive Cascades
+## What's new in v0.5 — Puzzles & responsive playfields
+
+- **Real landscape desktop board:** the browser width selects a 760 × 580 playfield with 16/15 alternating columns, while narrower screens get the 432 × 700 portrait board with 9/8 columns. Mouse, touch and keyboard remain supported.
+- **Handcrafted puzzles:** Twin Towers, Heartbreaker and The Crown have shaped formations, glowing bomb targets, curated opening ammunition and a limited number of shots. Clear the marked targets (by popping, blasting or dropping them) to win. The puzzles are available on both layouts.
+- **Smoother movement:** board wobble on impact, staggered puzzle entrances, animated descending rows, refined aim indication and more responsive aiming.
+- **More forgiving grazes:** the projectile collision distance is slightly smaller than the drawn bubble pair. The aiming guide now uses the same collision distance and wall-bounce rules as the real projectile.
+- **Bubble Pop temporarily hidden:** Arcade and Puzzles are now the two play styles within Bubble Shooter. The earlier Bubble Pop rules remain in the code for possible reintroduction later.
+
+## Previous version: v0.4 — Explosive Cascades
 
 - **Bomb bubbles** appear as glowing, marked coloured bubbles on the shooter board. Include one in a normal match of 3+, or hit it with another bomb's blast, to detonate it.
 - A bomb clears nearby bubbles regardless of colour, triggering any other bombs in its radius. A short delay between detonations makes chains readable.
@@ -28,13 +36,15 @@ python3 -m http.server 8000
 
 Then visit `http://localhost:8000/`. Using a local server is recommended because the game's JavaScript uses ES modules.
 
-## Two modes
+## Play styles
 
-**Bubble Shooter** — Aim with your mouse or finger, then click/tap to shoot. Match **3 or more** connected bubbles of the same colour. Glowing marked bubbles are bombs: if a matched group contains one, it explodes and removes surrounding bubbles, potentially setting off more bombs. Disconnected bubbles tumble down and burst on the floor for a gravity bonus. A new row descends after every five shots. Lose if the stack reaches the launcher, or win by clearing it. The **Left/Right** arrow keys and **Space** work on a keyboard too.
+**Arcade** — Aim with your mouse or finger, then click/tap to shoot. Match **3 or more** connected bubbles of the same colour. Glowing marked bubbles are bombs: if a matched group contains one, it explodes and removes surrounding bubbles, potentially setting off more bombs. Disconnected bubbles tumble down and burst on the floor for a gravity bonus. A new row descends after every five shots. Lose if the stack reaches the launcher, or win by clearing it.
 
-**Bubble Pop** — Click/tap groups of **2 or more** adjacent bubbles of the same colour. Bigger groups earn more points (`group size² × 5`). Bubbles fall and empty columns shift left. Clear the board for a bonus, or keep going until no groups remain.
+**Puzzles** — Choose one of three shaped challenges. Each has glowing bomb targets and a shot limit. You only need to clear the marked targets, not the entire board. You can advance to the next puzzle after winning.
 
-Both modes support a restart button, optional sound effects and separate local high scores. Glossy reflections, particle trails, expanding burst rings, floating score pop-ups and subtle impact feedback add an arcade feel. The game is responsive for desktop and mobile browsers. Sound starts muted, and screen shake is disabled when reduced motion is preferred.
+Both play styles support a restart button, optional sound effects and separate local high scores. **Left/Right** arrow keys and **Space** work on a keyboard. Glossy reflections, particle trails, expanding burst rings, floating score pop-ups and subtle impact feedback add an arcade feel. Sound starts muted, and screen shake is disabled when reduced motion is preferred.
+
+The archived **Bubble Pop** rules and tests remain in `src/game.js` but the mode is not presented in the UI.
 
 ## Run tests
 
@@ -53,9 +63,9 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `index.html` — accessible menu, score display and game layout
 - `styles.css` — classic arcade styling and responsive layout
 - `src/game.js` — game rules and state (kept independent of display)
-- `src/render.js` — canvas bubble graphics, aim line and effects
+- `src/render.js` — responsive canvas bubble graphics, aim guide and effects
 - `src/app.js` — input, menus, scores, optional sound and persistence
-- `tests/game.test.js` — basic gameplay regression tests
+- `tests/game.test.js` — gameplay regression tests, desktop geometry and verified puzzle solutions
 
 ## Ideas for later
 

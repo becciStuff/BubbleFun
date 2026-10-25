@@ -1,7 +1,9 @@
 // Pure-ish game rules. Rendering, input, audio and storage live elsewhere so
 // future power-ups, levels and themes can be added without rewriting the rules.
-export const WIDTH = 432;
-export const HEIGHT = 700;
+export const MOBILE_LAYOUT = Object.freeze({ width: 432, height: 700, left: 27, top: 56, launchY: 639, columns: 9 });
+export const DESKTOP_LAYOUT = Object.freeze({ width: 760, height: 580, left: 44, top: 54, launchY: 527, columns: 16 });
+export const WIDTH = MOBILE_LAYOUT.width;
+export const HEIGHT = MOBILE_LAYOUT.height;
 export const RADIUS = 21;
 export const PITCH = RADIUS * 2;
 export const ROW_HEIGHT = Math.sqrt(3) * RADIUS;
@@ -10,6 +12,9 @@ export const TOP = 56;
 export const LAUNCH_Y = 639;
 export const SHOTS_PER_ROW = 5;
 export const BOMB_RADIUS = 86;
+// A few pixels of grace let near-tangent shots skim past. The guide uses the
+// exact same distance; packed clusters remain physically impassable.
+export const SHOT_HIT_DISTANCE = PITCH - 4.5;
 export const COLOURS = ['pink', 'blue', 'yellow', 'green', 'purple'];
 export const SWATCHES = {
   pink: '#ff559c', blue: '#4ac6ff', yellow: '#ffc44b',
@@ -27,14 +32,14 @@ function visualState() {
   };
 }
 
-export function shooterColumns(row, phase = 0) {
-  return (row + phase) % 2 === 0 ? 9 : 8;
+export function shooterColumns(row, phase = 0, layout = MOBILE_LAYOUT) {
+  return (row + phase) % 2 === 0 ? layout.columns : layout.columns - 1;
 }
 
-export function shooterPosition(row, col, phase = 0) {
+export function shooterPosition(row, col, phase = 0, layout = MOBILE_LAYOUT) {
   return {
-    x: LEFT + RADIUS + col * PITCH + (((row + phase) % 2) ? RADIUS : 0),
-    y: TOP + RADIUS + row * ROW_HEIGHT,
+    x: layout.left + RADIUS + col * PITCH + (((row + phase) % 2) ? RADIUS : 0),
+    y: layout.top + RADIUS + row * ROW_HEIGHT,
   };
 }
 
@@ -42,11 +47,11 @@ export function popPosition(row, col) {
   return { x: LEFT + RADIUS + col * PITCH, y: 78 + RADIUS + row * PITCH };
 }
 
-export function initialShooter(random = Math.random) {
+export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
   const board = new Map();
   // Short runs of repeated colours make the first few moves approachable.
   for (let row = 0; row < 5; row++) {
-    for (let col = 0; col < shooterColumns(row); col++) {
+    for (let col = 0; col < shooterColumns(row, 0, layout); col++) {
       const columnBand = Math.floor((col + (row % 2)) / 2);
       const palette = COLOURS.slice(0, 4);
       const colour = random() < .64 ? palette[(columnBand + Math.floor(row / 2)) % palette.length] : randomColour(palette, random);
@@ -59,17 +64,17 @@ export function initialShooter(random = Math.random) {
   const bombs = new Set();
   const candidates = row => Array.from(board.keys()).filter(k => {
     const [r, c] = k.split(',').map(Number);
-    return r === row && connectedShooter(board, r, c).length >= 2;
+    return r === row && connectedShooter(board, r, c, 0, true, layout).length >= 2;
   });
   const lower = candidates(4);
   if (lower.length) {
     const first = lower[Math.floor(random() * lower.length)];
     bombs.add(first);
     const [firstRow, firstCol] = first.split(',').map(Number);
-    const centre = shooterPosition(firstRow, firstCol);
+    const centre = shooterPosition(firstRow, firstCol, 0, layout);
     const nearby = candidates(3).filter(k => {
       const [r, c] = k.split(',').map(Number);
-      const p = shooterPosition(r, c);
+      const p = shooterPosition(r, c, 0, layout);
       return Math.hypot(p.x - centre.x, p.y - centre.y) <= BOMB_RADIUS;
     });
     // A nearby bomb of another colour gives players a discoverable, real
@@ -79,37 +84,85 @@ export function initialShooter(random = Math.random) {
     if (secondOptions.length) bombs.add(secondOptions[Math.floor(random() * secondOptions.length)]);
   }
   return {
-    mode: 'shooter', board, bombs, pendingBombs: [], bombClock: 0,
+    mode: 'shooter', variant: 'arcade', layout, board, bombs, pendingBombs: [], bombClock: 0,
     phase: 0, angle: 0, projectile: null,
     current: randomColour(colours, random), next: randomColour(colours, random),
     score: 0, shots: 0, shotsUntilRow: SHOTS_PER_ROW, status: 'playing',
     falling: [], lastDrop: 0, lastBombs: 0, recoil: 0, comboLevel: 0, highestCombo: 1,
     comboDisplay: 0, lastChain: null, pendingRow: false, pendingDanger: false,
+    wobble: new Map(), rowShift: 0, introTime: 0, pendingPuzzleLoss: false,
     ...visualState(),
   };
 }
 
-function neighbours(board, row, col, phase) {
-  const origin = shooterPosition(row, col, phase);
+const PUZZLE_COLOURS = { P: 'pink', B: 'blue', Y: 'yellow', G: 'green', V: 'purple' };
+export const PUZZLES = Object.freeze([
+  {
+    name: 'Twin Towers', goal: 'Bring down both glowing supports', shots: 16,
+    rows: ['..PPPPP..', '..PYYYP..', '..P...P..', '..B...B..', '..B...B..', '..B...B..'],
+    bombs: [[3, 2], [3, 6]],
+    ammo: ['blue', 'blue', 'pink', 'blue', 'yellow', 'pink', 'blue', 'yellow'],
+  },
+  {
+    name: 'Heartbreaker', goal: 'Find the two weak points', shots: 18,
+    rows: ['..PP.PP..', '.PYY.YYP.', '.PYYYYYP.', '..PBBBP..', '...BBB...', '....B....'],
+    bombs: [[2, 2], [2, 6]],
+    ammo: ['blue', 'yellow', 'pink', 'blue', 'yellow', 'pink', 'yellow', 'blue'],
+  },
+  {
+    name: 'The Crown', goal: 'Destroy the three royal bombs', shots: 20,
+    rows: ['P..Y.Y..P', 'PP.YYY.P.', 'PPYYYYYPP', '.PBBBBBP.', '..BBBBB..', '...GGG...', '....G....'],
+    bombs: [[2, 1], [2, 4], [2, 7]],
+    ammo: ['green', 'blue', 'pink', 'yellow', 'pink', 'blue', 'yellow', 'green'],
+  },
+]);
+
+export function initialPuzzle(index = 0, layout = MOBILE_LAYOUT, random = Math.random) {
+  const safeIndex = Math.max(0, Math.min(PUZZLES.length - 1, index));
+  const puzzle = PUZZLES[safeIndex];
+  const state = initialShooter(random, layout);
+  const offset = Math.floor((layout.columns - 9) / 2);
+  state.board = new Map();
+  puzzle.rows.forEach((line, row) => {
+    Array.from(line).forEach((symbol, col) => {
+      if (PUZZLE_COLOURS[symbol]) state.board.set(key(row, col + offset), PUZZLE_COLOURS[symbol]);
+    });
+  });
+  state.bombs = new Set(puzzle.bombs.map(([row, col]) => key(row, col + offset)));
+  state.variant = 'puzzle';
+  state.puzzleIndex = safeIndex;
+  state.puzzleName = puzzle.name;
+  state.puzzleGoal = puzzle.goal;
+  state.shotLimit = puzzle.shots;
+  state.ammo = puzzle.ammo;
+  state.ammoIndex = 2;
+  state.current = puzzle.ammo[0];
+  state.next = puzzle.ammo[1];
+  state.introTime = .72;
+  return state;
+}
+
+function neighbours(board, row, col, phase, layout = MOBILE_LAYOUT) {
+  const origin = shooterPosition(row, col, phase, layout);
   const nearby = [];
   for (let r = Math.max(0, row - 1); r <= row + 1; r++) {
-    for (let c = Math.max(0, col - 1); c <= Math.min(shooterColumns(r, phase) - 1, col + 1); c++) {
+    for (let c = Math.max(0, col - 1); c <= Math.min(shooterColumns(r, phase, layout) - 1, col + 1); c++) {
       if (r === row && c === col) continue;
       if (!board.has(key(r, c))) continue;
-      const p = shooterPosition(r, c, phase);
+      const p = shooterPosition(r, c, phase, layout);
       if (Math.hypot(origin.x - p.x, origin.y - p.y) <= CLUSTER_THRESHOLD) nearby.push([r, c]);
     }
   }
   return nearby;
 }
 
-export function connectedShooter(board, row, col, phase = 0, colourOnly = true) {
+export function connectedShooter(board, row, col, phase = 0, colourOnly = true, layout = MOBILE_LAYOUT) {
   const original = board.get(key(row, col));
   if (!original) return [];
   const found = new Set([key(row, col)]);
   const queue = [[row, col]];
   for (let i = 0; i < queue.length; i++) {
-    for (const [nr, nc] of neighbours(board, ...queue[i], phase)) {
+    for (const [nr, nc] of neighbours(board, ...queue[i], phase, layout)) {
       const k = key(nr, nc);
       if (found.has(k) || (colourOnly && board.get(k) !== original)) continue;
       found.add(k);
@@ -119,12 +172,12 @@ export function connectedShooter(board, row, col, phase = 0, colourOnly = true) 
   return queue;
 }
 
-export function floatingShooter(board, phase = 0) {
+export function floatingShooter(board, phase = 0, layout = MOBILE_LAYOUT) {
   const connected = new Set();
-  for (let col = 0; col < shooterColumns(0, phase); col++) {
+  for (let col = 0; col < shooterColumns(0, phase, layout); col++) {
     const start = key(0, col);
     if (!board.has(start) || connected.has(start)) continue;
-    for (const [r, c] of connectedShooter(board, 0, col, phase, false)) connected.add(key(r, c));
+    for (const [r, c] of connectedShooter(board, 0, col, phase, false, layout)) connected.add(key(r, c));
   }
   return Array.from(board.keys()).filter(k => !connected.has(k)).map(k => k.split(',').map(Number));
 }
@@ -172,12 +225,12 @@ export function releaseFloatingShooter(state, cells, random = Math.random) {
   for (const [row, col] of cells) {
     const colour = state.board.get(key(row, col));
     if (!colour) continue;
-    const { x, y } = shooterPosition(row, col, state.phase);
+    const { x, y } = shooterPosition(row, col, state.phase, state.layout);
     const bomb = state.bombs.delete(key(row, col));
     state.board.delete(key(row, col));
     state.falling.push({
       x, y, colour, bomb,
-      vx: (x - WIDTH / 2) * .09 + (random() - .5) * 50,
+      vx: (x - state.layout.width / 2) * .09 + (random() - .5) * 50,
       vy: -25 - random() * 40,
       gravity: 885 + random() * 140,
       spin: (random() - .5) * 3.5,
@@ -202,7 +255,7 @@ function pickFromBoard(state, random = Math.random) {
 
 export function fireShooter(state) {
   // A shot owns its entire bomb sequence and falling cascade.
-  if (state.status !== 'playing' || state.projectile || state.pendingBombs.length || state.falling.length) return false;
+  if (state.status !== 'playing' || state.projectile || state.pendingBombs.length || state.falling.length || state.rowShift > 1 || state.introTime > 0) return false;
   state.comboLevel = 0;
   state.comboDisplay = 0;
   state.lastChain = null;
@@ -211,7 +264,7 @@ export function fireShooter(state) {
   state.lastBombs = 0;
   const speed = 810;
   state.projectile = {
-    x: WIDTH / 2, y: LAUNCH_Y,
+    x: state.layout.width / 2, y: state.layout.launchY,
     vx: Math.sin(state.angle) * speed,
     vy: -Math.cos(state.angle) * speed,
     colour: state.current,
@@ -219,7 +272,8 @@ export function fireShooter(state) {
   };
   state.recoil = 1;
   state.current = state.next;
-  state.next = pickFromBoard(state);
+  state.next = state.variant === 'puzzle' && state.ammoIndex < state.ammo.length
+    ? state.ammo[state.ammoIndex++] : pickFromBoard(state);
   emit(state, 'fire');
   return true;
 }
@@ -227,7 +281,7 @@ export function fireShooter(state) {
 export function aimShooter(state, x, y) {
   if (state.status !== 'playing') return;
   // The launcher can never shoot downwards or nearly horizontally.
-  state.angle = Math.max(-1.15, Math.min(1.15, Math.atan2(x - WIDTH / 2, LAUNCH_Y - y)));
+  state.angle = Math.max(-1.15, Math.min(1.15, Math.atan2(x - state.layout.width / 2, state.layout.launchY - y)));
 }
 
 function landingSlot(state, x, y) {
@@ -235,11 +289,11 @@ function landingSlot(state, x, y) {
   let minDistance = Infinity;
   const maxRow = Math.min(18, Math.max(1, ...Array.from(state.board.keys(), k => Number(k.split(',')[0]) + 1)));
   for (let r = 0; r <= maxRow; r++) {
-    for (let c = 0; c < shooterColumns(r, state.phase); c++) {
+    for (let c = 0; c < shooterColumns(r, state.phase, state.layout); c++) {
       if (state.board.has(key(r, c))) continue;
       // A shot must attach to the ceiling or an existing bubble.
-      if (r !== 0 && neighbours(state.board, r, c, state.phase).length === 0) continue;
-      const p = shooterPosition(r, c, state.phase);
+      if (r !== 0 && neighbours(state.board, r, c, state.phase, state.layout).length === 0) continue;
+      const p = shooterPosition(r, c, state.phase, state.layout);
       const distance = Math.hypot(x - p.x, y - p.y);
       if (distance < minDistance) { minDistance = distance; closest = [r, c]; }
     }
@@ -252,7 +306,7 @@ function removeCells(state, cells, effectCount) {
   for (const [r, c] of cells) {
     const colour = state.board.get(key(r, c));
     if (!colour) continue;
-    const { x, y } = shooterPosition(r, c, state.phase);
+    const { x, y } = shooterPosition(r, c, state.phase, state.layout);
     if (state.bombs.delete(key(r, c))) bombs.push({ x, y, row: r, col: c });
     addBurst(state, x, y, colour, effectCount);
     addPulse(state, x, y, colour, .65);
@@ -269,7 +323,7 @@ export function detonateNextBomb(state) {
   const victims = [];
   for (const k of state.board.keys()) {
     const [r, c] = k.split(',').map(Number);
-    const p = shooterPosition(r, c, state.phase);
+    const p = shooterPosition(r, c, state.phase, state.layout);
     if (Math.hypot(p.x - bomb.x, p.y - bomb.y) <= BOMB_RADIUS) victims.push([r, c]);
   }
   state.pendingBombs.push(...removeCells(state, victims, 11));
@@ -298,13 +352,14 @@ export function descendShooter(state, random = Math.random) {
   }
   state.phase = 1 - state.phase; // Preserves the x positions of existing rows.
   state.board = shifted;
-  for (let col = 0; col < shooterColumns(0, state.phase); col++) {
+  for (let col = 0; col < shooterColumns(0, state.phase, state.layout); col++) {
     state.board.set(key(0, col), randomColour(COLOURS.slice(0, 4), random));
     if (shiftedBombs.size < 4 && random() < .09) shiftedBombs.add(key(0, col));
   }
   state.bombs = shiftedBombs;
   state.shotsUntilRow = SHOTS_PER_ROW;
   state.pendingRow = false;
+  state.rowShift = ROW_HEIGHT;
   emit(state, 'drop');
   if (ceilingReachedLauncher(state)) {
     state.status = 'lost';
@@ -315,22 +370,22 @@ export function descendShooter(state, random = Math.random) {
 function ceilingReachedLauncher(state) {
   for (const k of state.board.keys()) {
     const [row, col] = k.split(',').map(Number);
-    if (shooterPosition(row, col, state.phase).y + RADIUS >= LAUNCH_Y - 43) return true;
+    if (shooterPosition(row, col, state.phase, state.layout).y + RADIUS >= state.layout.launchY - 43) return true;
   }
   return false;
 }
 
 function settleShooter(state) {
-  const floaters = floatingShooter(state.board, state.phase);
+  const floaters = floatingShooter(state.board, state.phase, state.layout);
   const detached = releaseFloatingShooter(state, floaters);
   state.lastDrop += detached;
   state.lastPop += detached;
   state.score += detached * 30;
   if (detached) {
-    addCallout(state, WIDTH / 2, 370, `GRAVITY! ${detached} FALLING +${detached * 30}`, 'pink');
+    addCallout(state, state.layout.width / 2, state.layout.height * .58, `GRAVITY! ${detached} FALLING +${detached * 30}`, 'pink');
     if (!state.lastBombs) emit(state, 'cascade');
   }
-  if (state.board.size === 0) {
+  if (state.variant === 'puzzle' ? state.bombs.size === 0 : state.board.size === 0) {
     if (state.falling.length) state.status = 'clearing';
     else { state.status = 'won'; emit(state, 'win'); }
     return;
@@ -338,6 +393,13 @@ function settleShooter(state) {
   if (ceilingReachedLauncher(state)) {
     if (state.falling.length) state.pendingDanger = true;
     else { state.status = 'lost'; emit(state, 'lose'); return; }
+  }
+  if (state.variant === 'puzzle') {
+    if (state.shots >= state.shotLimit) {
+      if (state.falling.length) state.pendingPuzzleLoss = true;
+      else { state.status = 'lost'; emit(state, 'lose'); }
+    }
+    return;
   }
   if (state.shotsUntilRow <= 0) {
     if (state.falling.length) state.pendingRow = true;
@@ -352,8 +414,14 @@ function lockShooter(state) {
   if (!slot) { state.status = 'lost'; emit(state, 'lose'); return; }
   const [row, col] = slot;
   state.board.set(key(row, col), shot.colour);
-  const impact = shooterPosition(row, col, state.phase);
-  const same = connectedShooter(state.board, row, col, state.phase);
+  const impact = shooterPosition(row, col, state.phase, state.layout);
+  const same = connectedShooter(state.board, row, col, state.phase, true, state.layout);
+  for (const [k] of state.board) {
+    const [r, c] = k.split(',').map(Number);
+    const p = shooterPosition(r, c, state.phase, state.layout);
+    const proximity = Math.hypot(p.x - impact.x, p.y - impact.y);
+    if (proximity < PITCH * 3.1) state.wobble.set(k, .85 * (1 - proximity / (PITCH * 4)));
+  }
   state.lastPop = 0;
   state.lastDrop = 0;
   if (same.length >= 3) {
@@ -379,6 +447,15 @@ export function stepGame(state, dt) {
   state.shake = Math.max(0, state.shake - dt * 2.4);
   state.flash = Math.max(0, state.flash - dt * 1.5);
   if (state.recoil) state.recoil = Math.max(0, state.recoil - dt * 5);
+  if (state.rowShift) state.rowShift = state.rowShift < .4 ? 0 : state.rowShift * Math.exp(-13 * dt);
+  if (state.introTime) state.introTime = Math.max(0, state.introTime - dt);
+  if (state.wobble) {
+    for (const [k, value] of state.wobble) {
+      const reduced = value - dt * 1.4;
+      if (reduced <= 0) state.wobble.delete(k);
+      else state.wobble.set(k, reduced);
+    }
+  }
   if (state.comboDisplay) state.comboDisplay = Math.max(0, state.comboDisplay - dt);
   for (const particle of state.effects) {
     particle.x += particle.vx * dt;
@@ -419,8 +496,8 @@ export function stepGame(state, dt) {
       falling.x += falling.vx * dt;
       falling.y += falling.vy * dt;
       falling.rotation += falling.spin * dt;
-      if (falling.x < LEFT + RADIUS || falling.x > WIDTH - LEFT - RADIUS) {
-        falling.x = Math.max(LEFT + RADIUS, Math.min(WIDTH - LEFT - RADIUS, falling.x));
+      if (falling.x < state.layout.left + RADIUS || falling.x > state.layout.width - state.layout.left - RADIUS) {
+        falling.x = Math.max(state.layout.left + RADIUS, Math.min(state.layout.width - state.layout.left - RADIUS, falling.x));
         falling.vx *= -.7;
       }
       falling.burstAt -= dt;
@@ -429,8 +506,8 @@ export function stepGame(state, dt) {
         falling.sparkleClock = 0;
         addSpark(state, falling.x, falling.y, falling.colour, (Math.random() - .5) * 50, -35);
       }
-      if (falling.burstAt <= 0 || falling.y + RADIUS >= HEIGHT - 22) {
-        const floorY = HEIGHT - 22 - RADIUS;
+      if (falling.burstAt <= 0 || falling.y + RADIUS >= state.layout.height - 22) {
+        const floorY = state.layout.height - 22 - RADIUS;
         addExplosion(state, falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75);
         exploded++;
       } else remaining.push(falling);
@@ -440,7 +517,7 @@ export function stepGame(state, dt) {
       state.shake = Math.max(state.shake, Math.min(1.25, exploded * .18));
       if (!detonated) emit(state, 'burst');
     }
-    if (state.board.size === 0 && state.status === 'playing' && !state.projectile) {
+    if ((state.variant === 'puzzle' ? state.bombs.size === 0 : state.board.size === 0) && state.status === 'playing' && !state.projectile && !state.pendingBombs.length) {
       if (state.falling.length) state.status = 'clearing';
       else { state.status = 'won'; emit(state, 'win'); }
     }
@@ -450,6 +527,11 @@ export function stepGame(state, dt) {
     }
     if (state.status === 'playing' && state.falling.length === 0) {
       if (state.pendingRow) descendShooter(state);
+      if (state.pendingPuzzleLoss && state.status === 'playing') {
+        state.pendingPuzzleLoss = false;
+        state.status = 'lost';
+        emit(state, 'lose');
+      }
       if (state.status === 'playing' && state.pendingDanger) {
         state.pendingDanger = false;
         if (ceilingReachedLauncher(state)) {
@@ -473,15 +555,15 @@ export function stepGame(state, dt) {
       shot.sparkleClock = 0;
       addSpark(state, shot.x, shot.y, shot.colour, -shot.vx * .045 + (Math.random() - .5) * 45, -shot.vy * .045);
     }
-    const low = LEFT + RADIUS;
-    const high = WIDTH - low;
+    const low = state.layout.left + RADIUS;
+    const high = state.layout.width - low;
     if (shot.x < low) { shot.x = low + (low - shot.x); shot.vx = Math.abs(shot.vx); }
     if (shot.x > high) { shot.x = high - (shot.x - high); shot.vx = -Math.abs(shot.vx); }
-    if (shot.y <= TOP + RADIUS) { shot.y = TOP + RADIUS; lockShooter(state); break; }
+    if (shot.y <= state.layout.top + RADIUS) { shot.y = state.layout.top + RADIUS; lockShooter(state); break; }
     for (const [k] of state.board) {
       const [row, col] = k.split(',').map(Number);
-      const p = shooterPosition(row, col, state.phase);
-      if (Math.hypot(shot.x - p.x, shot.y - p.y) < PITCH - 1.5) {
+      const p = shooterPosition(row, col, state.phase, state.layout);
+      if (Math.hypot(shot.x - p.x, shot.y - p.y) < SHOT_HIT_DISTANCE) {
         lockShooter(state);
         break;
       }

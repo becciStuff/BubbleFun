@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  initialShooter, shooterPosition, shooterColumns, connectedShooter,
+  initialShooter, initialPuzzle, PUZZLES, MOBILE_LAYOUT, DESKTOP_LAYOUT,
+  SHOT_HIT_DISTANCE, shooterPosition, shooterColumns, connectedShooter,
   floatingShooter, releaseFloatingShooter, detonateNextBomb,
   descendShooter, fireShooter, aimShooter, stepGame,
   initialPop, popGroup, popAt, popCellAt, collapsePop, hasPopMoves,
@@ -12,6 +13,89 @@ test('hexagonal rows fit the board and alternate between nine and eight cells', 
   assert.equal(shooterColumns(1), 8);
   assert.equal(shooterPosition(0, 0).x, 48);
   assert.equal(shooterPosition(1, 0).x, 69);
+});
+
+test('desktop playfield is genuinely landscape with a wider bubble grid', () => {
+  const state = initialShooter(() => .3, DESKTOP_LAYOUT);
+  assert.equal(state.layout.width,760);
+  assert.equal(state.layout.height,580);
+  assert.equal(shooterColumns(0,0,DESKTOP_LAYOUT),16);
+  assert.equal(shooterColumns(1,0,DESKTOP_LAYOUT),15);
+  assert.equal(state.board.size,78);
+  assert.ok(shooterPosition(0,15,0,DESKTOP_LAYOUT).x < DESKTOP_LAYOUT.width);
+  assert.equal(floatingShooter(state.board,0,DESKTOP_LAYOUT).length,0);
+});
+
+test('all handcrafted puzzle shapes are attached to the ceiling and fit both screens', () => {
+  assert.equal(PUZZLES.length,3);
+  for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) for (let index=0;index<PUZZLES.length;index++) {
+    const state = initialPuzzle(index,layout,()=>.3);
+    assert.equal(state.variant,'puzzle');
+    assert.equal(state.bombs.size,PUZZLES[index].bombs.length);
+    assert.deepEqual(floatingShooter(state.board,0,layout),[]);
+    for (const k of state.board.keys()) {
+      const [r,c] = k.split(',').map(Number);
+      assert.ok(c < shooterColumns(r,0,layout),`puzzle ${index} has an out-of-bounds bubble`);
+    }
+  }
+});
+
+test('Twin Towers can actually be solved with two aimed shots, not just mock state', () => {
+  const state=initialPuzzle(0,MOBILE_LAYOUT,()=>.2);
+  for(let i=0;i<50;i++) stepGame(state,.02);
+  for(const col of [2,6]) {
+    const p=shooterPosition(5,col);
+    aimShooter(state,p.x,p.y);
+    assert.equal(fireShooter(state),true);
+    for(let i=0;i<200;i++)stepGame(state,.02);
+  }
+  assert.equal(state.status,'won');
+  assert.equal(state.bombs.size,0);
+  assert.equal(state.shots,2);
+});
+
+test('Heartbreaker and The Crown have real playable solutions within their limits', () => {
+  const paths = [
+    [1,[[5,4],[2,4]],2],
+    [2,[[6,4],[4,4],[2,1],[2,4],[2,7]],5],
+  ];
+  for (const [index,targets,expectedShots] of paths) {
+    const state=initialPuzzle(index,MOBILE_LAYOUT,()=>.2);
+    for(let i=0;i<50;i++)stepGame(state,.02);
+    for(const [row,col] of targets) {
+      const aim=shooterPosition(row,col);
+      aimShooter(state,aim.x,aim.y);
+      assert.equal(fireShooter(state),true);
+      for(let i=0;i<220;i++)stepGame(state,.02);
+    }
+    assert.equal(state.status,'won',`${state.puzzleName} should be solvable`);
+    assert.equal(state.shots,expectedShots);
+    assert.ok(state.shots <= state.shotLimit);
+  }
+});
+
+test('puzzle mode ends when the last allotted shot misses its target', () => {
+  const state=initialPuzzle(0,MOBILE_LAYOUT,()=>.2);
+  state.board=new Map([['0,8','green']]);
+  state.bombs=new Set(['0,8']);
+  state.shots=state.shotLimit-1;
+  state.current='pink';
+  for(let i=0;i<45;i++)stepGame(state,.02);
+  aimShooter(state,48,77);
+  assert.equal(fireShooter(state),true);
+  for(let i=0;i<160;i++)stepGame(state,.02);
+  assert.equal(state.status,'lost');
+  assert.equal(state.bombs.size,1);
+});
+
+test('a near-graze passes outside the actual hit radius', () => {
+  const state=initialShooter(()=>.2);
+  const p=shooterPosition(1,4);
+  state.board=new Map([['0,4','green'],['1,4','green']]);
+  state.bombs=new Set();
+  state.projectile={x:p.x+SHOT_HIT_DISTANCE+.75,y:p.y+20,vx:0,vy:-700,colour:'pink',sparkleClock:0};
+  stepGame(state,.022);
+  assert.ok(state.projectile,'a grazing shot should keep travelling');
 });
 
 test('matching shooter bubbles connect across rows but different colours do not', () => {

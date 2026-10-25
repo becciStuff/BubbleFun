@@ -1,6 +1,6 @@
 import {
-  WIDTH, HEIGHT, RADIUS, LEFT, TOP, LAUNCH_Y, ROW_HEIGHT,
-  SWATCHES, shooterPosition, shooterColumns, popPosition, popGroup,
+  WIDTH, HEIGHT, RADIUS, SHOT_HIT_DISTANCE,
+  SWATCHES, shooterPosition, popPosition, popGroup,
 } from './game.js';
 
 const shade = (hex, amount) => {
@@ -16,10 +16,9 @@ function roundRect(ctx, x, y, width, height, radius, colour) {
   ctx.fill();
 }
 
-function bubble(ctx, x, y, colour, radius = RADIUS, highlight = false, opacity = 1) {
+function paintBubble(ctx, x, y, colour, radius = RADIUS, highlight = false) {
   const base = SWATCHES[colour] ?? colour;
   ctx.save();
-  ctx.globalAlpha = opacity;
   if (highlight) {
     ctx.shadowColor = base;
     ctx.shadowBlur = 21;
@@ -54,6 +53,28 @@ function bubble(ctx, x, y, colour, radius = RADIUS, highlight = false, opacity =
   ctx.restore();
 }
 
+// Gradient glass bubbles are expensive to rebuild dozens of times every
+// frame. Paint each colour/style once, then animate lightweight bitmaps.
+const bubbleSprites = new Map();
+function bubble(ctx, x, y, colour, radius = RADIUS, highlight = false, opacity = 1) {
+  const id = `${colour}:${radius}:${highlight}`;
+  let sprite = bubbleSprites.get(id);
+  if (!sprite && typeof document !== 'undefined') {
+    const padding = highlight ? 30 : 14;
+    const size = Math.ceil((radius + padding) * 2);
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    paintBubble(canvas.getContext('2d'),size/2,size/2,colour,radius,highlight);
+    sprite = {canvas,padding,size};
+    bubbleSprites.set(id,sprite);
+  }
+  if (!sprite) { paintBubble(ctx,x,y,colour,radius,highlight); return; }
+  ctx.save();
+  ctx.globalAlpha *= opacity;
+  ctx.drawImage(sprite.canvas,x-sprite.size/2,y-sprite.size/2);
+  ctx.restore();
+}
+
 function bombMark(ctx, x, y, seconds) {
   const beat = (Math.sin(seconds * 5 + x * .07) + 1) * .5;
   ctx.save();
@@ -81,22 +102,23 @@ function star(ctx, x, y, radius, alpha = 1, colour = '#c5d9ff') {
   ctx.restore();
 }
 
-function background(ctx, seconds) {
-  const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+function background(ctx, seconds, layout) {
+  const { width, height } = layout;
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, '#263b81');
   gradient.addColorStop(.44, '#1b2d70');
   gradient.addColorStop(1, '#171746');
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-  const glow = ctx.createRadialGradient(WIDTH / 2, 180, 0, WIDTH / 2, 180, 390);
+  ctx.fillRect(0, 0, width, height);
+  const glow = ctx.createRadialGradient(width / 2, height * .32, 0, width / 2, height * .32, height * .67);
   glow.addColorStop(0, 'rgba(94,113,225,.3)');
   glow.addColorStop(1, 'rgba(51,73,173,0)');
   ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.fillRect(0, 0, width, height);
   // Low-contrast drifting orbs give the still board a lively backdrop.
   for (let i = 0; i < 13; i++) {
-    const x = 25 + (i * 97) % 385 + Math.sin(seconds * .37 + i) * 11;
-    const y = ((i * 121 - seconds * (7 + i % 4 * 2)) % (HEIGHT + 90) + HEIGHT + 90) % (HEIGHT + 90) - 45;
+    const x = 25 + (i * 97) % (width - 48) + Math.sin(seconds * .37 + i) * 11;
+    const y = ((i * 121 - seconds * (7 + i % 4 * 2)) % (height + 90) + height + 90) % (height + 90) - 45;
     const radius = 5 + (i * 7) % 12;
     ctx.strokeStyle = `rgba(180,196,255,${.055 + i % 3 * .025})`;
     ctx.lineWidth = 1.5;
@@ -106,21 +128,21 @@ function background(ctx, seconds) {
   }
   ctx.strokeStyle = 'rgba(188,200,255,.037)';
   ctx.lineWidth = 1;
-  for (let x = 15; x < WIDTH; x += 28) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, HEIGHT); ctx.stroke();
+  for (let x = 15; x < width; x += 28) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
   }
-  for (let y = 12; y < HEIGHT; y += 28) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WIDTH, y); ctx.stroke();
+  for (let y = 12; y < height; y += 28) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
   }
-  const stars = [[30,150,2.6],[389,92,3],[54,321,1.8],[388,440,2.3],[115,575,2.2],[355,602,1.5],[204,51,1.6],[323,264,1.9]];
+  const stars = [[30,150,2.6],[width-40,92,3],[54,321,1.8],[width-44,440,2.3],[115,height-105,2.2],[width-77,height-98,1.5],[width*.47,51,1.6],[width*.75,264,1.9]];
   for (let i = 0; i < stars.length; i++) {
     const [x,y,r] = stars[i];
     star(ctx,x,y,r,.17 + (Math.sin(seconds * 1.5 + i * 1.8) + 1) * .12);
   }
-  const floor = ctx.createLinearGradient(0, 580, 0, HEIGHT);
+  const floor = ctx.createLinearGradient(0, height-120, 0, height);
   floor.addColorStop(0,'rgba(42,25,97,0)');
   floor.addColorStop(1,'rgba(18,9,51,.78)');
-  ctx.fillStyle = floor; ctx.fillRect(0, 580, WIDTH, 120);
+  ctx.fillStyle = floor; ctx.fillRect(0, height-120, width, 120);
 }
 
 function label(ctx, text, x, y, colour = '#93a9e6', size = 12, align = 'center') {
@@ -134,26 +156,27 @@ function label(ctx, text, x, y, colour = '#93a9e6', size = 12, align = 'center')
 }
 
 function aimGuide(ctx, state) {
-  // Follow a thin, wall-bouncing trajectory until it touches the top or a bubble.
+  // This uses the *same* collision distance as the moving shot, including
+  // near-grazes and wall bounces, so the guide never lies about a clear gap.
+  const {width,left,top,launchY} = state.layout;
   const dx = Math.sin(state.angle) * 5;
   const dy = -Math.cos(state.angle) * 5;
-  let x = WIDTH / 2;
-  let y = LAUNCH_Y - 28;
+  let x = width / 2;
+  let y = launchY;
   let vx = dx;
   const trail = [];
-  for (let i = 0; i < 160; i++) {
+  for (let i = 0; i < 300; i++) {
     x += vx; y += dy;
-    if (x < LEFT + RADIUS || x > WIDTH - LEFT - RADIUS) {
-      vx = -vx;
-      x = Math.max(LEFT + RADIUS, Math.min(WIDTH - LEFT - RADIUS, x));
-    }
+    const low = left + RADIUS, high = width - low;
+    if (x < low) { x = low + (low - x); vx = Math.abs(vx); }
+    if (x > high) { x = high - (x - high); vx = -Math.abs(vx); }
     trail.push([x,y]);
-    if (y <= TOP + RADIUS) break;
+    if (y <= top + RADIUS) break;
     let hit = false;
     for (const [k] of state.board) {
       const [row,col] = k.split(',').map(Number);
-      const p = shooterPosition(row,col,state.phase);
-      if (Math.hypot(x-p.x,y-p.y) < RADIUS*2) { hit=true; break; }
+      const p = shooterPosition(row,col,state.phase,state.layout);
+      if (Math.hypot(x-p.x,y-p.y) < SHOT_HIT_DISTANCE) { hit=true; break; }
     }
     if (hit) break;
   }
@@ -164,24 +187,38 @@ function aimGuide(ctx, state) {
     ctx.fillStyle = `rgba(245,240,255,${.18+scale*.52})`;
     ctx.fill();
   }
+  if (trail.length) {
+    const [lastX,lastY] = trail[trail.length-1];
+    ctx.beginPath(); ctx.arc(lastX,lastY,13,0,Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,246,208,.5)'; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+  }
 }
 
 function shooter(ctx, state, seconds) {
+  const {width,height,launchY} = state.layout;
   const chainActive = state.comboLevel >= 2 && state.comboDisplay > 0;
-  roundRect(ctx, chainActive ? 119 : 100, 17, chainActive ? WIDTH - 238 : WIDTH - 200, 24, 12,
+  const bannerWidth = state.variant === 'puzzle' ? 310 : chainActive ? 235 : 227;
+  roundRect(ctx, (width - bannerWidth)/2, 17, bannerWidth, 24, 12,
     chainActive ? 'rgba(225,61,154,.65)' : 'rgba(13,20,72,.4)');
-  label(ctx, chainActive ? `EXPLOSIVE COMBO ×${state.comboLevel}` : 'MATCH 3+ · DETONATE BOMBS', WIDTH/2, 29,
+  label(ctx, chainActive ? `EXPLOSIVE COMBO ×${state.comboLevel}` : state.variant === 'puzzle' ? `PUZZLE ${state.puzzleIndex + 1} · ${state.puzzleName.toUpperCase()}` : 'MATCH 3+ · DETONATE BOMBS', width/2, 29,
     chainActive ? '#fff0b3' : '#acbdfa', 11);
   ctx.strokeStyle = `rgba(255,148,198,${.17 + Math.sin(seconds * 2) * .045})`; ctx.lineWidth = 1.3;
   ctx.setLineDash([8,10]);
-  ctx.beginPath(); ctx.moveTo(30,LAUNCH_Y-47); ctx.lineTo(WIDTH-30,LAUNCH_Y-47); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(30,launchY-47); ctx.lineTo(width-30,launchY-47); ctx.stroke();
   ctx.setLineDash([]);
-  if (!state.projectile && !state.falling.length && state.status === 'playing') aimGuide(ctx,state);
+  if (!state.projectile && !state.falling.length && !state.pendingBombs.length && state.status === 'playing') aimGuide(ctx,state);
   for (const [k,colour] of state.board) {
     const [row,col] = k.split(',').map(Number);
-    const {x,y} = shooterPosition(row,col,state.phase);
-    bubble(ctx,x,y,colour);
-    if (state.bombs.has(k)) bombMark(ctx,x,y,seconds);
+    const {x,y:baseY} = shooterPosition(row,col,state.phase,state.layout);
+    const entrance = state.introTime ? Math.min(1,Math.max(0,(.78-state.introTime-row*.052)/.3)) : 1;
+    const y = baseY - state.rowShift - Math.pow(1 - entrance, 2) * 90;
+    const power = state.wobble.get(k) ?? 0;
+    const squash = 1 + Math.sin((1-power)*24)*power*.07;
+    ctx.save(); ctx.translate(x,y); ctx.scale(squash,1+(1-squash)*.7);
+    bubble(ctx,0,0,colour,RADIUS,false,Math.max(.1,entrance));
+    if (state.bombs.has(k)) bombMark(ctx,0,0,seconds);
+    ctx.restore();
   }
   // Detached bubbles no longer disappear: gravity takes over until they burst.
   for (const falling of state.falling) {
@@ -193,17 +230,17 @@ function shooter(ctx, state, seconds) {
     star(ctx, -12, 14, 3.1, .75, '#fff5df');
     ctx.restore();
   }
-  const x = WIDTH/2;
+  const x = width/2;
   ctx.save();
-  ctx.translate(x,LAUNCH_Y+8+state.recoil*7);
+  ctx.translate(x,launchY+8+state.recoil*7);
   ctx.rotate(state.angle);
   roundRect(ctx,-25,-22,50,61,24,'#654394');
   roundRect(ctx,-17,-29,34,54,15,'#9071c6');
   roundRect(ctx,-9,-33,18,40,9,'#c1a6ef');
   ctx.restore();
-  ctx.fillStyle='#1d1245'; ctx.beginPath(); ctx.ellipse(x,LAUNCH_Y+40,48,15,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#805baa'; ctx.beginPath();ctx.ellipse(x,LAUNCH_Y+34,43,12,0,0,Math.PI*2);ctx.fill();
-  bubble(ctx,x,LAUNCH_Y+state.recoil*5,state.current,21);
+  ctx.fillStyle='#1d1245'; ctx.beginPath(); ctx.ellipse(x,launchY+40,48,15,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#805baa'; ctx.beginPath();ctx.ellipse(x,launchY+34,43,12,0,0,Math.PI*2);ctx.fill();
+  bubble(ctx,x,launchY+state.recoil*5,state.current,21);
   if (state.projectile) {
     ctx.save();
     ctx.shadowBlur = 22;
@@ -211,7 +248,7 @@ function shooter(ctx, state, seconds) {
     bubble(ctx,state.projectile.x,state.projectile.y,state.projectile.colour,21,true);
     ctx.restore();
   }
-  label(ctx,'BUBBLE LAUNCHER',x,HEIGHT-17,'#8e85c8',10);
+  label(ctx,state.variant === 'puzzle' ? `${state.bombs.size} TARGET${state.bombs.size===1?'':'S'} REMAINING` : 'BUBBLE LAUNCHER',x,height-17,'#a596d1',10);
 }
 
 function popBoard(ctx, state, hover) {
@@ -293,8 +330,9 @@ function effects(ctx,state) {
 }
 
 export function draw(ctx, state, hover, seconds=0, reducedMotion=false) {
-  ctx.clearRect(0,0,WIDTH,HEIGHT);
-  background(ctx,reducedMotion ? 0 : seconds);
+  const layout = state.layout ?? {width:WIDTH,height:HEIGHT};
+  ctx.clearRect(0,0,layout.width,layout.height);
+  background(ctx,reducedMotion ? 0 : seconds,layout);
   ctx.save();
   if (!reducedMotion && state.shake > 0) {
     const strength = state.shake * 5;
@@ -306,6 +344,6 @@ export function draw(ctx, state, hover, seconds=0, reducedMotion=false) {
   ctx.restore();
   if (state.flash > 0) {
     ctx.fillStyle = `rgba(255,241,255,${state.flash * .18})`;
-    ctx.fillRect(0,0,WIDTH,HEIGHT);
+    ctx.fillRect(0,0,layout.width,layout.height);
   }
 }

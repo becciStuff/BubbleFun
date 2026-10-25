@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1e1548" />
-    <meta name="description" content="BubbleFun: two colourful, free-to-play bubble popping arcade games." />
+    <meta name="description" content="BubbleFun: a free bubble shooter with explosive arcade action and handcrafted puzzles, for desktop and mobile." />
     <title>BubbleFun — The little bubble arcade</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -19,7 +19,7 @@
           <span>Bubble<span class="brand-accent">Fun!</span></span>
         </a>
         <div class="header-right">
-          <span class="version-pill"><span class="online-dot"></span> EXPLOSIVE EDITION <span class="version-number">v0.4</span></span>
+          <span class="version-pill"><span class="online-dot"></span> PUZZLE EDITION <span class="version-number">v0.5</span></span>
           <button class="sound-button" id="sound-button" type="button" aria-pressed="false" aria-label="Turn sound on">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Z"/><path class="sound-wave" d="M15 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/><path class="sound-muted" d="m16 9 5 6m0-6-5 6"/></svg>
             <span id="sound-label">Sound off</span>
@@ -33,18 +33,23 @@
           <h1>Ready,<br />set, <span>POP!</span></h1>
           <p class="intro">A pocketful of colour, a little bit of strategy, and that oh-so-satisfying <em>pop.</em></p>
 
-          <div class="selector-title">CHOOSE YOUR GAME <span>02 MODES</span></div>
-          <div class="mode-selector" role="group" aria-label="Game mode">
-            <button class="mode-card active" data-mode="shooter" aria-pressed="true" type="button">
+          <div class="selector-title">CHOOSE YOUR PLAY STYLE <span>02 WAYS TO PLAY</span></div>
+          <div class="mode-selector" role="group" aria-label="Play style">
+            <button class="mode-card active" data-play="arcade" aria-pressed="true" type="button">
               <span class="mode-icon shooter-icon" aria-hidden="true">↗<i></i></span>
-              <span class="mode-copy"><strong>Bubble Shooter</strong><small>Aim · Match · Clear</small></span>
+              <span class="mode-copy"><strong>Arcade</strong><small>Endless explosive fun</small></span>
               <span class="mode-arrow" aria-hidden="true">›</span>
             </button>
-            <button class="mode-card" data-mode="pop" aria-pressed="false" type="button">
-              <span class="mode-icon pop-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-              <span class="mode-copy"><strong>Bubble Pop</strong><small>Find groups · Score big</small></span>
+            <button class="mode-card" data-play="puzzle" aria-pressed="false" type="button">
+              <span class="mode-icon puzzle-icon" aria-hidden="true">✦</span>
+              <span class="mode-copy"><strong>Puzzles</strong><small>Shapes · Limited shots</small></span>
               <span class="mode-arrow" aria-hidden="true">›</span>
             </button>
+          </div>
+          <div class="puzzle-picker" id="puzzle-picker" hidden role="group" aria-label="Choose a puzzle">
+            <button class="puzzle-choice active" type="button" data-puzzle="0" aria-pressed="true"><span>01</span><strong>Twin Towers</strong><small>16 shots</small></button>
+            <button class="puzzle-choice" type="button" data-puzzle="1" aria-pressed="false"><span>02</span><strong>Heartbreaker</strong><small>18 shots</small></button>
+            <button class="puzzle-choice" type="button" data-puzzle="2" aria-pressed="false"><span>03</span><strong>The Crown</strong><small>20 shots</small></button>
           </div>
 
           <div class="side-note"><span class="side-note-icon">✳</span><p><strong>Make a little chaos!</strong> Those glowing bombs can set off a whole chain of colourful explosions.</p></div>
@@ -62,6 +67,8 @@
             <div class="score-cell"><span id="turn-label">NEXT ROW IN</span><strong id="turns-value">5 shots</strong></div>
           </div>
 
+          <div class="mission-strip" id="mission-strip" hidden></div>
+
           <div class="stage-wrap">
             <div class="stage-shine" aria-hidden="true"></div>
             <canvas id="game-canvas" width="432" height="700" tabindex="0" aria-label="Bubble arcade playfield. Aim with the pointer, tap to fire, or use arrow keys and Space."></canvas>
@@ -71,6 +78,7 @@
               <p id="result-message">Ready for another round?</p>
               <strong id="result-score">0 points</strong>
               <button id="play-again-button" class="play-again-button" type="button">Play again <span aria-hidden="true">→</span></button>
+              <button id="next-puzzle-button" class="next-puzzle-button" type="button" hidden>Next puzzle <span aria-hidden="true">→</span></button>
             </div>
           </div>
 

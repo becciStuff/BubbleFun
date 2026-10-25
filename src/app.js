@@ -1,6 +1,6 @@
 import {
-  WIDTH, HEIGHT, SWATCHES, initialShooter, initialPop, fireShooter,
-  aimShooter, stepGame, popAt, popCellAt,
+  MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES, PUZZLES,
+  initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame,
 } from './game.js';
 import { draw } from './render.js';
 
@@ -8,18 +8,17 @@ const $ = id => document.getElementById(id);
 const canvas = $('game-canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
 const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
-const states = { shooter: initialShooter(), pop: initialPop() };
-let mode = 'shooter';
-let hover = null;
+const landscape = window.matchMedia('(min-width: 900px)');
+const chosenLayout = () => landscape.matches ? DESKTOP_LAYOUT : MOBILE_LAYOUT;
+let state = initialShooter(Math.random, chosenLayout());
+let playStyle = 'arcade';
+let puzzleIndex = 0;
 let pointerDown = false;
 let sound = false;
 let audioContext = null;
 let lastTime = 0;
-const seenEvents = { shooter: 0, pop: 0 };
-const best = {
-  shooter: readBest('shooter'),
-  pop: readBest('pop'),
-};
+let seenEvent = 0;
+let bestScore = readBest('arcade');
 
 function readBest(gameMode) {
   try { return Number(localStorage.getItem(`bubblefun-best-${gameMode}`)) || 0; }
@@ -73,15 +72,14 @@ function playSound(type) {
 function pointFromEvent(event) {
   const rect = canvas.getBoundingClientRect();
   return {
-    x: (event.clientX - rect.left) * WIDTH / rect.width,
-    y: (event.clientY - rect.top) * HEIGHT / rect.height,
+    x: (event.clientX - rect.left) * state.layout.width / rect.width,
+    y: (event.clientY - rect.top) * state.layout.height / rect.height,
   };
 }
 
 function updateTarget(event) {
   const point = pointFromEvent(event);
-  if (mode === 'shooter') aimShooter(states.shooter, point.x, point.y);
-  else hover = popCellAt(point.x, point.y);
+  aimShooter(state, point.x, point.y);
   return point;
 }
 
@@ -102,66 +100,73 @@ canvas.addEventListener('pointermove', event => {
 canvas.addEventListener('pointerup', event => {
   if (!pointerDown) return;
   pointerDown = false;
-  const { x, y } = updateTarget(event);
-  if (mode === 'shooter') fireShooter(states.shooter);
-  else {
-    const cell = popCellAt(x, y);
-    if (cell) {
-      const count = popAt(states.pop, ...cell);
-      if (count === 0 && states.pop.status === 'playing') announce('Find two or more connected bubbles of the same colour.');
-    }
-  }
+  updateTarget(event);
+  fireShooter(state);
   event.preventDefault();
 });
 
 canvas.addEventListener('pointercancel', () => { pointerDown = false; });
-canvas.addEventListener('pointerleave', () => { if (mode === 'pop') hover = null; });
 
 window.addEventListener('keydown', event => {
   if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|BUTTON|SELECT)$/.test(event.target.tagName)) return;
-  if (mode !== 'shooter' || states.shooter.status !== 'playing') return;
-  if (event.key === 'ArrowLeft') { states.shooter.angle = Math.max(-1.15, states.shooter.angle - .085); event.preventDefault(); }
-  if (event.key === 'ArrowRight') { states.shooter.angle = Math.min(1.15, states.shooter.angle + .085); event.preventDefault(); }
-  if (event.code === 'Space') { fireShooter(states.shooter); event.preventDefault(); }
+  if (state.status !== 'playing') return;
+  if (event.key === 'ArrowLeft') { state.angle = Math.max(-1.15, state.angle - .065); event.preventDefault(); }
+  if (event.key === 'ArrowRight') { state.angle = Math.min(1.15, state.angle + .065); event.preventDefault(); }
+  if (event.code === 'Space') { fireShooter(state); event.preventDefault(); }
 });
 
-function setMode(nextMode) {
-  if (nextMode !== 'shooter' && nextMode !== 'pop') return;
-  mode = nextMode;
-  hover = null;
-  pointerDown = false;
+const scoreKey = () => playStyle === 'arcade' ? 'shooter' : `puzzle-${puzzleIndex}`;
+
+function updatePlayUI() {
   for (const button of document.querySelectorAll('.mode-card')) {
-    const selected = button.dataset.mode === mode;
+    const selected = button.dataset.play === playStyle;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-pressed', String(selected));
   }
-  const shooter = mode === 'shooter';
-  canvas.setAttribute('aria-label', shooter
-    ? 'Bubble Shooter playfield. Aim with a pointer and shoot, or use Left and Right arrow keys and Space.'
-    : 'Bubble Pop playfield. Tap or click connected groups of two or more bubbles to pop them.');
-  $('game-title').textContent = shooter ? 'Bubble Shooter' : 'Bubble Pop';
-  $('turn-label').textContent = shooter ? 'NEXT ROW IN' : 'BUBBLES LEFT';
-  $('next-area').hidden = !shooter;
-  $('instructions-title').textContent = shooter ? 'Make your shot count.' : 'Find the big groups.';
-  $('instructions-copy').textContent = shooter
-    ? 'Match three or more colours. Pop a glowing bomb bubble to blast nearby bubbles and set off explosive chains. Anything disconnected tumbles down and bursts!'
-    : 'Tap any connected group of two or more matching bubbles. They disappear, the rest fall, and empty columns slide together.';
-  $('control-primary').textContent = shooter ? 'Move to aim' : 'Find matching neighbours';
-  $('control-secondary').textContent = shooter ? 'Click or tap to shoot' : 'Click or tap a group to pop';
-  $('control-keyboard').textContent = shooter ? 'Arrow keys + Space also work' : 'Bigger groups earn more points';
-  $('tip-copy').textContent = shooter
-    ? 'Glowing bubbles are bombs! Include one in a colour match, or detonate it with another bomb. Each blast multiplies your score.'
-    : 'A group of 5 earns much more than five groups of 2. Plan a few moves ahead!';
-  announce(`${shooter ? 'Bubble Shooter' : 'Bubble Pop'} selected.`);
-  updateUI();
+  for (const button of document.querySelectorAll('.puzzle-choice')) {
+    const selected = Number(button.dataset.puzzle) === puzzleIndex;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  }
+  const puzzle = playStyle === 'puzzle';
+  $('puzzle-picker').hidden = !puzzle;
+  $('mission-strip').hidden = !puzzle;
+  putText('game-title', puzzle ? `Puzzle ${puzzleIndex + 1}: ${PUZZLES[puzzleIndex].name}` : 'Bubble Shooter');
+  putText('mission-strip', puzzle ? `✦  ${PUZZLES[puzzleIndex].goal}  ·  ${PUZZLES[puzzleIndex].shots} shots` : '');
+  putText('instructions-title', puzzle ? 'Every shot matters.' : 'Make your shot count.');
+  putText('instructions-copy', puzzle
+    ? `Clear the glowing bomb targets in ${PUZZLES[puzzleIndex].shots} shots or fewer. The bubbles form a handcrafted pattern — look for a weak point and bring down whole sections.`
+    : 'Match three or more colours. Hit marked bomb bubbles to set off explosive chains, then watch unsupported bubbles tumble and burst.');
+  putText('tip-copy', puzzle
+    ? 'You don’t need to clear every bubble. Break the supports or detonate the marked targets to solve the puzzle.'
+    : 'Those glowing bubbles are bombs. Aim for a colour match, or use another explosion to trigger them.');
+  canvas.setAttribute('aria-label', `${puzzle ? PUZZLES[puzzleIndex].name + ' puzzle' : 'Bubble Shooter'} playfield. Aim with mouse or touch; arrow keys and Space also work.`);
 }
 
 function reset() {
-  states[mode] = mode === 'shooter' ? initialShooter() : initialPop();
-  seenEvents[mode] = 0;
-  hover = null;
-  announce('New game started.');
+  state = playStyle === 'puzzle' ? initialPuzzle(puzzleIndex, chosenLayout()) : initialShooter(Math.random, chosenLayout());
+  if (reducedMotion) state.introTime = 0;
+  canvas.width = state.layout.width;
+  canvas.height = state.layout.height;
+  canvas.style.aspectRatio = `${state.layout.width} / ${state.layout.height}`;
+  seenEvent = 0;
+  bestScore = readBest(scoreKey());
+  pointerDown = false;
+  updatePlayUI();
+  announce(`${playStyle === 'puzzle' ? state.puzzleName : 'Arcade'} started.`);
   updateUI();
+}
+
+function selectPlay(nextStyle) {
+  if (nextStyle !== 'arcade' && nextStyle !== 'puzzle') return;
+  if (playStyle !== nextStyle) { playStyle = nextStyle; reset(); }
+}
+
+function selectPuzzle(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= PUZZLES.length) return;
+  playStyle = 'puzzle';
+  puzzleIndex = index;
+  reset();
 }
 
 function announce(message) { $('live-status').textContent = message; }
@@ -172,49 +177,46 @@ function putText(id, value) {
 }
 
 function updateUI() {
-  const state = states[mode];
-  if (state.score > best[mode]) { best[mode] = state.score; saveBest(mode, state.score); }
+  if (state.score > bestScore) { bestScore = state.score; saveBest(scoreKey(), state.score); }
   putText('score-value', state.score.toLocaleString('en-NZ'));
-  putText('best-value', best[mode].toLocaleString('en-NZ'));
-  if (mode === 'shooter') {
-    const showCombo = state.comboDisplay > 0 && state.comboLevel >= 2;
-    putText('turn-label', showCombo ? 'EXPLOSIVE COMBO' : 'NEXT ROW IN');
-    putText('turns-value', showCombo ? `×${state.comboLevel} COMBO` : `${state.shotsUntilRow} shot${state.shotsUntilRow === 1 ? '' : 's'}`);
-    const orb = $('next-orb');
-    if (orb.dataset.colour !== state.next) {
-      orb.style.backgroundColor = SWATCHES[state.next];
-      orb.style.backgroundImage = `radial-gradient(circle at 30% 22%, #fff, ${SWATCHES[state.next]} 38%, #442464 125%)`;
-      orb.dataset.colour = state.next;
-    }
-  } else {
-    putText('turns-value', state.board.flat().filter(Boolean).length);
+  putText('best-value', bestScore.toLocaleString('en-NZ'));
+  const showCombo = state.comboDisplay > 0 && state.comboLevel >= 2;
+  putText('turn-label', showCombo ? 'EXPLOSIVE COMBO' : playStyle === 'puzzle' ? 'SHOTS LEFT' : 'NEXT ROW IN');
+  const remaining = playStyle === 'puzzle' ? Math.max(0,state.shotLimit - state.shots) : state.shotsUntilRow;
+  putText('turns-value', showCombo ? `×${state.comboLevel} COMBO` : `${remaining} shot${remaining === 1 ? '' : 's'}`);
+  const orb = $('next-orb');
+  if (orb.dataset.colour !== state.next) {
+    orb.style.backgroundColor = SWATCHES[state.next];
+    orb.style.backgroundImage = `radial-gradient(circle at 30% 22%, #fff, ${SWATCHES[state.next]} 38%, #442464 125%)`;
+    orb.dataset.colour = state.next;
   }
-  const status = mode === 'shooter'
-    ? (state.status === 'clearing' ? 'Final bubbles tumbling down!'
+  const status = (state.status === 'clearing' ? 'Final bubbles tumbling down!'
       : state.pendingBombs.length ? 'Bombs are going off — here comes the chain!'
       : state.comboDisplay > 0 && state.lastChain ? `${state.lastBombs} bomb${state.lastBombs === 1 ? '' : 's'}! Combo ×${state.lastChain.multiplier}!`
       : state.falling.length ? 'Gravity cascade — wait for the floor bursts!'
       : state.lastDrop ? `${state.lastDrop} bubble${state.lastDrop === 1 ? '' : 's'} dropped and bursting!`
-      : state.lastPop ? `${state.lastPop} popped! Keep going!` : 'Match 3+ — glowing bubbles are bombs!')
-    : (state.lastPop ? `${state.lastPop} popped! Nice one!` : 'Tap matching groups of 2+');
+      : state.lastPop ? `${state.lastPop} popped! Keep going!`
+      : playStyle === 'puzzle' ? `${state.bombs.size} bomb target${state.bombs.size===1?'':'s'} to clear` : 'Match 3+ — glowing bubbles are bombs!');
   putText('game-status', `✦ ${status}`);
 
   const overlay = $('result-overlay');
-  const finished = state.status === 'won' || state.status === 'lost' || state.status === 'finished';
+  const finished = state.status === 'won' || state.status === 'lost';
   overlay.classList.toggle('hidden', !finished);
+  $('next-puzzle-button').hidden = !(finished && state.status === 'won' && playStyle === 'puzzle' && puzzleIndex < PUZZLES.length - 1);
   if (finished) {
     const victory = state.status === 'won';
-    putText('result-title', victory ? 'Bubble-tastic!' : state.status === 'lost' ? 'Oh, bubbles!' : 'All done!');
-    putText('result-message', victory ? 'You cleared the board. Absolutely brilliant!'
-      : state.status === 'lost' ? 'The bubbles reached your launcher. Fancy another go?'
-      : 'No more matching groups. Can you beat that score?');
+    putText('result-title', victory ? (playStyle === 'puzzle' ? 'Puzzle solved!' : 'Bubble-tastic!') : 'Oh, bubbles!');
+    putText('result-message', victory ? (playStyle === 'puzzle' ? `All targets cleared in ${state.shots} shots. Nicely done!` : 'You cleared the board. Absolutely brilliant!')
+      : playStyle === 'puzzle' ? 'Out of shots! Try a different angle or look for a weaker support.' : 'The bubbles reached your launcher. Fancy another go?');
     putText('result-score', `${state.score.toLocaleString('en-NZ')} points`);
   }
 }
 
-document.querySelectorAll('.mode-card').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
+document.querySelectorAll('.mode-card').forEach(button => button.addEventListener('click', () => selectPlay(button.dataset.play)));
+document.querySelectorAll('.puzzle-choice').forEach(button => button.addEventListener('click', () => selectPuzzle(Number(button.dataset.puzzle))));
 $('restart-button').addEventListener('click', reset);
 $('play-again-button').addEventListener('click', reset);
+$('next-puzzle-button').addEventListener('click', () => selectPuzzle(puzzleIndex + 1));
 $('sound-button').addEventListener('click', () => {
   sound = !sound;
   const button = $('sound-button');
@@ -227,11 +229,13 @@ $('sound-button').addEventListener('click', () => {
 function frame(timestamp) {
   const dt = lastTime ? (timestamp - lastTime) / 1000 : 0;
   lastTime = timestamp;
-  // Preserve the inactive mode's animation state until it is selected again.
-  const state = states[mode];
   stepGame(state, dt);
-  if (seenEvents[mode] !== state.event) {
-    seenEvents[mode] = state.event;
+  if (reducedMotion) {
+    state.rowShift = 0;
+    state.wobble.clear();
+  }
+  if (seenEvent !== state.event) {
+    seenEvent = state.event;
     playSound(state.lastEvent);
     if (state.lastEvent === 'pop') announce(`${state.lastPop} bubbles popped. Score ${state.score}.`);
     if (state.lastEvent === 'cascade') announce(`Gravity combo! ${state.lastDrop} disconnected bubbles are falling. Score ${state.score}.`);
@@ -239,9 +243,13 @@ function frame(timestamp) {
     if (['won', 'lost', 'finished'].includes(state.status)) announce(`Game over. Score ${state.score}.`);
   }
   updateUI();
-  draw(ctx, state, hover, timestamp / 1000, reducedMotion);
+  draw(ctx, state, null, timestamp / 1000, reducedMotion);
   requestAnimationFrame(frame);
 }
 
-setMode('shooter');
+landscape.addEventListener('change', () => {
+  if (state.shots === 0 && !state.projectile && !state.pendingBombs.length) reset();
+  else announce('Display size changed. Restart when you are ready to switch between desktop and mobile boards.');
+});
+reset();
 requestAnimationFrame(frame);

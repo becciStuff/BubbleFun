@@ -16,7 +16,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid #75e9ff; outline-offs
 .page-glow { position: fixed; pointer-events: none; width: 420px; height: 420px; border-radius: 50%; filter: blur(90px); opacity: .18; }
 .page-glow-one { left: -220px; top: 190px; background: #ed48bb; }
 .page-glow-two { right: -260px; top: 450px; background: #32bcff; }
-.site-shell { position: relative; width: min(1210px, calc(100% - 58px)); margin: 0 auto; }
+.site-shell { position: relative; width: min(1540px, calc(100% - 48px)); margin: 0 auto; }
 .site-header { height: 104px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,.11); }
 .brand { color: white; text-decoration: none; display: flex; align-items: center; gap: 13px; font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; font-size: 31px; font-weight: 800; letter-spacing: -1.7px; }
 .brand-accent { color: #ff6eae; }
@@ -34,7 +34,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid #75e9ff; outline-offs
 .sound-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sound-button[aria-pressed="false"] .sound-wave, .sound-button[aria-pressed="true"] .sound-muted { display: none; }
 
-.arcade-layout { display: grid; grid-template-columns: minmax(218px, 256px) minmax(370px, 425px) minmax(204px, 253px); align-items: start; justify-content: center; gap: 27px; padding: 40px 0 52px; }
+.arcade-layout { display: grid; grid-template-columns: minmax(190px, 238px) minmax(560px, 900px) minmax(190px, 238px); align-items: start; justify-content: center; gap: 24px; padding: 30px 0 52px; }
 .left-panel { padding-top: 32px; }
 .eyebrow { color: #bbace8; font-size: 10px; font-weight: 900; letter-spacing: 1.7px; }
 .tiny-star { color: #f8bf56; margin-right: 4px; font-size: 13px; }
@@ -64,6 +64,16 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
 .mode-card.active .mode-copy small { color: #e8c4da; }
 .mode-arrow { margin-left: auto; font-size: 24px; color: #9586b8; }
 .mode-card.active .mode-arrow { color: #ffc3df; }
+.puzzle-icon { background: linear-gradient(130deg,#8f86f6,#6743ac); font-size: 31px; color:#ffdf93; text-shadow:0 2px 14px #ffe3acaa; }
+.puzzle-picker { display: grid; gap: 7px; margin-top: 12px; animation: pickerIn .26s ease-out; }
+.puzzle-picker[hidden] { display: none; }
+.puzzle-choice { min-width:0; width:100%; display:flex; align-items:center; gap:9px; border:1px solid #51416f; border-radius:12px; background:#271f4b; color:#ded4fa; text-align:left; padding:10px 11px; transition:background .2s,border-color .2s,transform .2s; }
+.puzzle-choice:hover { background:#403066; transform:translateX(2px); }
+.puzzle-choice.active { border-color:#ffd182; background:#4b3369; box-shadow:inset 3px 0 #ffd182; }
+.puzzle-choice span { color:#ffcf86; font-weight:900; font-size:11px; }
+.puzzle-choice strong { font-size:11px; white-space:nowrap; }
+.puzzle-choice small { margin-left:auto; color:#a79ac7; font-size:9px; white-space:nowrap; }
+@keyframes pickerIn { from {opacity:0;transform:translateY(-9px)} to {opacity:1;transform:translateY(0)} }
 .side-note { display: flex; gap: 10px; margin-top: 27px; padding: 15px 1px; border-top: 1px solid #493968; }
 .side-note-icon { color: #ffbd76; font-size: 21px; }
 .side-note p { font-size: 11px; line-height: 1.6; color: #968ab8; margin: 0; }
@@ -72,7 +82,7 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
 .game-card { min-width: 0; padding: 15px; border-radius: 25px; background: #f4eafa; box-shadow: 0 0 0 5px rgba(255,255,255,.06), 0 25px 65px rgba(7,4,31,.35), inset 0 3px 4px #fff; color: #35265a; }
 .game-card-top { display: flex; align-items: center; justify-content: space-between; padding: 5px 9px 16px; gap: 8px; }
 .game-label { font-size: 9px; font-weight: 900; letter-spacing: 1.4px; color: #9584ad; }
-.current-game h2 { margin: 0; line-height: 1; font-size: 25px; letter-spacing: -.55px; font-weight: 800; }
+.current-game h2 { margin: 0; line-height: 1; font-size: clamp(23px,2.2vw,31px); letter-spacing: -.55px; font-weight: 800; }
 .restart-button { color: #5f5279; border: 1px solid #d9cbe7; border-radius: 12px; background: #fffafd; padding: 9px 11px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 900; white-space: nowrap; }
 .restart-button:hover { background: #ffe4f3; }
 .restart-button span { font-size: 20px; line-height: 10px; }
@@ -83,10 +93,12 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
 .score-cell:last-child { background: #fde1eb; }
 .score-cell:last-child span { color: #bf7594; }
 .score-cell:last-child strong { font-size: 17px; color: #9c476f; }
+.mission-strip { padding: 11px 17px; margin-bottom: 9px; border-radius: 12px; background: linear-gradient(105deg,#5b3d87,#75519b); color:#fff1cc; font-size:12px; font-weight:900; letter-spacing:.35px; box-shadow:inset 0 1px #ffffff2b; }
+.mission-strip[hidden] { display:none; }
 .stage-wrap { position: relative; overflow: hidden; border-radius: 13px; background: #192258; box-shadow: 0 2px 0 #fff9, inset 0 1px 10px #091032; isolation: isolate; }
 .stage-wrap::after { content: ''; position: absolute; z-index: 3; inset: 0; border: 2px solid rgba(255,255,255,.12); border-radius: inherit; pointer-events: none; }
 .stage-shine { position: absolute; z-index: 2; top: 0; left: 0; width: 100%; height: 16%; pointer-events: none; background: linear-gradient(rgba(255,255,255,.06), transparent); }
-#game-canvas { display: block; width: 100%; height: auto; aspect-ratio: 432 / 700; touch-action: none; cursor: crosshair; }
+#game-canvas { display: block; width: 100%; height: auto; touch-action: none; cursor: crosshair; }
 #game-canvas:focus-visible { outline: 3px solid #80e7ff; outline-offset: -4px; }
 .game-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 5px 3px; min-height: 67px; }
 .next-area { display: flex; align-items: center; gap: 10px; }
@@ -106,6 +118,9 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
 .play-again-button { background: linear-gradient(110deg,#ff6db1,#ed4c9d); border: 0; color: white; font-weight: 900; border-radius: 14px; padding: 14px 23px; box-shadow: 0 6px 0 #a83179; }
 .play-again-button:hover { filter: brightness(1.1); }
 .play-again-button span { margin-left: 10px; }
+.next-puzzle-button { margin-top:14px; padding:12px 22px; border:1px solid #ffe2a3; border-radius:12px; background:rgba(255,207,113,.17); color:#ffe3a2; font-weight:900; }
+.next-puzzle-button:hover { background:rgba(255,207,113,.27); }
+.next-puzzle-button[hidden] { display:none; }
 
 .right-panel { padding-top: 25px; }
 .instructions-card { border: 1px solid #4b3d78; border-radius: 19px; padding: 20px 19px; background: linear-gradient(145deg,#33285f,#2b2454); }
@@ -129,20 +144,20 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
 .site-footer span span { color: #f078af; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
 
-@media (max-width: 1080px) {
-  .arcade-layout { grid-template-columns: minmax(205px, 240px) minmax(360px, 490px); max-width: 770px; margin: auto; gap: 24px; }
+@media (max-width: 1250px) {
+  .arcade-layout { grid-template-columns: minmax(190px, 240px) minmax(550px, 1fr); max-width: 1080px; margin: auto; gap: 24px; }
   .right-panel { grid-column: 1 / -1; padding-top: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
   .coming-soon { display: none; }
   .tip-card { margin-top: 0; align-self: start; }
 }
-@media (max-width: 670px) {
-  .site-shell { width: min(100% - 28px, 490px); }
+@media (max-width: 899px) {
+  .site-shell { width: min(100% - 28px, 560px); }
   .site-header { height: 74px; }
   .brand { font-size: 25px; gap: 8px; }
   .brand-mark { transform: scale(.8) rotate(-15deg); transform-origin: left center; width: 36px; }
   .version-pill { display: none; }
   .sound-button { padding: 9px 11px; }
-  .arcade-layout { display: flex; flex-direction: column; padding: 25px 0 35px; gap: 21px; }
+  .arcade-layout { display: flex; flex-direction: column; padding: 22px 0 35px; gap: 20px; }
   .left-panel { padding-top: 0; width: 100%; }
   .left-panel h1 { font-size: 42px; line-height: 1; margin: 9px 0; }
   .left-panel h1 br { display: none; }
@@ -150,6 +165,11 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
   .selector-title { margin-bottom: 9px; }
   .mode-selector { flex-direction: row; }
   .mode-card { flex: 1; min-height: 69px; padding: 10px; gap: 8px; }
+  .puzzle-picker { grid-template-columns: repeat(3,minmax(0,1fr)); gap:6px; }
+  .puzzle-choice { flex-wrap:wrap; justify-content:center; gap:2px; text-align:center; padding:8px 3px; }
+  .puzzle-choice span,.puzzle-choice strong,.puzzle-choice small { display:block; width:100%; text-align:center; margin:0; }
+  .puzzle-choice strong { font-size:10px; }
+  .puzzle-choice.active { box-shadow:inset 0 3px #ffd182; }
   .mode-icon { width: 36px; height: 36px; flex-basis: 36px; border-radius: 10px; }
   .shooter-icon { font-size: 24px; }
   .shooter-icon i { width: 9px; height: 9px; }
