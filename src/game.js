@@ -343,7 +343,7 @@ export function stepGame(state, dt) {
     }
   }
   if (state.comboDisplay) state.comboDisplay = Math.max(0, state.comboDisplay - dt);
-  stepAttachedSway(state, dt);
+  if (state.mode === 'shooter') stepAttachedSway(state, dt);
   updateVisualEffects(state, dt);
 
   if (state.mode === 'shooter') {
