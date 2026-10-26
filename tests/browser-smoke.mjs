@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 const browser = await chromium.launch({ headless: true });
 try {
   for (const viewport of [{ width: 1300, height: 860 }, { width: 390, height: 844 }]) {
-    const page = await browser.newPage({ viewport, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport, reducedMotion: 'no-preference' });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto('http://127.0.0.1:8765/', { waitUntil: 'networkidle' });
@@ -21,11 +21,16 @@ try {
     await page.locator('#gravity-demo-button').click();
     assert.equal(await page.locator('#game-title').textContent(), 'Gravity Lab');
     assert.equal(await page.locator('#gravity-surge-button').isEnabled(), true);
-    assert.match(await page.locator('#instructions-copy').textContent(), /Amber outlines/);
+    assert.equal(await page.locator('#gravity-swing-button').isEnabled(), true);
+    assert.match(await page.locator('#instructions-copy').textContent(), /Swing the chain/);
+    await page.locator('#gravity-swing-button').click();
+    assert.match(await page.locator('#live-status').textContent(), /swinging around its ceiling pivot/);
+    await page.waitForTimeout(600);
     // The Arcade shooter is intentionally replaced by a deterministic lab.
     await page.locator('#gravity-surge-button').click();
     assert.equal(await page.locator('#gravity-surge-button').isDisabled(), true);
-    assert.match(await page.locator('#gravity-lab-message').textContent(), /3 bubbles falling/);
+    assert.match(await page.locator('#gravity-lab-message').textContent(), /9 bubbles falling/);
+    assert.equal(await page.locator('#gravity-swing-button').isDisabled(), true);
     await page.waitForFunction(() =>
       document.querySelector('#gravity-lab-message')?.textContent?.includes('Mint bracing held'),
       null, { timeout: 8000 });
@@ -33,6 +38,7 @@ try {
     // Reload gives a fresh repeatable experiment.
     await page.locator('#gravity-demo-button').click();
     assert.equal(await page.locator('#gravity-surge-button').isEnabled(), true);
+    assert.equal(await page.locator('#gravity-swing-button').isEnabled(), true);
     // Puzzle choice must not inherit the lab or its special action.
     await page.locator('[data-play="puzzle"]').click();
     assert.equal(await page.locator('#gravity-lab-panel').isVisible(), false);
@@ -58,6 +64,27 @@ try {
     });
     assert.ok(live.displaced > .2, 'regular Arcade bubble coordinates should actually sway');
     assert.equal(live.collides, '3,3', 'projectiles must target the visible swaying bubble');
+    // Independently check a lab pendulum from the actual browser's physics
+    // modules: a nudge must move the tip while retaining a fixed pivot.
+    const pendulum = await page.evaluate(async () => {
+      const [{ initialGravityLab, nudgeGravityLab, stepGame },
+        { shooterPosition }, { bubblePosition }] = await Promise.all([
+          import('./src/game.js'), import('./src/grid.js'),
+          import('./src/positions.js'),
+        ]);
+      const s = initialGravityLab();
+      const start = shooterPosition(7, 3, 0, s.layout);
+      stepGame(s, .045);
+      nudgeGravityLab(s);
+      for (let i = 0; i < 11; i++) stepGame(s, .045);
+      const live = bubblePosition(s, 7, 3);
+      return { delta: Math.hypot(live.x - start.x, live.y - start.y),
+        fixed: JSON.stringify(bubblePosition(s, 0, 2)) === JSON.stringify(shooterPosition(0, 2, 0, s.layout)),
+        braced: JSON.stringify(bubblePosition(s, 2, 5)) === JSON.stringify(shooterPosition(2, 5, 0, s.layout)) };
+    });
+    assert.ok(pendulum.delta > 20, 'test board should show a clearly swinging pendulum');
+    assert.equal(pendulum.fixed, true);
+    assert.equal(pendulum.braced, true);
     assert.deepEqual(errors, [], 'No application JavaScript exceptions');
     await page.close();
     console.log('Gravity Lab browser smoke passed at', viewport.width, 'px');
