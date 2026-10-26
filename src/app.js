@@ -2,6 +2,7 @@ import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES } from './config.js';
 import { PUZZLES } from './puzzles.js';
 import { initialShooter, initialPuzzle, initialGravityLab, nudgeGravityLab, canTriggerGravityLabSurge, triggerGravityLabSurge, fireShooter, aimShooter, stepGame } from './game.js';
 import { draw } from './render.js';
+import { labSwingDisplacement } from './sway.js';
 import { loadVersion } from './version.js';
 
 const $ = id => document.getElementById(id);
@@ -231,10 +232,17 @@ function updateUI() {
       : playStyle === 'puzzle' ? `${state.bombs.size} bomb target${state.bombs.size===1?'':'s'} to clear` : 'Match 3+ — glowing bubbles are bombs!');
   putText('game-status', `✦ ${status}`);
   $('gravity-surge-button').disabled = !canTriggerGravityLabSurge(state);
-  $('gravity-swing-button').disabled = !(state.variant === 'lab' && !state.reducedMotion && !state.gravityLabUsed && state.status === 'playing' && !state.falling.length);
+  // Pressing Swing can create the demo automatically. It stays usable on
+  // reduced-motion devices because the user explicitly requested this motion.
+  $('gravity-swing-button').disabled = playStyle !== 'arcade';
+  putText('gravity-swing-button', state.variant === 'lab' && state.gravityLabUsed ? '↔ Reset & swing' : '↔ Swing the chain');
   putText('gravity-lab-message', state.variant === 'lab'
-    ? (state.falling.length ? `${state.lastGravityRelease} bubbles falling. The two-anchor structure is still attached.` : state.gravityLabUsed ? `Released ${state.lastGravityRelease} hanging bubbles. Mint bracing held. Load the test board to try again.` : state.reducedMotion ? 'Motion is reduced in your device settings. Change Reduce Motion to watch swinging; Surge still works.' : 'Amber: long pendulum on one support. Mint: two independent anchors. Press Swing the chain, then Gravity Surge.')
-    : 'Load a test board to see weak and independently supported bubbles side by side.');
+    ? (state.falling.length ? `${state.lastGravityRelease} bubbles falling. The two-anchor structure is still attached.`
+      : state.gravityLabUsed ? `Released ${state.lastGravityRelease} hanging bubbles. Mint bracing held. Press Reset & swing to try again.`
+      : state.labSwingAt != null ? `Swing active! Tip is ${labSwingDisplacement(state)}px from rest. Press Swing again for another push.`
+      : state.reducedMotion ? 'Motion is reduced by your device. Press Swing the chain to enable motion in this experiment only.'
+      : 'Amber: hanging pendulum. Mint: stable double support. Press Swing the chain, then Gravity Surge.')
+    : 'Press Swing the chain to load and push a test pendulum, or Load test board to inspect it first.');
 
   const overlay = $('result-overlay');
   const finished = state.status === 'won' || state.status === 'lost';
@@ -254,7 +262,14 @@ document.querySelectorAll('.puzzle-choice').forEach(button => button.addEventLis
 $('restart-button').addEventListener('click', reset);
 $('gravity-demo-button').addEventListener('click', loadGravityLab);
 $('gravity-swing-button').addEventListener('click', () => {
-  if (nudgeGravityLab(state)) announce('The hanging chain is swinging around its ceiling pivot. Its oscillation gradually slows down.');
+  if (playStyle !== 'arcade') return;
+  // One click works from ordinary Arcade, a fresh Lab or a completed Surge.
+  if (state.variant !== 'lab' || state.gravityLabUsed ||
+      state.status !== 'playing' || state.falling.length) loadGravityLab();
+  if (nudgeGravityLab(state)) {
+    announce('Swing activated. The pendulum is moving around its fixed ceiling pivot.');
+    updateUI();
+  }
 });
 $('gravity-surge-button').addEventListener('click', () => {
   const result = triggerGravityLabSurge(state);
@@ -289,7 +304,8 @@ function frame(timestamp) {
     if (['won', 'lost', 'finished'].includes(state.status)) announce(`Game over. Score ${state.score}.`);
   }
   updateUI();
-  draw(ctx, state, null, timestamp / 1000, reducedMotion);
+  draw(ctx, state, null, timestamp / 1000,
+    reducedMotion && !(state.variant === 'lab' && state.labMotionEnabled));
   requestAnimationFrame(frame);
 }
 

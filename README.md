@@ -10,6 +10,21 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
+## v0.7.2 — Reliable one-click Swing control
+
+The **↔ Swing the chain** button now works directly from Arcade: it automatically
+loads the test board and starts a visible push. You no longer need to press
+**Load test board** first.
+
+If your device prefers reduced motion, that preference is respected in the
+ordinary game. Pressing Swing explicitly opts into motion for **this Lab
+experiment only**. The Lab displays live feedback — **Swing active, tip is
+N pixels from rest** — so it's clear the chain has actually moved. A completed
+Surge can be restarted with **Reset & swing**.
+
+We have browser checks for **both** system motion preferences on desktop and
+phone-sized viewports.
+
 ## v0.7.1 — Visible swinging test rig
 
 Gravity Lab now contains a **long pendulum hanging from a single ceiling
@@ -59,11 +74,11 @@ puzzles use gentle sway only. The Lab's warning rings still show
 
 ## Release tracking
 
-**Current version: v0.7.1** on the swinging-lab fix review branch. Gentle attached sway is
+**Current version: v0.7.2** on the Swing-button reliability review branch. Gentle attached sway is
 integrated into regular Arcade and Puzzles; the lab remains a diagnostic.
 Realistic elastic stretching and dynamic bond breaking remain future features.
 
-The header badge reads **Version 0.7.1**, loading the number from
+The header badge reads **Version 0.7.2**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -71,9 +86,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.7.1 → 0.7.2
+npm run version:patch   # e.g. 0.7.2 → 0.7.3
 # or
-npm run version:minor   # e.g. 0.7.1 → 0.8.0
+npm run version:minor   # e.g. 0.7.2 → 0.8.0
 npm test
 ```
 

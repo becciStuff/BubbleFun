@@ -6,10 +6,10 @@
 
 **Reviewed:** 26 October 2026 (NZ)  
 **Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged production baseline:** v0.7.0, Arcade/Puzzle sway, PR #9  
-**Current review branch:** `fix/gravity-lab-swing-visible` — [PR #10](https://github.com/becciStuff/BubbleFun/pull/10) (v0.7.1)  
-**Proposed version:** v0.7.1 in both `version.json` and `package.json`  
-**Status:** G3 normal-play sway merged. G3.1 lab demonstration fix awaits review; the previous Lab was intentionally static and therefore could not show swinging.
+**Merged production baseline:** v0.7.1, swinging Gravity Lab demonstration, PR #10  
+**Current review branch:** `fix/gravity-swing-button-072` — v0.7.2 Swing activation fix  
+**Proposed version:** v0.7.2 in both `version.json` and `package.json`  
+**Status:** G3 normal-play sway and G3.1 lab demonstration are merged. G3.2 fixes an inert Swing button before board load and on reduced-motion devices.
 
 ## What's playable
 
@@ -86,7 +86,7 @@ and pure modules for geometry and support calculations.
 
 - **PR #8 (v0.6.0):** Merged; Gravity Lab and browser smoke tests passed.
 - **PR #9 (v0.7.0):** Merged, with **82 tests passing**.
-- **v0.7.1 fix:** Extended pendulum rig, push button, live support wires and stronger motion tests. **83 Node tests passed, 0 failed**; Chromium browser smoke passed at 1300px and 390px viewports in CI on PR #10. Real-device/manual review remains.
+- **v0.7.1 fix:** PR #10 merged with a long hanging pendulum and push button. **v0.7.2** makes one-click Swing available directly from Arcade, explicitly opts into Lab motion when OS requests reduced motion, and adds live pixel-displacement feedback. **83 Node tests pass; Chromium browser smoke passes at 1300px and 390px with reduced motion on and off** (runs 40249981474 and 40249981565). Real-device visual confirmation is still pending.
 - **G3 browser automation:** desktop 1300px and phone-sized 390px Chromium
   smoke checks passed, including live displacement and collision checks on
   both board sizes. Full manual playtesting and live GitHub Pages deployment
@@ -102,7 +102,8 @@ and pure modules for geometry and support calculations.
 - [x] G2 Gravity Lab demo (PR #8).
 - [x] G3 live sway, shared positions and tests merged in PR #9.
 - [x] G3.1 visible Lab pendulum and one-button push — implemented and automated checks passed.
-- [ ] Review and merge PR #10, then visually confirm swinging on the live deployed game.
+- [x] PR #10 merged, adding the lab's long pendulum and push control.
+- [ ] Review the v0.7.2 Swing-button fix; check its CI and visually confirm motion after merge.
 - [ ] Review and merge PR #9 after CI; manually play Arcade and each puzzle on
       desktop/mobile, including near misses and rebound shots.
 - [ ] G4: advanced multi-anchor load sharing, stickiness and controlled Extreme

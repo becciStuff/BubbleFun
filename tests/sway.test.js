@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SHOT_HIT_DISTANCE } from '../src/config.js';
 import { cellKey, shooterPosition, shotBubbleCollision } from '../src/grid.js';
 import { bubblePosition } from '../src/positions.js';
-import { stepAttachedSway, kickAttachedSway, nudgeLabPendulum } from '../src/sway.js';
+import { stepAttachedSway, kickAttachedSway, nudgeLabPendulum, labSwingDisplacement } from '../src/sway.js';
 import { releaseFloatingShooter } from '../src/gravity.js';
 import { initialShooter, initialPuzzle, initialGravityLab, stepGame } from '../src/game.js';
 
@@ -87,21 +87,45 @@ test('Gravity Lab pendulum swings around a fixed roof pivot while braced bubbles
   assert.deepEqual(bubblePosition(state, 0, 2), pivot);
   assert.ok(Math.abs(bubblePosition(state, 7, 3).x - tip.x) > 3);
   assert.deepEqual(bubblePosition(state, 2, 5), braced);
+  const beforePushX = bubblePosition(state, 7, 3).x;
   assert.equal(nudgeLabPendulum(state), true);
-  const oldX = bubblePosition(state, 7, 3).x;
-  for (let i = 0; i < 12; i++) stepAttachedSway(state, .045);
-  assert.ok(Math.abs(bubblePosition(state, 7, 3).x - oldX) > 10,
-    'visible nudge moves the suspended tip by more than ten pixels');
+  const afterPushX = bubblePosition(state, 7, 3).x;
+  assert.ok(Math.abs(afterPushX - beforePushX) > 10,
+    'the explicit push should displace the tip immediately');
+  const samples = [afterPushX];
+  for (let i = 0; i < 24; i++) {
+    stepAttachedSway(state, .045);
+    samples.push(bubblePosition(state, 7, 3).x);
+  }
+  assert.ok(Math.max(...samples) - Math.min(...samples) > 12,
+    'the pendulum must visibly keep moving after the initial push');
   const distance = pos => Math.hypot(pos.x - pivot.x, pos.y - pivot.y);
   assert.ok(Math.abs(distance(bubblePosition(state, 7, 3)) - distance(tip)) < .01,
     'rigid pendulum rotation preserves attachment length');
 });
-test('reduced-motion mode explicitly disables the lab pendulum', () => {
+test('reduced-motion stays on until the user explicitly requests Lab swing', () => {
   const state = initialGravityLab();
   state.reducedMotion = true;
-  assert.equal(nudgeLabPendulum(state), false);
   stepAttachedSway(state, .5);
-  assert.equal(state.attachedPositions.size, 0);
+  assert.equal(state.attachedPositions.size, 0, 'before the click, Lab motion is suppressed');
+  assert.equal(nudgeLabPendulum(state), true, 'explicit Swing click must work');
+  assert.equal(state.labMotionEnabled, true);
+  assert.equal(state.reducedMotion, true, 'system accessibility preference remains unchanged');
+  assert.ok(labSwingDisplacement(state) > 15, 'pendulum responds immediately');
+  stepAttachedSway(state, .2);
+  assert.ok(state.attachedPositions.size > 0, 'animation continues after click');
+  assert.deepEqual(bubblePosition(state, 0, 2), shooterPosition(0, 2, 0, state.layout));
+  assert.deepEqual(bubblePosition(state, 2, 5), shooterPosition(2, 5, 0, state.layout));
+
+  const normal = stateWithBoard(MOBILE_LAYOUT, ['0,3','1,3','2,3']);
+  normal.reducedMotion = true;
+  assert.equal(nudgeLabPendulum(normal), false, 'button bypass cannot leak into Arcade');
+  stepAttachedSway(normal, .5);
+  assert.equal(normal.attachedPositions.size, 0);
+  const restartedLab = initialGravityLab();
+  restartedLab.reducedMotion = true;
+  stepAttachedSway(restartedLab, .5);
+  assert.equal(restartedLab.attachedPositions.size, 0, 'lab opt-in resets on reload');
 });
 test('sway state is specific to each game and never persists after restarting', () => {
   const first = stateWithBoard(MOBILE_LAYOUT, ['0,3','1,3']);
