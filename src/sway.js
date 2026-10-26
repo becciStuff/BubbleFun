@@ -1,113 +1,115 @@
-// Connected attached-bubble motion. Ceiling anchors never move; attached
-// structures NEVER tear free from weight in Normal Gravity. Keep all geometry
-// in the single attachedPositions map shared by visuals and hit detection.
-import { PITCH } from './config.js';
-import { cellKey, shooterPosition } from './grid.js';
+// Connected, damped attached-bubble motion for ordinary Arcade and Puzzles.
+// Grid topology stays authoritative for matching; the shared attachedPositions
+// map is authoritative for rendering, aiming, projectile hits and falling.
+import { PITCH, RADIUS } from './config.js';
+import { cellKey, shooterNeighbours, shooterPosition } from './grid.js';
 import { analyseSupports } from './supports.js';
 
+const RESTORING = 69;        // Pull towards the stable hex grid.
+const COUPLING = 18;         // Transmit movement through real connections.
+const DAMPING = 10.5;
+const MAX_OFFSET = 13;      // Keep shots/snapping predictable.
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
-// A nudge is deliberately available only on the deterministic test board.
-// The impulse drives a damped pendulum; Surge remains a separate action.
-export function nudgeLabPendulum(state) {
-  if (state.variant !== 'lab' || state.gravityLabUsed ||
-      state.status !== 'playing' || state.falling.length || state.projectile) return false;
-  // An explicit button click opts into Lab motion even when the OS preference
-  // is reduced motion. Only this Lab state is overridden, never other modes.
-  state.labMotionEnabled = true;
-  // Begin slightly into the push so the very next rendered frame visibly moves.
-  state.labSwingAt = (state.swayClock ?? 0) - .14;
-  stepAttachedSway(state, 0);
-  return true;
-}
-
-export function labSwingDisplacement(state) {
-  if (state.variant !== 'lab') return 0;
-  const tip = state.attachedPositions?.get('7,3');
-  if (!tip) return 0;
-  const rest = shooterPosition(7, 3, state.phase, state.layout);
-  return Math.round(Math.hypot(tip.x - rest.x, tip.y - rest.y));
-}
-
-export function kickAttachedSway(state, row, col) {
-  if (state.reducedMotion || state.variant === 'lab') return;
-  state.swayKicks ??= new Map();
-  const impact = shooterPosition(row, col, state.phase, state.layout);
+// A real shot injects an impulse through its surrounding connected bubbles.
+// It is deliberately stronger than the old purely visual .5px wobble.
+export function kickAttachedSway(state, row, col, vx = 0) {
+  if (state.reducedMotion) return;
+  state.swayDynamics ??= new Map();
+  const origin = shooterPosition(row, col, state.phase, state.layout);
+  const direction = Math.abs(vx) > 50 ? Math.sign(vx) : (state.angle < 0 ? -1 : 1);
   for (const key of state.board.keys()) {
     const [r, c] = key.split(',').map(Number);
-    if (!r) continue; // Only anchored descendants can move.
+    if (r === 0) continue;
     const p = shooterPosition(r, c, state.phase, state.layout);
-    const distance = Math.hypot(p.x - impact.x, p.y - impact.y);
-    if (distance > PITCH * 5) continue;
-    const next = clamp(1 - distance / (PITCH * 5), 0, 1);
-    state.swayKicks.set(key, Math.max(state.swayKicks.get(key) ?? 0, next));
+    const distance = Math.hypot(p.x - origin.x, p.y - origin.y);
+    const reach = Math.max(0, 1 - distance / (PITCH * 5.5));
+    if (reach <= 0) continue;
+    const motion = state.swayDynamics.get(key) ?? { x: 0, y: 0, vx: 0, vy: 0 };
+    motion.vx = clamp(motion.vx + direction * 115 * reach, -170, 170);
+    motion.vy = clamp(motion.vy - 26 * reach, -65, 65);
+    state.swayDynamics.set(key, motion);
   }
 }
 
 export function stepAttachedSway(state, dt) {
   state.attachedPositions ??= new Map();
-  state.swayKicks ??= new Map();
-  dt = Math.max(0, dt);
+  state.swayDynamics ??= new Map();
+  dt = Math.max(0, Math.min(.045, dt));
   state.swayClock = (state.swayClock ?? 0) + dt;
-  if (state.reducedMotion && !(state.variant === 'lab' && state.labMotionEnabled)) {
+  if (state.reducedMotion) {
     state.attachedPositions.clear();
-    state.swayKicks.clear();
+    state.swayDynamics.clear();
     return state.attachedPositions;
   }
 
-  const next = new Map();
-  const t = state.swayClock;
-  const lab = state.variant === 'lab';
   const analysis = analyseSupports(state.board, { phase: state.phase, layout: state.layout });
+  const targets = new Map();
+  const live = new Map();
+  const phaseTime = state.swayClock;
+  const blockedByTransition = state.rowShift > .5 || state.introTime > 0;
 
   for (const region of analysis.regions) {
     const single = region.supportCount === 1;
-    const [anchorRow, anchorCol] = region.anchors[0].split(',').map(Number);
-    const anchor = shooterPosition(anchorRow, anchorCol, state.phase, state.layout);
-    const phase = anchorCol * .73 + anchorRow * .27;
-
-    // A rigid-body pendulum preserves the actual distance between attached
-    // bubbles. A long dangling branch swings farther at its tip. Regions
-    // anchored at two distinct roof cells are kept almost stationary.
-    let angle = 0;
-    if (single) {
-      angle = (lab ? .065 : .046) * Math.sin(t * 1.55 + phase);
-      if (lab && state.labSwingAt != null) {
-        const elapsed = Math.max(0, t - state.labSwingAt);
-        angle += .27 * Math.exp(-.55 * elapsed) * Math.sin(elapsed * 3.1);
-      }
-    }
-
+    const [roofRow, roofCol] = region.anchors[0].split(',').map(Number);
+    const pivot = shooterPosition(roofRow, roofCol, state.phase, state.layout);
+    const mass = Math.sqrt(region.weight);
+    const theta = Math.sin(phaseTime * (1.3 + .3 / Math.max(1, mass)) + roofCol * .57)
+      * Math.min(.087, .038 + mass * .008);
     for (const [row, col] of region.cells) {
       const key = cellKey(row, col);
       const base = shooterPosition(row, col, state.phase, state.layout);
-      const kick = state.swayKicks.get(key) ?? 0;
-      const ripple = Math.sin(t * 15 + phase + row * .45) * kick * 3;
+      let x = 0, y = 0;
       if (single) {
-        const dx = base.x - anchor.x;
-        const dy = base.y - anchor.y;
-        next.set(key, {
-          x: anchor.x + dx * Math.cos(angle) - dy * Math.sin(angle) + ripple,
-          y: anchor.y + dx * Math.sin(angle) + dy * Math.cos(angle),
-        });
+        // A ceiling-rooted pendulum: the more distant bubbles move farther,
+        // and rotated positions preserve connections within this component.
+        const dx = base.x - pivot.x, dy = base.y - pivot.y;
+        x = dx * Math.cos(theta) - dy * Math.sin(theta) - dx;
+        y = dx * Math.sin(theta) + dy * Math.cos(theta) - dy;
       } else {
-        const motion = lab ? 0 : Math.sin(t * 1.15 + phase) * .55;
-        next.set(key, { x: base.x + motion + ripple, y: base.y });
+        // Dense Arcade boards also react: flexible short links transmit a
+        // smaller wave, but the presence of many roof anchors keeps it stable.
+        const influence = Math.min(3.1, Math.max(0, row) * .76);
+        x = Math.sin(phaseTime * 1.45 + roofCol * .31 + col * .12) * influence;
+        y = Math.sin(phaseTime * 1.2 + col * .26) * Math.min(1.4, row * .28);
       }
+      targets.set(key, { x, y });
     }
   }
 
+  // Integrate all bubbles from the previous state before publishing positions.
+  // This avoids board iteration order affecting the springs.
+  const previous = state.swayDynamics;
+  const next = new Map();
   for (const key of state.board.keys()) {
-    if (next.has(key)) continue;
     const [row, col] = key.split(',').map(Number);
-    next.set(key, shooterPosition(row, col, state.phase, state.layout));
+    const base = shooterPosition(row, col, state.phase, state.layout);
+    if (!row || blockedByTransition) {
+      live.set(key, base);
+      continue;
+    }
+    const m = previous.get(key) ?? { x: 0, y: 0, vx: 0, vy: 0 };
+    const aim = targets.get(key) ?? { x: 0, y: 0 };
+    const connected = shooterNeighbours(state.board, row, col, state.phase, state.layout);
+    let nx = 0, ny = 0;
+    for (const [r, c] of connected) {
+      const neighbor = previous.get(cellKey(r, c));
+      nx += neighbor?.x ?? 0;
+      ny += neighbor?.y ?? 0;
+    }
+    const count = Math.max(1, connected.length);
+    const ax = RESTORING * (aim.x - m.x) + COUPLING * (nx / count - m.x) - DAMPING * m.vx;
+    const ay = RESTORING * (aim.y - m.y) + COUPLING * (ny / count - m.y) - DAMPING * m.vy;
+    const vx = (m.vx + ax * dt);
+    const vy = (m.vy + ay * dt);
+    const x = clamp(m.x + vx * dt, -MAX_OFFSET, MAX_OFFSET);
+    const y = clamp(m.y + vy * dt, -MAX_OFFSET * .45, MAX_OFFSET * .45);
+    const minX = state.layout.left + RADIUS;
+    const maxX = state.layout.width - minX;
+    live.set(key, { x: clamp(base.x + x, minX, maxX), y: base.y + y });
+    next.set(key, { x, y, vx, vy });
   }
-  state.attachedPositions = next;
-  for (const [key, amount] of state.swayKicks) {
-    if (!state.board.has(key)) { state.swayKicks.delete(key); continue; }
-    const damped = amount * Math.exp(-dt * 3.2);
-    if (damped < .005) state.swayKicks.delete(key);
-    else state.swayKicks.set(key, damped);
-  }
-  return next;
+  state.swayDynamics = next;
+  state.attachedPositions = live;
+  return live;
 }

@@ -6,79 +6,48 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.7.0 enables gentle attached-bubble sway in regular Arcade and Puzzles**; the isolated Lab still demonstrates Extreme Gravity support breakage.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.0 integrates movement into Arcade and Puzzles**, with no Gravity Lab in the UI.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
-## v0.7.2 — Reliable one-click Swing control
+## v0.8.0 — Gravity belongs in Arcade and Puzzles
 
-The **↔ Swing the chain** button now works directly from Arcade: it automatically
-loads the test board and starts a visible push. You no longer need to press
-**Load test board** first.
+**Gravity Lab has been removed from the player interface.** Its demo buttons,
+standalone board, overlay and orchestration are gone. BubbleFun has two visible
+play styles: **Arcade** and **Puzzles**, each with gravity integrated directly.
 
-If your device prefers reduced motion, that preference is respected in the
-ordinary game. Pressing Swing explicitly opts into motion for **this Lab
-experiment only**. The Lab displays live feedback — **Swing active, tip is
-N pixels from rest** — so it's clear the chain has actually moved. A completed
-Surge can be restarted with **Reset & swing**.
+- Ceiling bubbles stay fixed. Hanging single-anchor branches rock more
+  naturally; densely supported regions still show small movements.
+- Every landed shot sends a visible, **damped ripple through connected bubbles**
+  instead of only adding an imperceptible ambient wobble. Tiny elastic
+  attachment threads show stretched connections.
+- The **rendered bubble centres**, aim guide, actual projectile hit detection
+  and fall starting points all share the same `attachedPositions` map.
+- Matching, ceiling topology, puzzle goals, scores and shot snap cells remain
+  governed by the original hex grid. Normal gravity does **not** break a
+  ceiling-supported cluster purely because of its weight.
+- `prefers-reduced-motion` is respected throughout normal play.
+- Support-weight analysis and an **unwired, test-only** Extreme Gravity API
+  remain in their own modules for later earned specials. No separate Gravity
+  mode or UI is part of the intended game.
 
-We have browser checks for **both** system motion preferences on desktop and
-phone-sized viewports.
+The old Gravity Lab is retired as of this version. Its tests have been
+replaced by real Arcade/Puzzle gameplay, geometry and reduced-motion tests
+on desktop and mobile-sized screens.
 
-## v0.7.1 — Visible swinging test rig
+## Previous gravity milestones
 
-Gravity Lab now contains a **long pendulum hanging from a single ceiling
-bubble**, opposite a **two-anchor braced structure**. The hanging chain
-moves on its own, and **↔ Swing the chain** applies a visible push that
-swings back and forth and gradually damps out. Support wires follow the
-current bubble positions. **Gravity Surge** still separately snaps the
-weak attachment, causing the hanging bubbles to fall.
-
-This corrects the previous lab omission: v0.7.0 had hard-disabled swinging
-inside the Lab, so it was a poor place to test the motion! The experiment
-remains separate from ordinary Arcade/Puzzle progress; sway itself is
-integrated into those modes. A system reduced-motion preference keeps the
-lab static and disables the Swing button, but Surge remains available.
-
-## v0.7.0 — Attached bubble sway in the real game (G3)
-
-**Gravity is not a separate game mode.** Arcade and all three Puzzles now have
-gentle, support-sensitive movement while bubbles are still attached. Hanging
-branches move more, separately braced structures move less, and ceiling bubbles
-stay fixed. Impacts add small, damped ripples.
-
-The **aiming guide**, **actual projectile collisions**, **rendered bubbles** and
-**falling launch points** use the **same frame's live attached positions**.
-The hex grid still owns colour matching, adjacency and where new shots snap,
-so existing puzzle solutions and fair gameplay are preserved. Reduced-motion
-settings turn off attached sway.
-
-Gravity Lab remains available as a **diagnostic** for support strength and
-experimental Surge. Real-level connections do not yet snap from weight or
-Gravity Surge; multi-anchor load sharing and realistic stretching are future
-physics milestones.
-
-## v0.6.0 — Gravity Lab (G2 prototype)
-
-The first **visible and interactive gravity experiment** is available in
-Arcade's **Gravity Lab** panel. Press **Load test board** to display two
-separate structures: an amber-marked single-support chain, and a mint-marked
-structure with two independent ceiling anchors. Press **Gravity Surge** to
-watch the weak chain detach and fall while the braced structure survives.
-Reload the test board to repeat. The lab deliberately pauses shooting and
-does not save scores.
-
-The Surge action stays restricted to the test board; standard Arcade and
-puzzles use gentle sway only. The Lab's warning rings still show
-*support stress*, not simulated bending or snapping.
+- **v0.7.0–0.7.2:** Implemented gentle sway and a temporary Gravity Lab
+  pendulum to diagnose the physics. The lab was removed in v0.8.0.
+- **v0.6.0:** Prototyped weak versus independently braced support structures.
 
 ## Release tracking
 
-**Current version: v0.7.2** on the Swing-button reliability review branch. Gentle attached sway is
-integrated into regular Arcade and Puzzles; the lab remains a diagnostic.
-Realistic elastic stretching and dynamic bond breaking remain future features.
+**Current version: v0.8.0** on its feature review branch. Gravity reacts to
+shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
+Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.7.2**, loading the number from
+The header badge reads **Version 0.8.0**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -86,9 +55,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.7.2 → 0.7.3
+npm run version:patch   # e.g. 0.8.0 → 0.8.1
 # or
-npm run version:minor   # e.g. 0.7.2 → 0.8.0
+npm run version:minor   # e.g. 0.8.0 → 0.9.0
 npm test
 ```
 
@@ -164,9 +133,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/gravity.js` — detached-bubble detection, falling motion and opt-in Surge
 - `src/sway.js` — damped supported-cluster sway with impact impulses (G3)
 - `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
-- `src/gravity-lab.js` — independent, deterministic lab demonstration board
-- `src/gravity-hints.js` — support marker data derived from the support graph
-- `src/gravity-overlay.js` — canvas-only visual strain and bracing indicators
+- `src/attachment-visuals.js` — subtle glass-like links between live bubble centres
 - `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
 - `src/effects.js` — visual effect creation, particles and effect lifetimes
 - `src/pop-mode.js` — archived Bubble Pop logic (not shown in the UI)
@@ -178,7 +145,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/gravity.test.js` — independent detachment, falling physics, wall bounce and burst timing tests
 - `tests/supports.test.js` — anchors, loaded bonds and surge planning (G1 branch)
 - `tests/surge.test.js` — opt-in gravity detachment and scoring boundaries
-- `tests/gravity-lab.test.js` — interactive lab workflow, both layouts and normal-mode isolation
+- `tests/browser-smoke.mjs` — real Arcade/Puzzle firing across responsive layouts and motion preferences
 - `tests/sway.test.js` — live collision points, support-sensitive sway and reduced motion
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
