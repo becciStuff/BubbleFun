@@ -203,6 +203,7 @@ function shooter(ctx, state, seconds, reducedMotion = false) {
   ctx.beginPath(); ctx.moveTo(30,launchY-47); ctx.lineTo(width-30,launchY-47); ctx.stroke();
   ctx.setLineDash([]);
   if (state.variant !== 'lab' && !state.projectile && !state.falling.length && !state.pendingBombs.length && !state.introTime && state.rowShift < .5 && state.status === 'playing') aimGuide(ctx,state);
+  if (state.variant === 'lab') drawGravitySupportOverlay(ctx, state, seconds, reducedMotion);
   for (const [k,colour] of state.board) {
     const [row,col] = k.split(',').map(Number);
     const {x,y:baseY} = bubblePosition(state,row,col);
@@ -215,7 +216,6 @@ function shooter(ctx, state, seconds, reducedMotion = false) {
     if (state.bombs.has(k)) bombMark(ctx,0,0,seconds);
     ctx.restore();
   }
-  if (state.variant === 'lab') drawGravitySupportOverlay(ctx, state, seconds, reducedMotion);
   // Detached bubbles no longer disappear: gravity takes over until they burst.
   for (const falling of state.falling) {
     ctx.save();
