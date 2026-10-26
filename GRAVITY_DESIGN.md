@@ -1,6 +1,6 @@
 # BubbleFun — gravity design and implementation
 
-**Current review milestone: v0.8.0 — reactive connected-bubble sway inside Arcade and Puzzles.**
+**Current review milestone: v0.8.1 — gravity-driven sag and explosion response inside Arcade and Puzzles.**
 The standalone player-facing **Gravity Lab is retired**. Its lessons are now
 tested through real game boards and browser interactions. Gravity is a core
 mechanic of BubbleFun, **not a separate play style**.
@@ -23,7 +23,8 @@ mechanic of BubbleFun, **not a separate play style**.
 config.js               Board and physics constants
 grid.js                 Resting hex lattice, graph connectivity, hit predicate
 supports.js             Ceiling anchor graph, weights, stresses, weak links
-sway.js                 Damped connected-body motion and shot impulses
+sag.js                  Pure load-bearing bridge sag equilibrium
+sway.js                 Damped connected-body motion, shots and explosions
 positions.js            One current attached-bubble position lookup
 gravity.js              Detached-body physics and optional Extreme Gravity API
 attachment-visuals.js   Canvas rendering of subtle stretched bonds
@@ -63,6 +64,31 @@ This is a **constrained elastic-looking model**, not yet a full multi-body
 solver with continuously rotating joints, force-balanced link stretching,
 mass-specific sag or true torque conservation.
 
+## New requirement: weight visibly hangs, and blasts shake supports (v0.8.1)
+
+The screenshot-based feedback exposed a crucial distinction: periodic wobbling
+does **not** imply that a sideways-hanging connection droops under gravity.
+
+- `sag.js` uses `analyseSupports(...).bridges` to identify real single-cut
+  connections, even when the overall board has many ceiling anchors. The
+  dependent subtree rotates *down* around that bridge, preserving internal
+  rigid-body distances and its parent bond length.
+- Collision, wall, ceiling and maximum-displacement constraints reduce the
+  target angle when the next bubble blocks the way. The whole connected
+  component never randomly becomes detached in Normal Gravity.
+- These equilibrium positions are **recomputed when topology changes** and
+  become `sway.js` spring targets. The on-screen location, aiming guide,
+  collisions and falling origin all use `attachedPositions`.
+- Popped matches and bomb blasts now inject a **radial recoil into surviving
+  neighbours**, proportional to their distance from the affected bubbles.
+  Constrained springs and damping transmit/reduce those waves naturally.
+- Reduced-motion users still see the resting hex lattice.
+
+Important limitation: this is a *bounded equilibrium-sag and spring-response
+prototype*, **not** a complete deformable, torque-balanced bubble simulator.
+Larger swinging/elastic changes must maintain collision fairness. Bond
+breaking remains reserved for future Extreme Gravity rules.
+
 ## Support analysis and future Extreme Gravity
 
 G1 in `supports.js` provides:
@@ -73,7 +99,7 @@ G1 in `supports.js` provides:
 
 `gravity.js` exposes `releaseGravitySurge(state, options)` to apply the
 plan with the existing falling objects, without scoring. **No player UI
-calls it** in v0.8.0. Heavy multi-anchor groups need better load-sharing
+calls it** in v0.8.1. Heavy multi-anchor groups need better load-sharing
 before extreme support breakage can be balanced for actual levels.
 
 ## Testing and release boundaries
