@@ -86,7 +86,7 @@ and pure modules for geometry and support calculations.
 
 - **PR #8 (v0.6.0):** Merged; Gravity Lab and browser smoke tests passed.
 - **PR #9 (v0.7.0):** Merged, with **82 tests passing**.
-- **v0.7.1 fix:** PR #10 merged with a long hanging pendulum and push button. **v0.7.2** makes one-click Swing available directly from Arcade, explicitly opts into Lab motion when OS requests reduced motion, and adds live pixel-displacement feedback. Full CI verification is pending.
+- **v0.7.1 fix:** PR #10 merged with a long hanging pendulum and push button. **v0.7.2** makes one-click Swing available directly from Arcade, explicitly opts into Lab motion when OS requests reduced motion, and adds live pixel-displacement feedback. **83 Node tests pass; Chromium browser smoke passes at 1300px and 390px with reduced motion on and off** (runs 40249981474 and 40249981565). Real-device visual confirmation is still pending.
 - **G3 browser automation:** desktop 1300px and phone-sized 390px Chromium
   smoke checks passed, including live displacement and collision checks on
   both board sizes. Full manual playtesting and live GitHub Pages deployment
