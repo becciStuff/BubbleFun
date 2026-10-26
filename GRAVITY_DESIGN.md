@@ -1,6 +1,6 @@
 # BubbleFun gravity development
 
-**Checkpoint: G3 — gentle live attached sway in v0.7.0 (review branch).**
+**Checkpoint: G3.1 — lab swing demonstration correction in v0.7.1 (review branch).**
 G1 support analysis and G2 Gravity Lab are merged. G3 begins integrating
 support-sensitive swaying into **normal Arcade and all three Puzzles**, not as
 a separate game mode. Lab remains a controlled diagnostic only.
@@ -61,7 +61,9 @@ still no earned special shot or gravity-induced breakage in standard gameplay.
 
 ## G2: what players can actually see
 
-- In **Arcade**, press **Load test board** in Gravity Lab.
+- In **Arcade**, press **Load test board** in Gravity Lab. In v0.7.1
+  the board has a longer hanging pendulum and two independently anchored
+  reference supports. Press **Swing the chain** to apply a damped push.
 - Amber-marked attachments show an overloaded single-ceiling-support chain.
   Mint-marked attachments identify the stronger, independently braced group.
 - Press **Gravity Surge** once to release the vulnerable chain. The supported
@@ -69,9 +71,9 @@ still no earned special shot or gravity-induced breakage in standard gameplay.
 - Press **Load test board** to try again. Restart returns to normal Arcade.
 - The lab pauses firing and never saves a high score. Puzzles and standard
   Arcade cannot trigger the experimental Surge.
-- Markers are a **diagnostic visual** on fixed grid positions, not simulated
-  bending or sway. Hit detection and rendering still share the fixed grid
-  geometry, preserving aiming fairness.
+- Markers and support wires are a **diagnostic visual** following actual live
+  bubble centres. The single-anchor chain swings around its fixed ceiling
+  pivot. This is constrained rigid-body motion, not a deformable spring mesh.
 
 `gravity-lab.js` provides a deterministic board; `gravity-hints.js`
 prepares marker geometry from `analyseSupports`, and
@@ -97,8 +99,10 @@ movement amplitude, not automatic bond failure.
 - During opening/row animations the aim guide is hidden, since the board is
   temporarily presented with a separate entrance/row transition.
 - **Reduced motion** disables sway, leaving canonical positions.
-- The G2 Lab continues to use fixed board positions for accurate anchor
-  diagnostics. The Lab is not required to use normal game gravity.
+- The Gravity Lab now **uses live positions** as well. Its single-anchor
+  structure rotates as a rigid pendulum about a fixed ceiling pivot; the
+  braced structure stays nearly stationary. The support-warning overlay
+  reads the same live positions rather than drawing phantom fixed links.
 
 New support-aware movement is **not** a full elastic solver. It does not
 redistribute real tension over multiple anchors, physically stretch links,
@@ -129,7 +133,7 @@ automated checks; hands-on mobile and GitHub Pages deployment remain separate.
 
 - **G2: visual stress diagnostic and deliberate activation (v0.6.0).**
   Isolated Gravity Lab with warnings and button; normal levels remain unchanged.
-- **G3: constrained, damped sway (v0.7.0 review).** Integrated into normal
+- **G3: constrained, damped sway (v0.7.0 merged; v0.7.1 lab correction).** Integrated into normal
   Arcade and puzzles, with a shared live-position query.
 - **G4: improve multi-anchor load sharing, stickiness and support failure.**
   Tune isolated heavy dual-support boards; no arbitrary collapse under normal gravity.
