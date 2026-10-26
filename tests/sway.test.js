@@ -87,11 +87,18 @@ test('Gravity Lab pendulum swings around a fixed roof pivot while braced bubbles
   assert.deepEqual(bubblePosition(state, 0, 2), pivot);
   assert.ok(Math.abs(bubblePosition(state, 7, 3).x - tip.x) > 3);
   assert.deepEqual(bubblePosition(state, 2, 5), braced);
+  const beforePushX = bubblePosition(state, 7, 3).x;
   assert.equal(nudgeLabPendulum(state), true);
-  const oldX = bubblePosition(state, 7, 3).x;
-  for (let i = 0; i < 12; i++) stepAttachedSway(state, .045);
-  assert.ok(Math.abs(bubblePosition(state, 7, 3).x - oldX) > 10,
-    'visible nudge moves the suspended tip by more than ten pixels');
+  const afterPushX = bubblePosition(state, 7, 3).x;
+  assert.ok(Math.abs(afterPushX - beforePushX) > 10,
+    'the explicit push should displace the tip immediately');
+  const samples = [afterPushX];
+  for (let i = 0; i < 24; i++) {
+    stepAttachedSway(state, .045);
+    samples.push(bubblePosition(state, 7, 3).x);
+  }
+  assert.ok(Math.max(...samples) - Math.min(...samples) > 12,
+    'the pendulum must visibly keep moving after the initial push');
   const distance = pos => Math.hypot(pos.x - pivot.x, pos.y - pivot.y);
   assert.ok(Math.abs(distance(bubblePosition(state, 7, 3)) - distance(tip)) < .01,
     'rigid pendulum rotation preserves attachment length');
