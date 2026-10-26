@@ -3,12 +3,13 @@
 // map is authoritative for rendering, aiming, projectile hits and falling.
 import { PITCH, RADIUS } from './config.js';
 import { cellKey, shooterNeighbours, shooterPosition } from './grid.js';
-import { analyseSupports } from './supports.js';
+import { planHangingSag } from './sag.js';
 
 const RESTORING = 69;        // Pull towards the stable hex grid.
 const COUPLING = 18;         // Transmit movement through real connections.
 const DAMPING = 10.5;
-const MAX_OFFSET = 13;      // Keep shots/snapping predictable.
+const MAX_OFFSET = 34;      // Allow visible droop, but cap for fair aiming.
+const MAX_DROP = 29;
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
 // A real shot injects an impulse through its surrounding connected bubbles.
@@ -32,6 +33,35 @@ export function kickAttachedSway(state, row, col, vx = 0) {
   }
 }
 
+// Explosions should excite the surviving neighbours, not just burst the
+// victims. Pulse sources are the ACTUAL live positions of removed bubbles.
+export function kickExplosionSway(state, sources, intensity = 1) {
+  if (state.reducedMotion || !sources.length) return;
+  state.swayDynamics ??= new Map();
+  const radius = PITCH * 5.5;
+  for (const key of state.board.keys()) {
+    const [row, col] = key.split(',').map(Number);
+    if (row === 0) continue; // The ceiling is rigid.
+    const p = state.attachedPositions?.get(key) ?? shooterPosition(row, col, state.phase, state.layout);
+    let pushX = 0, pushY = 0;
+    for (const source of sources) {
+      const dx = p.x - source.x, dy = p.y - source.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance >= radius) continue;
+      const strength = Math.pow(1 - distance / radius, 1.45) * intensity;
+      const directionX = distance > 1 ? dx / distance : (col % 2 ? 1 : -1);
+      const directionY = distance > 1 ? dy / distance : -.3;
+      pushX += directionX * 190 * strength;
+      pushY += (directionY * 80 - 35) * strength;
+    }
+    if (Math.abs(pushX) + Math.abs(pushY) < .5) continue;
+    const motion = state.swayDynamics.get(key) ?? { x: 0, y: 0, vx: 0, vy: 0 };
+    motion.vx = clamp(motion.vx + pushX, -230, 230);
+    motion.vy = clamp(motion.vy + pushY, -140, 140);
+    state.swayDynamics.set(key, motion);
+  }
+}
+
 export function stepAttachedSway(state, dt) {
   state.attachedPositions ??= new Map();
   state.swayDynamics ??= new Map();
@@ -43,7 +73,13 @@ export function stepAttachedSway(state, dt) {
     return state.attachedPositions;
   }
 
-  const analysis = analyseSupports(state.board, { phase: state.phase, layout: state.layout });
+  // Cache topology-based sag targets; only recompute after a snap, burst or
+  // ceiling shift. Oscillation and impacts still advance each tick.
+  const signature = state.phase + ':' + state.layout.columns + ':' + [...state.board.keys()].join(';');
+  if (state.sagCache?.signature !== signature) {
+    state.sagCache = { signature, ...planHangingSag(state.board, { phase: state.phase, layout: state.layout }) };
+  }
+  const { analysis, positions: sagPose } = state.sagCache;
   const targets = new Map();
   const live = new Map();
   const phaseTime = state.swayClock;
@@ -59,19 +95,20 @@ export function stepAttachedSway(state, dt) {
     for (const [row, col] of region.cells) {
       const key = cellKey(row, col);
       const base = shooterPosition(row, col, state.phase, state.layout);
-      let x = 0, y = 0;
+      const settled = sagPose.get(key) ?? base;
+      let x = settled.x - base.x, y = settled.y - base.y;
       if (single) {
         // A ceiling-rooted pendulum: the more distant bubbles move farther,
         // and rotated positions preserve connections within this component.
-        const dx = base.x - pivot.x, dy = base.y - pivot.y;
-        x = dx * Math.cos(theta) - dy * Math.sin(theta) - dx;
-        y = dx * Math.sin(theta) + dy * Math.cos(theta) - dy;
+        const dx = settled.x - pivot.x, dy = settled.y - pivot.y;
+        x += dx * Math.cos(theta) - dy * Math.sin(theta) - dx;
+        y += dx * Math.sin(theta) + dy * Math.cos(theta) - dy;
       } else {
         // Dense Arcade boards also react: flexible short links transmit a
         // smaller wave, but the presence of many roof anchors keeps it stable.
         const influence = Math.min(3.1, Math.max(0, row) * .76);
-        x = Math.sin(phaseTime * 1.45 + roofCol * .31 + col * .12) * influence;
-        y = Math.sin(phaseTime * 1.2 + col * .26) * Math.min(1.4, row * .28);
+        x += Math.sin(phaseTime * 1.45 + roofCol * .31 + col * .12) * influence;
+        y += Math.sin(phaseTime * 1.2 + col * .26) * Math.min(1.4, row * .28);
       }
       targets.set(key, { x, y });
     }
@@ -89,7 +126,8 @@ export function stepAttachedSway(state, dt) {
       continue;
     }
     const m = previous.get(key) ?? { x: 0, y: 0, vx: 0, vy: 0 };
-    const aim = targets.get(key) ?? { x: 0, y: 0 };
+    const sagged = sagPose.get(key) ?? base;
+    const aim = targets.get(key) ?? { x: sagged.x - base.x, y: sagged.y - base.y };
     const connected = shooterNeighbours(state.board, row, col, state.phase, state.layout);
     let nx = 0, ny = 0;
     for (const [r, c] of connected) {
@@ -103,7 +141,7 @@ export function stepAttachedSway(state, dt) {
     const vx = (m.vx + ax * dt);
     const vy = (m.vy + ay * dt);
     const x = clamp(m.x + vx * dt, -MAX_OFFSET, MAX_OFFSET);
-    const y = clamp(m.y + vy * dt, -MAX_OFFSET * .45, MAX_OFFSET * .45);
+    const y = clamp(m.y + vy * dt, -MAX_DROP, MAX_DROP);
     const minX = state.layout.left + RADIUS;
     const maxX = state.layout.width - minX;
     live.set(key, { x: clamp(base.x + x, minX, maxX), y: base.y + y });

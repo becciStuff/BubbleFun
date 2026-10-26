@@ -6,19 +6,22 @@
 
 **Updated:** 26 October 2026 (NZ)  
 **Repo:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.7.2 (PR #11), with temporary Gravity Lab  
-**Current review branch:** `feature/gravity-in-main-remove-lab-080` — [PR #12](https://github.com/becciStuff/BubbleFun/pull/12)  
-**Proposed release version:** **v0.8.0**, from `version.json` and mirrored in `package.json`  
-**Current phase:** Bring all gravity motion into ordinary Arcade/Puzzles;
-**remove Gravity Lab** instead of turning it into another play style.
+**Merged baseline:** v0.8.0, integrated Arcade/Puzzle sway (PR #12)  
+**Current review branch:** `feature/gravity-sag-explosion-response-081` — [PR #13](https://github.com/becciStuff/BubbleFun/pull/13)  
+**Proposed release version:** **v0.8.1**, from `version.json` and mirrored in `package.json`  
+**Current phase:** Weight-based downward settling at weak side bonds and
+explosion impulses within ordinary Arcade and Puzzles. Gravity Lab is gone.
 
-## What players should see after PR #12 merges
+## What players should see after PR #13 merges
 
 BubbleFun is a vanilla JS free-to-play bubble shooter with only two
 visible play styles: **Arcade** and **Puzzles** (Twin Towers,
 Heartbreaker, The Crown). The older Bubble Pop mode stays archived and
 hidden in `src/pop-mode.js`.
 
+- Side-hanging single-bond clusters rotate **down under gravity**, provided
+  other bubbles do not block their movement. They stay attached under Normal Gravity.
+- After a pop or bomb blast, connected surviving bubbles recoil and damp out.
 - Bubbles still match colours, bombs chain, disconnected pieces fall,
   scores/combos accumulate, and responsive mobile/desktop boards work.
 - **Attached bubbles move naturally** as part of ordinary gameplay.
@@ -43,7 +46,8 @@ hidden in `src/pop-mode.js`.
 src/config.js             Shared layout and tuning
 src/grid.js               Hex lattice, neighbors, match and shared collision
 src/supports.js           Load/ceiling anchor graph and break planning
-src/sway.js               Shot impulses and damped connected motion
+src/sag.js                Pure hanging bridge sag targets and collision constraints
+src/sway.js               Shot/blast impulses and damped connected motion
 src/positions.js          Shared live attached positions
 src/gravity.js            Detached/falling simulation + internal Surge API
 src/attachment-visuals.js Small visual connector renderer
@@ -87,23 +91,25 @@ visuals and gameplay orchestration in separate modules.
 - [x] G3.1/G3.2 diagnostic pendulum and button fixes (PRs #10–11).
 - [x] v0.8.0 code on review branch: retire Lab UI/code, react to actual
       shots in Arcade/Puzzles, add elastic-looking joints and replacement tests.
-- [ ] Confirm final Node + browser CI for PR #12, then review and merge.
+- [x] PR #12 merged (v0.8.0): Gravity Lab removed, motion in normal play.
+- [ ] Review and merge PR #13 after final Node/Chromium CI. Check side-hanging
+      sags and pop/bomb recoil on a live desktop and real phone.
 - [ ] Hand-play Arcade and all Puzzles after deploy on actual phones/desktops.
 - [ ] Better spring/bond physics, real multi-anchor load sharing, controlled
       Extreme Gravity special *inside the real game*.
 
 ## Verification
 
-At the time this document was initially written, the v0.8.0 branch
-**passed 75 Node tests (0 failures)**. Chromium UI checks also ran
-successfully before the documentation update; CI must be reconfirmed on
-the final PR commit. Live GitHub Pages and real-device tests have not been
+The v0.8.0 baseline passed 75 Node tests and desktop/mobile Chromium checks.
+PR #13 adds sag/explosion regression tests and a browser smoke scenario to
+verify both behaviours and reduced-motion handling. Verify final workflow
+results before merge; physical-device playtesting remains separate. Live GitHub Pages and real-device tests have not been
 personally verified. Do not misstate automated checks as manual playtests.
 
 ## Handover note
 
 > Continue BubbleFun from https://github.com/becciStuff/BubbleFun. Start by
-> checking whether PR #12 (v0.8.0 gravity in main game, remove Gravity Lab)
+> checking whether PR #13 (v0.8.1 gravity sag and explosion recoil)
 > merged. Keep only Arcade and Puzzles as visible play styles, retain
 > modular physics, and preserve shared moving hitboxes. Don't reintroduce
 > the Lab. See GRAVITY_DESIGN.md and VISION.md for the planned advanced gravity

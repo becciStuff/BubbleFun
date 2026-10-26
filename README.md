@@ -6,9 +6,29 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.0 integrates movement into Arcade and Puzzles**, with no Gravity Lab in the UI.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.1 adds gravity sag and blast recoil within Arcade and Puzzles**, with no Gravity Lab in the UI.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
+
+## v0.8.1 — Dangling branches sag; explosions shake their neighbours
+
+A bubble with **one sideways support connection** should not hover
+indefinitely at its original hex-grid height. It now gravitates toward a
+lower hanging position, rotating with any dependents about the weak bond.
+Static equilibrium is **bounded by neighbouring bubbles, walls and existing
+attachments**, so stable puzzles stay fair. Normal Gravity does not
+automatically tear off ceiling-supported bubbles.
+
+When a match pops or a bomb goes off, the **surviving connected bubbles**
+receive an outward physical impulse. Motion travels through the supporting
+connections and gradually settles into the new supported shape.
+Disconnected pieces still drop through the existing falling engine.
+
+`src/sag.js` computes pure resting positions from weak load-bearing bridges,
+`src/sway.js` eases into those positions and handles explosion impulses,
+`src/positions.js` supplies the same live centres for drawing and
+collisions. The renderer and game remain separate. Reduced-motion settings
+continue to suppress attached movement.
 
 ## v0.8.0 — Gravity belongs in Arcade and Puzzles
 
@@ -43,11 +63,11 @@ on desktop and mobile-sized screens.
 
 ## Release tracking
 
-**Current version: v0.8.0** on its feature review branch. Gravity reacts to
+**Current version: v0.8.1** on the gravity-sag feature review branch. Gravity reacts to
 shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
 Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.8.0**, loading the number from
+The header badge reads **Version 0.8.1**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -55,9 +75,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.8.0 → 0.8.1
+npm run version:patch   # e.g. 0.8.1 → 0.8.2
 # or
-npm run version:minor   # e.g. 0.8.0 → 0.9.0
+npm run version:minor   # e.g. 0.8.1 → 0.9.0
 npm test
 ```
 
@@ -131,7 +151,8 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/puzzles.js` — handcrafted puzzle layouts, targets, ammunition and fresh board creation
 - `src/supports.js` — gravity support graph, suspended weight and independent ceiling anchors (merged in G1)
 - `src/gravity.js` — detached-bubble detection, falling motion and opt-in Surge
-- `src/sway.js` — damped supported-cluster sway with impact impulses (G3)
+- `src/sway.js` — damped attached springs and shot/explosion impulses
+- `src/sag.js` — gravity-resting positions for weakly supported hanging branches
 - `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
 - `src/attachment-visuals.js` — subtle glass-like links between live bubble centres
 - `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
@@ -147,6 +168,8 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/surge.test.js` — opt-in gravity detachment and scoring boundaries
 - `tests/browser-smoke.mjs` — real Arcade/Puzzle firing across responsive layouts and motion preferences
 - `tests/sway.test.js` — live collision points, support-sensitive sway and reduced motion
+- `tests/sag.test.js` — single-link sag, bounds and geometry
+- `tests/explosion-motion.test.js` — survivor recoil and damping
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
 ## Ideas for later
