@@ -6,10 +6,10 @@
 
 **Reviewed:** 26 October 2026 (NZ)  
 **Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged production baseline:** v0.6.0, Gravity Lab, PR #8  
-**Current review branch:** `feature/attached-sway-g3` — [PR #9](https://github.com/becciStuff/BubbleFun/pull/9)  
-**Proposed version:** v0.7.0 in both `version.json` and `package.json`  
-**Status:** G3 gentle attached sway implemented and under review; do **not** call it merged until PR #9 lands.
+**Merged production baseline:** v0.7.0, Arcade/Puzzle sway, PR #9  
+**Current review branch:** `fix/gravity-lab-swing-visible` — v0.7.1 fix  
+**Proposed version:** v0.7.1 in both `version.json` and `package.json`  
+**Status:** G3 normal-play sway merged. G3.1 lab demonstration fix awaits review; the previous Lab was intentionally static and therefore could not show swinging.
 
 ## What's playable
 
@@ -29,14 +29,16 @@ bubbles, press Gravity Surge, and watch the vulnerable branch fall.
 **This is not a second game mode in the long-term design**, nor an earned
 special in real levels.
 
-**G3 v0.7.0 on the review branch** brings subtle, damped attached-bubble
+**G3 v0.7.0 merged** brings subtle, damped attached-bubble
 sway to **normal Arcade and all Puzzles**. Single-anchor structures move more;
 multiply supported structures move very little; shot impacts add decaying
 motion; ceiling anchors stay fixed. The renderer, aim guide, projectile hit
 checks and falling-body origins share the same *current* positions. The hex
 grid still controls matching, connection topology and shot snap locations.
-Reduced-motion settings disable attached sway. Lab markers stay on the fixed
-test board.
+Reduced-motion settings disable attached sway. The corrected Lab now has a
+long hanging pendulum that swings visibly, a **Swing the chain** button,
+and two-anchor bracing. Support wires follow actual positions. Reduced motion
+keeps the Lab static and disables its Swing control.
 
 ## Engineering boundaries
 
@@ -44,7 +46,7 @@ test board.
 src/config.js           Dimensions and tuning
 src/grid.js             Hex lattice, graph adjacency, match and hit predicate
 src/supports.js         Distinct ceiling supports, load, vulnerable bonds
-src/sway.js             Attached displacement simulation (G3 branch)
+src/sway.js             Attached displacement simulation (merged in G3)
 src/positions.js        Shared current physical attached positions (G3 branch)
 src/gravity.js          Existing detachment/falling and opt-in Surge
 src/gravity-lab.js      Isolated deterministic test-board data
@@ -83,7 +85,8 @@ and pure modules for geometry and support calculations.
 ## Verification
 
 - **PR #8 (v0.6.0):** Merged; Gravity Lab and browser smoke tests passed.
-- **PR #9 (G3 branch):** `npm test` passed **82 tests, 0 failures**.
+- **PR #9 (v0.7.0):** Merged, with **82 tests passing**.
+- **v0.7.1 fix:** Extended pendulum rig, push button, live support wires and stronger motion tests; final CI verification required before merging.
 - **G3 browser automation:** desktop 1300px and phone-sized 390px Chromium
   smoke checks passed, including live displacement and collision checks on
   both board sizes. Full manual playtesting and live GitHub Pages deployment
@@ -97,7 +100,8 @@ and pure modules for geometry and support calculations.
       archived mode extracted (PRs #1–4).
 - [x] G1 support / weight and ceiling anchoring analysis (PR #5).
 - [x] G2 Gravity Lab demo (PR #8).
-- [x] G3 live sway, shared positions and tests written on review branch.
+- [x] G3 live sway, shared positions and tests merged in PR #9.
+- [ ] G3.1 visible Lab pendulum and one-button push — review tests and merge.
 - [ ] Review and merge PR #9 after CI; manually play Arcade and each puzzle on
       desktop/mobile, including near misses and rebound shots.
 - [ ] G4: advanced multi-anchor load sharing, stickiness and controlled Extreme
@@ -111,7 +115,7 @@ and pure modules for geometry and support calculations.
 
 > We're continuing BubbleFun at https://github.com/becciStuff/BubbleFun.
 > Please read PROJECT_STATUS.md, GRAVITY_DESIGN.md, VISION.md and the source.
-> The structural refactor and G1/G2 are merged. PR #9 proposes v0.7.0 with
+> The structural refactor and G1/G2 are merged. PR #9 merged v0.7.0 with
 > real-game attached sway and live projectile collisions. Please verify merge
 > status before doing new work, and preserve normal vs Extreme Gravity rules.
 
