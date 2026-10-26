@@ -1,6 +1,6 @@
 # BubbleFun gravity development
 
-**Checkpoint: G3.1 — lab swing demonstration correction in v0.7.1 (review branch).**
+**Checkpoint: G3.2 — reliable Swing activation in v0.7.2 (review branch).**
 G1 support analysis and G2 Gravity Lab are merged. G3 begins integrating
 support-sensitive swaying into **normal Arcade and all three Puzzles**, not as
 a separate game mode. Lab remains a controlled diagnostic only.
@@ -64,6 +64,8 @@ still no earned special shot or gravity-induced breakage in standard gameplay.
 - In **Arcade**, press **Load test board** in Gravity Lab. In v0.7.1
   the board has a longer hanging pendulum and two independently anchored
   reference supports. Press **Swing the chain** to apply a damped push.
+  From v0.7.2 Swing can be clicked **before loading** the test board: the
+  action sets up the Lab and starts motion in one step.
 - Amber-marked attachments show an overloaded single-ceiling-support chain.
   Mint-marked attachments identify the stronger, independently braced group.
 - Press **Gravity Surge** once to release the vulnerable chain. The supported
@@ -79,6 +81,17 @@ still no earned special shot or gravity-induced breakage in standard gameplay.
 prepares marker geometry from `analyseSupports`, and
 `gravity-overlay.js` draws the markers without owning game logic.
 `game.js` handles the explicit test action and its turn-safety checks.
+
+## G3.2: explicit Swing activation and reduced motion
+
+The Lab defaults to the device's system motion preference. Pressing **Swing
+the chain** is an explicit user request to observe the diagnostic pendulum,
+so it enables motion for that **one Lab state only**. A fresh Lab, ordinary
+Arcade, and Puzzles continue respecting the system setting. The visible
+tip-displacement readout comes from `sway.js`'s live attached position map.
+Tests exercise this UI in desktop/mobile Chromium with both normal and
+reduced-motion preferences. After Surge, **Reset & swing** reloads the
+demonstration rather than leaving an inert button.
 
 ## G3: actual gentle sway in ordinary play (v0.7.0)
 
