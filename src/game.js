@@ -9,7 +9,7 @@ import {
 import { createPuzzleBoard } from './puzzles.js';
 import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles } from './gravity.js';
 import { bubblePosition } from './positions.js';
-import { stepAttachedSway, kickAttachedSway } from './sway.js';
+import { stepAttachedSway, kickAttachedSway, kickExplosionSway } from './sway.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -152,15 +152,20 @@ function landingSlot(state, x, y) {
 
 function removeCells(state, cells, effectCount) {
   const bombs = [];
+  const impacts = [];
   for (const [r, c] of cells) {
     const colour = state.board.get(key(r, c));
     if (!colour) continue;
     const { x, y } = bubblePosition(state, r, c);
+    impacts.push({ x, y });
     if (state.bombs.delete(key(r, c))) bombs.push({ x, y, row: r, col: c });
     addBurst(state, x, y, colour, effectCount);
     addPulse(state, x, y, colour, .65);
     state.board.delete(key(r, c));
   }
+  // Removed bubbles transfer their last momentum to their surviving links.
+  // Do this after deleting victims so nothing kicks an already-popped cell.
+  if (impacts.length) kickExplosionSway(state, impacts, Math.min(1.45, .65 + impacts.length * .095));
   return bombs;
 }
 
@@ -176,6 +181,9 @@ export function detonateNextBomb(state) {
     if (Math.hypot(p.x - bomb.x, p.y - bomb.y) <= BOMB_RADIUS) victims.push([r, c]);
   }
   state.pendingBombs.push(...removeCells(state, victims, 11));
+  // A bomb blast has an extra outward pressure wave, even when only a few
+  // remaining bubbles survive inside its visual blast radius.
+  kickExplosionSway(state, [{ x: bomb.x, y: bomb.y }], 1.35);
   state.comboLevel = Math.min(8, Math.max(2, state.comboLevel + 1));
   state.highestCombo = Math.max(state.highestCombo, state.comboLevel);
   state.comboDisplay = 2.8;
