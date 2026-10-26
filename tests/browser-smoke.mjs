@@ -25,7 +25,7 @@ try {
     assert.match(await page.locator('#live-status').textContent(), /Swing activated/);
     await page.waitForFunction(() => {
       const text = document.querySelector('#gravity-lab-message')?.textContent ?? '';
-      return Number(text.match(/Tip is (\\d+)px/)?.[1] ?? 0) > 15;
+      return Number(text.match(/Tip is (\d+)px/)?.[1] ?? 0) > 15;
     }, null, { timeout: 3000 });
     const offsetBefore = await page.locator('#gravity-lab-message').textContent();
     await page.waitForTimeout(200);
