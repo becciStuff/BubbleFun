@@ -10,10 +10,23 @@ const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 // A nudge is deliberately available only on the deterministic test board.
 // The impulse drives a damped pendulum; Surge remains a separate action.
 export function nudgeLabPendulum(state) {
-  if (state.variant !== 'lab' || state.reducedMotion || state.gravityLabUsed ||
+  if (state.variant !== 'lab' || state.gravityLabUsed ||
       state.status !== 'playing' || state.falling.length || state.projectile) return false;
-  state.labSwingAt = state.swayClock ?? 0;
+  // An explicit button click opts into Lab motion even when the OS preference
+  // is reduced motion. Only this Lab state is overridden, never other modes.
+  state.labMotionEnabled = true;
+  // Begin slightly into the push so the very next rendered frame visibly moves.
+  state.labSwingAt = (state.swayClock ?? 0) - .14;
+  stepAttachedSway(state, 0);
   return true;
+}
+
+export function labSwingDisplacement(state) {
+  if (state.variant !== 'lab') return 0;
+  const tip = state.attachedPositions?.get('7,3');
+  if (!tip) return 0;
+  const rest = shooterPosition(7, 3, state.phase, state.layout);
+  return Math.round(Math.hypot(tip.x - rest.x, tip.y - rest.y));
 }
 
 export function kickAttachedSway(state, row, col) {
@@ -36,7 +49,7 @@ export function stepAttachedSway(state, dt) {
   state.swayKicks ??= new Map();
   dt = Math.max(0, dt);
   state.swayClock = (state.swayClock ?? 0) + dt;
-  if (state.reducedMotion) {
+  if (state.reducedMotion && !(state.variant === 'lab' && state.labMotionEnabled)) {
     state.attachedPositions.clear();
     state.swayKicks.clear();
     return state.attachedPositions;
