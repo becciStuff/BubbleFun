@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SHOT_HIT_DISTANCE } from '../src/config.js';
 import { cellKey, shooterPosition, shotBubbleCollision } from '../src/grid.js';
 import { bubblePosition } from '../src/positions.js';
-import { stepAttachedSway, kickAttachedSway } from '../src/sway.js';
+import { stepAttachedSway, kickAttachedSway, nudgeLabPendulum } from '../src/sway.js';
 import { releaseFloatingShooter } from '../src/gravity.js';
 import { initialShooter, initialPuzzle, initialGravityLab, stepGame } from '../src/game.js';
 
@@ -77,11 +77,31 @@ test('reduced motion leaves geometry unchanged for both Arcade and puzzles', () 
     assert.deepEqual(bubblePosition(state,row,col), shooterPosition(row,col,state.phase,state.layout));
   }
 });
-test('Gravity Lab stays at canonical positions while normal gameplay sways', () => {
+test('Gravity Lab pendulum swings around a fixed roof pivot while braced bubbles remain still', () => {
   const state = initialGravityLab();
+  const tip = shooterPosition(7, 3, 0, state.layout);
+  const pivot = shooterPosition(0, 2, 0, state.layout);
+  const braced = shooterPosition(2, 5, 0, state.layout);
   stepAttachedSway(state, .42);
+  assert.equal(state.board.size, 16);
+  assert.deepEqual(bubblePosition(state, 0, 2), pivot);
+  assert.ok(Math.abs(bubblePosition(state, 7, 3).x - tip.x) > 3);
+  assert.deepEqual(bubblePosition(state, 2, 5), braced);
+  assert.equal(nudgeLabPendulum(state), true);
+  const oldX = bubblePosition(state, 7, 3).x;
+  for (let i = 0; i < 12; i++) stepAttachedSway(state, .045);
+  assert.ok(Math.abs(bubblePosition(state, 7, 3).x - oldX) > 10,
+    'visible nudge moves the suspended tip by more than ten pixels');
+  const distance = pos => Math.hypot(pos.x - pivot.x, pos.y - pivot.y);
+  assert.ok(Math.abs(distance(bubblePosition(state, 7, 3)) - distance(tip)) < .01,
+    'rigid pendulum rotation preserves attachment length');
+});
+test('reduced-motion mode explicitly disables the lab pendulum', () => {
+  const state = initialGravityLab();
+  state.reducedMotion = true;
+  assert.equal(nudgeLabPendulum(state), false);
+  stepAttachedSway(state, .5);
   assert.equal(state.attachedPositions.size, 0);
-  assert.equal(state.board.size, 10);
 });
 test('sway state is specific to each game and never persists after restarting', () => {
   const first = stateWithBoard(MOBILE_LAYOUT, ['0,3','1,3']);

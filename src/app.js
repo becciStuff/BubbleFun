@@ -1,6 +1,6 @@
 import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES } from './config.js';
 import { PUZZLES } from './puzzles.js';
-import { initialShooter, initialPuzzle, initialGravityLab, canTriggerGravityLabSurge, triggerGravityLabSurge, fireShooter, aimShooter, stepGame } from './game.js';
+import { initialShooter, initialPuzzle, initialGravityLab, nudgeGravityLab, canTriggerGravityLabSurge, triggerGravityLabSurge, fireShooter, aimShooter, stepGame } from './game.js';
 import { draw } from './render.js';
 import { loadVersion } from './version.js';
 
@@ -147,16 +147,16 @@ function updatePlayUI() {
   putText('mission-strip', puzzle ? `✦  ${PUZZLES[puzzleIndex].goal}  ·  ${PUZZLES[puzzleIndex].shots} shots` : '');
   putText('instructions-title', lab ? 'Weight versus support.' : puzzle ? 'Every shot matters.' : 'Make your shot count.');
   putText('instructions-copy', lab
-    ? 'Amber outlines show a vulnerable hanging chain. Mint outlines show a braced structure with two separate ceiling anchors. Press Gravity Surge to test them — shooting is paused in this demo.'
+    ? 'The long amber chain hangs from one ceiling anchor. The mint structure has two separate supports. Press Swing the chain to push the pendulum, then Gravity Surge to detach it. Shooting is paused in the lab.'
     : puzzle
     ? `Clear the glowing bomb targets in ${PUZZLES[puzzleIndex].shots} shots or fewer. The bubbles form a handcrafted pattern — look for a weak point and bring down whole sections.`
     : 'Match three or more colours. Hit marked bomb bubbles to set off explosive chains, then watch unsupported bubbles tumble and burst.');
   putText('tip-copy', lab
-    ? 'Ordinary gravity never tears down attached bubbles. Only the experimental Surge applies extra force. Reload the test board to repeat it.'
+    ? 'Normal gravity allows connected bubbles to swing without snapping. Gravity Surge is a separate experiment that breaks weak attachments. Reload the board to try again.'
     : puzzle
     ? 'You don’t need to clear every bubble. Break the supports or detonate the marked targets to solve the puzzle.'
     : 'Those glowing bubbles are bombs. Aim for a colour match, or use another explosion to trigger them.');
-  canvas.setAttribute('aria-label', lab ? 'Gravity Lab demonstration. Amber indicates loaded weak supports, mint indicates independent bracing. Use the Gravity Surge button.' : `${puzzle ? PUZZLES[puzzleIndex].name + ' puzzle' : 'Bubble Shooter'} playfield. Aim with mouse or touch; arrow keys and Space also work.`);
+  canvas.setAttribute('aria-label', lab ? 'Gravity Lab demonstration. Amber marks a swinging chain on one anchor; mint marks independent bracing. Use Swing the chain to push the pendulum, or Gravity Surge to detach it.' : `${puzzle ? PUZZLES[puzzleIndex].name + ' puzzle' : 'Bubble Shooter'} playfield. Aim with mouse or touch; arrow keys and Space also work.`);
 }
 
 function reset() {
@@ -185,7 +185,7 @@ function loadGravityLab() {
   seenEvent = state.event;
   updatePlayUI();
   updateUI();
-  announce('Gravity Lab loaded. Amber is a weak single support; mint is a stable double support. Press Gravity Surge to test them.');
+  announce('Gravity Lab loaded. Amber is a long single-anchor pendulum. Press Swing the chain to push it. Mint is a separately braced structure.');
 }
 
 function selectPlay(nextStyle) {
@@ -231,8 +231,9 @@ function updateUI() {
       : playStyle === 'puzzle' ? `${state.bombs.size} bomb target${state.bombs.size===1?'':'s'} to clear` : 'Match 3+ — glowing bubbles are bombs!');
   putText('game-status', `✦ ${status}`);
   $('gravity-surge-button').disabled = !canTriggerGravityLabSurge(state);
+  $('gravity-swing-button').disabled = !(state.variant === 'lab' && !state.reducedMotion && !state.gravityLabUsed && state.status === 'playing' && !state.falling.length);
   putText('gravity-lab-message', state.variant === 'lab'
-    ? (state.falling.length ? `${state.lastGravityRelease} bubbles falling. The two-anchor structure is still attached.` : state.gravityLabUsed ? `Released ${state.lastGravityRelease} bubbles. Mint bracing held. Load the test board to try again.` : 'Amber: 3 bubbles hang from one ceiling anchor. Mint: the other structure has two independent anchors.')
+    ? (state.falling.length ? `${state.lastGravityRelease} bubbles falling. The two-anchor structure is still attached.` : state.gravityLabUsed ? `Released ${state.lastGravityRelease} hanging bubbles. Mint bracing held. Load the test board to try again.` : state.reducedMotion ? 'Motion is reduced in your device settings. Change Reduce Motion to watch swinging; Surge still works.' : 'Amber: long pendulum on one support. Mint: two independent anchors. Press Swing the chain, then Gravity Surge.')
     : 'Load a test board to see weak and independently supported bubbles side by side.');
 
   const overlay = $('result-overlay');
@@ -252,6 +253,9 @@ document.querySelectorAll('.mode-card').forEach(button => button.addEventListene
 document.querySelectorAll('.puzzle-choice').forEach(button => button.addEventListener('click', () => selectPuzzle(Number(button.dataset.puzzle))));
 $('restart-button').addEventListener('click', reset);
 $('gravity-demo-button').addEventListener('click', loadGravityLab);
+$('gravity-swing-button').addEventListener('click', () => {
+  if (nudgeGravityLab(state)) announce('The hanging chain is swinging around its ceiling pivot. Its oscillation gradually slows down.');
+});
 $('gravity-surge-button').addEventListener('click', () => {
   const result = triggerGravityLabSurge(state);
   if (result.activated) announce(`Gravity Surge released ${result.released} bubbles. The independently supported structure stays attached.`);

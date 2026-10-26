@@ -10,7 +10,7 @@ import { createPuzzleBoard } from './puzzles.js';
 import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles, releaseGravitySurge } from './gravity.js';
 import { createGravityLabBoard } from './gravity-lab.js';
 import { bubblePosition } from './positions.js';
-import { stepAttachedSway, kickAttachedSway } from './sway.js';
+import { stepAttachedSway, kickAttachedSway, nudgeLabPendulum } from './sway.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -100,8 +100,15 @@ export function initialGravityLab(layout = MOBILE_LAYOUT) {
   state.bombs = new Set();
   state.variant = 'lab';
   state.gravityLabUsed = false;
+  state.labSwingAt = null;
   state.lastGravityRelease = 0;
   return state;
+}
+
+// A deliberate test push lets players compare free hanging sway with bracing.
+// The movement rule and damping remain entirely inside sway.js.
+export function nudgeGravityLab(state) {
+  return nudgeLabPendulum(state);
 }
 
 export function canTriggerGravityLabSurge(state) {

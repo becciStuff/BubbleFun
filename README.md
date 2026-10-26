@@ -10,6 +10,21 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
+## v0.7.1 — Visible swinging test rig
+
+Gravity Lab now contains a **long pendulum hanging from a single ceiling
+bubble**, opposite a **two-anchor braced structure**. The hanging chain
+moves on its own, and **↔ Swing the chain** applies a visible push that
+swings back and forth and gradually damps out. Support wires follow the
+current bubble positions. **Gravity Surge** still separately snaps the
+weak attachment, causing the hanging bubbles to fall.
+
+This corrects the previous lab omission: v0.7.0 had hard-disabled swinging
+inside the Lab, so it was a poor place to test the motion! The experiment
+remains separate from ordinary Arcade/Puzzle progress; sway itself is
+integrated into those modes. A system reduced-motion preference keeps the
+lab static and disables the Swing button, but Surge remains available.
+
 ## v0.7.0 — Attached bubble sway in the real game (G3)
 
 **Gravity is not a separate game mode.** Arcade and all three Puzzles now have
@@ -44,11 +59,11 @@ puzzles use gentle sway only. The Lab's warning rings still show
 
 ## Release tracking
 
-**Current version: v0.7.0** on the G3 review branch. Gentle attached sway is
+**Current version: v0.7.1** on the swinging-lab fix review branch. Gentle attached sway is
 integrated into regular Arcade and Puzzles; the lab remains a diagnostic.
 Realistic elastic stretching and dynamic bond breaking remain future features.
 
-The header badge reads **Version 0.7.0**, loading the number from
+The header badge reads **Version 0.7.1**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -56,9 +71,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.7.0 → 0.7.1
+npm run version:patch   # e.g. 0.7.1 → 0.7.2
 # or
-npm run version:minor   # e.g. 0.7.0 → 0.8.0
+npm run version:minor   # e.g. 0.7.1 → 0.8.0
 npm test
 ```
 

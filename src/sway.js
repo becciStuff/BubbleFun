@@ -1,12 +1,20 @@
-// Constrained, damped sway for attached bubbles. This is a position-only
-// simulation: ordinary gravity NEVER severs still-supported connections.
-// The lattice remains authoritative for matching and snapping a fired shot.
+// Connected attached-bubble motion. Ceiling anchors never move; attached
+// structures NEVER tear free from weight in Normal Gravity. Keep all geometry
+// in the single attachedPositions map shared by visuals and hit detection.
 import { PITCH } from './config.js';
 import { cellKey, shooterPosition } from './grid.js';
 import { analyseSupports } from './supports.js';
 
-const MAX_KICK = 1.0;
-const clamp = (v, low, high) => Math.max(low, Math.min(high, v));
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+// A nudge is deliberately available only on the deterministic test board.
+// The impulse drives a damped pendulum; Surge remains a separate action.
+export function nudgeLabPendulum(state) {
+  if (state.variant !== 'lab' || state.reducedMotion || state.gravityLabUsed ||
+      state.status !== 'playing' || state.falling.length || state.projectile) return false;
+  state.labSwingAt = state.swayClock ?? 0;
+  return true;
+}
 
 export function kickAttachedSway(state, row, col) {
   if (state.reducedMotion || state.variant === 'lab') return;
@@ -14,11 +22,11 @@ export function kickAttachedSway(state, row, col) {
   const impact = shooterPosition(row, col, state.phase, state.layout);
   for (const key of state.board.keys()) {
     const [r, c] = key.split(',').map(Number);
-    if (!r) continue; // Ceiling bubbles are fixed anchors.
+    if (!r) continue; // Only anchored descendants can move.
     const p = shooterPosition(r, c, state.phase, state.layout);
     const distance = Math.hypot(p.x - impact.x, p.y - impact.y);
     if (distance > PITCH * 5) continue;
-    const next = clamp(1 - distance / (PITCH * 5), 0, MAX_KICK);
+    const next = clamp(1 - distance / (PITCH * 5), 0, 1);
     state.swayKicks.set(key, Math.max(state.swayKicks.get(key) ?? 0, next));
   }
 }
@@ -26,49 +34,62 @@ export function kickAttachedSway(state, row, col) {
 export function stepAttachedSway(state, dt) {
   state.attachedPositions ??= new Map();
   state.swayKicks ??= new Map();
-  state.swayClock = (state.swayClock ?? 0) + Math.max(0, dt);
-  // The Lab deliberately stays fixed so its support labels are exact.
-  if (state.reducedMotion || state.variant === 'lab') {
+  dt = Math.max(0, dt);
+  state.swayClock = (state.swayClock ?? 0) + dt;
+  if (state.reducedMotion) {
     state.attachedPositions.clear();
     state.swayKicks.clear();
     return state.attachedPositions;
   }
-  const analysis = analyseSupports(state.board, { phase: state.phase, layout: state.layout });
+
   const next = new Map();
   const t = state.swayClock;
-  // Each connected region moves as a gentle, anchored hanging structure.
-  // Independently braced regions are much steadier than single-anchor ones.
+  const lab = state.variant === 'lab';
+  const analysis = analyseSupports(state.board, { phase: state.phase, layout: state.layout });
+
   for (const region of analysis.regions) {
     const single = region.supportCount === 1;
-    const amplitude = single
-      ? Math.min(6.8, 2.3 + Math.sqrt(region.weight) * .75)
-      : Math.min(1.1, .45 + Math.sqrt(region.weight) * .065 / Math.sqrt(region.supportCount));
     const [anchorRow, anchorCol] = region.anchors[0].split(',').map(Number);
+    const anchor = shooterPosition(anchorRow, anchorCol, state.phase, state.layout);
     const phase = anchorCol * .73 + anchorRow * .27;
-    const speed = single ? 1.65 : 1.12;
-    const swing = Math.sin(t * speed + phase);
-    const lift = (1 - Math.cos(t * speed + phase)) * .18;
+
+    // A rigid-body pendulum preserves the actual distance between attached
+    // bubbles. A long dangling branch swings farther at its tip. Regions
+    // anchored at two distinct roof cells are kept almost stationary.
+    let angle = 0;
+    if (single) {
+      angle = (lab ? .065 : .046) * Math.sin(t * 1.55 + phase);
+      if (lab && state.labSwingAt != null) {
+        const elapsed = Math.max(0, t - state.labSwingAt);
+        angle += .27 * Math.exp(-.55 * elapsed) * Math.sin(elapsed * 3.1);
+      }
+    }
+
     for (const [row, col] of region.cells) {
       const key = cellKey(row, col);
       const base = shooterPosition(row, col, state.phase, state.layout);
-      const reach = Math.min(1.35, .22 + row * .18);
       const kick = state.swayKicks.get(key) ?? 0;
-      const ripple = Math.sin(t * 15 + phase + row * .45) * kick * 4;
-      next.set(key, {
-        x: base.x + clamp(swing * amplitude * reach + ripple, -9, 9),
-        y: base.y - lift * amplitude * reach + kick * Math.cos(t * 13 + phase) * .55,
-      });
+      const ripple = Math.sin(t * 15 + phase + row * .45) * kick * 3;
+      if (single) {
+        const dx = base.x - anchor.x;
+        const dy = base.y - anchor.y;
+        next.set(key, {
+          x: anchor.x + dx * Math.cos(angle) - dy * Math.sin(angle) + ripple,
+          y: anchor.y + dx * Math.sin(angle) + dy * Math.cos(angle),
+        });
+      } else {
+        const motion = lab ? 0 : Math.sin(t * 1.15 + phase) * .55;
+        next.set(key, { x: base.x + motion + ripple, y: base.y });
+      }
     }
   }
-  // Ceiling bubbles and disconnected cells have their exact lattice position.
-  // This also ensures the map contains only cells that still exist.
+
   for (const key of state.board.keys()) {
     if (next.has(key)) continue;
     const [row, col] = key.split(',').map(Number);
     next.set(key, shooterPosition(row, col, state.phase, state.layout));
   }
   state.attachedPositions = next;
-  // Frame-rate-independent damping; old keys vanish when their bubble pops.
   for (const [key, amount] of state.swayKicks) {
     if (!state.board.has(key)) { state.swayKicks.delete(key); continue; }
     const damped = amount * Math.exp(-dt * 3.2);
