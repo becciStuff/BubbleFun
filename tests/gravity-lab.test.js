@@ -6,14 +6,14 @@ import { gravitySupportMarkers } from '../src/gravity-hints.js';
 import { analyseSupports, planGravitySurge } from '../src/supports.js';
 import {
   initialShooter, initialPuzzle, initialGravityLab,
-  canTriggerGravityLabSurge, triggerGravityLabSurge, fireShooter, stepGame,
+  canTriggerGravityLabSurge, triggerGravityLabSurge, nudgeGravityLab, fireShooter, stepGame,
 } from '../src/game.js';
 
 for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
   test(`lab shows one weak group and a twice-braced group (${layout.columns} columns)`, () => {
     const board = createGravityLabBoard(layout);
     const analysis = analyseSupports(board, { layout });
-    assert.equal(board.size, 10);
+    assert.equal(board.size, 16);
     assert.deepEqual(analysis.unsupported, []);
     assert.deepEqual(analysis.regions.map(x => x.supportCount).sort(), [1, 2]);
     const marks = gravitySupportMarkers(board, 0, layout);
@@ -25,7 +25,7 @@ for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
     }
     assert.deepEqual(
       new Set(planGravitySurge(board, { layout }).detached.map(([r,c]) => `${r},${c}`)),
-      new Set(['1,1', '2,1', '3,1']),
+      new Set(['1,2','2,2','3,2','4,2','5,2','6,2','6,3','7,2','7,3']),
     );
   });
 
@@ -36,12 +36,16 @@ for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
     assert.equal(fireShooter(state), false, 'lab mode does not launch bubbles');
     assert.equal(canTriggerGravityLabSurge(state), true);
     const scoreBefore = state.score;
+    assert.equal(nudgeGravityLab(state), true);
+    for (let i = 0; i < 11; i++) stepGame(state, .045);
+    const swungTip = state.attachedPositions.get('7,3');
+    assert.ok(Math.abs(swungTip.x - state.layout.left - 21 - 3 * 42 - 21) > 5, 'pendulum is visibly swinging before Surge');
     const result = triggerGravityLabSurge(state, { random: () => .5 });
     assert.equal(result.activated, true);
-    assert.equal(result.released, 3);
+    assert.equal(result.released, 9);
     assert.equal(state.board.size, 7);
-    assert.equal(state.falling.length, 3);
-    assert.equal(state.board.has('0,1'), true);
+    assert.equal(state.falling.length, 9);
+    assert.equal(state.board.has('0,2'), true);
     assert.equal(state.board.has('0,5'), true);
     assert.equal(state.board.has('0,6'), true);
     assert.equal(state.score, scoreBefore, 'lab does not award persistent points');
@@ -54,6 +58,7 @@ for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
     assert.equal(state.board.size, 7);
     assert.equal(state.score, scoreBefore);
     assert.equal(initialGravityLab(layout).gravityLabUsed, false, 'reloading re-arms the experiment');
+    assert.equal(nudgeGravityLab(state), false, 'cannot push a completed experiment');
   });
 }
 
