@@ -1,167 +1,111 @@
-# BubbleFun gravity development
+# BubbleFun — gravity design and implementation
 
-**Checkpoint: G3.2 — reliable Swing activation in v0.7.2 (review branch).**
-G1 support analysis and G2 Gravity Lab are merged. G3 begins integrating
-support-sensitive swaying into **normal Arcade and all three Puzzles**, not as
-a separate game mode. Lab remains a controlled diagnostic only.
+**Current review milestone: v0.8.0 — reactive connected-bubble sway inside Arcade and Puzzles.**
+The standalone player-facing **Gravity Lab is retired**. Its lessons are now
+tested through real game boards and browser interactions. Gravity is a core
+mechanic of BubbleFun, **not a separate play style**.
 
-## Modular design
+## Gameplay rules
+
+- **Normal Gravity**: ceiling-connected bubbles remain supported at any
+  ordinary weight. Bubbles detached from *all* ceiling paths fall and burst.
+- **Independent roof supports** count distinct ceiling anchors, not simply the
+  number of bonds. Two paths back to the *same* roof bubble aren't two anchors.
+- **Extreme Gravity** is currently only a pure support-overload calculation and
+  an opt-in physical release API; it is **not wired to player turns or UI**.
+  We may later make it an earned special, with balancing, scoring and warnings.
+- Falling, matches, combo points, puzzle solutions and turn sequencing stay
+  with the ordinary game rules. No hidden Lab scoring or board transitions.
+
+## Modules (avoid growing a mega-file)
 
 ```text
-config.js      board dimensions and stable tunables
-grid.js        staggered geometry, neighbours and ordinary connectivity
-supports.js    roof anchors, load-bearing regions, vulnerable bonds, stress
-gravity.js     existing detachment/falling physics + explicit surge entry point
-sway.js        constrained support-sensitive live attached motion
-positions.js   shared live bubble coordinate lookup
-game.js        shooting, turn sequence, scores, wins and effects coordination
-render.js      drawing and eventual live physical position visualisation
+config.js               Board and physics constants
+grid.js                 Resting hex lattice, graph connectivity, hit predicate
+supports.js             Ceiling anchor graph, weights, stresses, weak links
+sway.js                 Damped connected-body motion and shot impulses
+positions.js            One current attached-bubble position lookup
+gravity.js              Detached-body physics and optional Extreme Gravity API
+attachment-visuals.js   Canvas rendering of subtle stretched bonds
+render.js               Bubble drawing and the aim-guide geometry
+game.js                 Shooting, scoring and turn orchestration
+app.js                  Normal Arcade/Puzzle controls and input
 ```
 
-Dependencies flow downward: `supports.js` uses the shared grid graph;
-`gravity.js` consumes the analysis; the gameplay and UI must not leak back into
-the support analyser.
+**Critical invariant:** `attachedPositions` holds the same coordinates
+for `render.js`, `positions.js`, projectile collision in `grid.js`,
+trajectory aiming and `gravity.js` falling starting points.
+Never animate bubbles in a way that leaves their hitboxes at old locations.
 
-## Rules preserved
+The underlying *resting* hex coordinates remain the authority for colour
+matching, connected-cluster membership and which slot a shot snaps into.
+The attached motion is deliberately **constrained** to protect fair gameplay.
+The spring/motion calculation itself lives in `sway.js`, not `game.js`.
 
-- In **Normal Gravity**, all attached bubbles remain attached regardless of
-  calculated stress. Removing their last ceiling path still makes them fall.
-- In **Extreme Gravity**, some loaded single-support regions can disconnect.
-- **Weight** is initially one unit per attached bubble in the dependent region.
-- **Distinct ceiling anchors** count as independent supports. Two paths to the
-  *same* ceiling bubble are **not** two independent roof supports.
-- The analyser also finds **bridge bonds**: cut a single link and its dependent
-  subtree has no other ceiling path.
-- Bond strength is a positive tuneable value; reinforced attachments can
-  survive higher forces.
-- Never drop a group twice when both a region and nested bridge are weak.
-- A ceiling bubble itself remains anchored; only bubbles below the ceiling
-  can be released by this prototype.
+## How v0.8.0 movement works
 
-## What G1 actually supplies
+- **Ceiling bubbles stay fixed.** The attached bubble graph is inspected to
+  distinguish one-roof regions from genuinely braced regions.
+- A **single-anchor** branch has a subtle pendulum target. Longer/heavier
+  suspended regions can move further around the roof pivot.
+- **Multiply supported** Arcade/Puzzle formations retain modest ambient
+  flex, rather than becoming utterly motionless as in earlier versions.
+- Each shot gives attached neighbours a **real impulse**, transferred across
+  the attached graph with a damped spring-to-grid and neighbour coupling.
+  Movement decays; subsequent shots can excite new ripples.
+- Bounds cap offsets and keep projectiles/snapping readable. Small translucent
+  bonds appear where live connections stretch beyond their resting separation.
+- The system respects `prefers-reduced-motion`. Entrance and row-drop
+  transitions use fixed positions while they animate, so aiming stays fair.
+- No Normal Gravity support breakage results from the sway motion.
 
-`src/supports.js`:
-- `analyseSupports(board, {phase, layout, bondStrength})` returns supported and
-  unsupported cells, suspended regions with their distinct roof anchors, and
-  actual bridge bonds with their dependent load.
-- `planGravitySurge(board, {force, threshold, ...})` calculates vulnerable
-  groups and broken bonds **without modifying the board**.
+This is a **constrained elastic-looking model**, not yet a full multi-body
+solver with continuously rotating joints, force-balanced link stretching,
+mass-specific sag or true torque conservation.
 
-`src/gravity.js`:
-- `releaseGravitySurge(state, options)` explicitly applies the plan using the
-  *existing* detached-bubble falling engine. It does not award points,
-  trigger a sound or decide game outcomes.
+## Support analysis and future Extreme Gravity
 
-The normal Arcade and puzzle turn loops **do not** call `releaseGravitySurge`.
-G2 adds a **lab-only** button and a deterministic comparison board. There is
-still no earned special shot or gravity-induced breakage in standard gameplay.
+G1 in `supports.js` provides:
+- `analyseSupports(board, options)` — graph traversal for roof-connected
+  regions, independent anchors, region loads and vulnerable bridge bonds.
+- `planGravitySurge(board, options)` — a **side-effect-free** plan of which
+  weak suspended structures would detach under a specified additional force.
 
-**Initial prototype settings** (`force: 1.5`, `threshold: 1`,
-`bondStrength: 1`) are placeholders for playtesting, not final balance values.
+`gravity.js` exposes `releaseGravitySurge(state, options)` to apply the
+plan with the existing falling objects, without scoring. **No player UI
+calls it** in v0.8.0. Heavy multi-anchor groups need better load-sharing
+before extreme support breakage can be balanced for actual levels.
 
-## G2: what players can actually see
+## Testing and release boundaries
 
-- In **Arcade**, press **Load test board** in Gravity Lab. In v0.7.1
-  the board has a longer hanging pendulum and two independently anchored
-  reference supports. Press **Swing the chain** to apply a damped push.
-  From v0.7.2 Swing can be clicked **before loading** the test board: the
-  action sets up the Lab and starts motion in one step.
-- Amber-marked attachments show an overloaded single-ceiling-support chain.
-  Mint-marked attachments identify the stronger, independently braced group.
-- Press **Gravity Surge** once to release the vulnerable chain. The supported
-  group remains attached. Detached objects use the existing falling physics.
-- Press **Load test board** to try again. Restart returns to normal Arcade.
-- The lab pauses firing and never saves a high score. Puzzles and standard
-  Arcade cannot trigger the experimental Surge.
-- Markers and support wires are a **diagnostic visual** following actual live
-  bubble centres. The single-anchor chain swings around its fixed ceiling
-  pivot. This is constrained rigid-body motion, not a deformable spring mesh.
+- Node tests for actual Arcade and all three puzzles, single vs multiple
+  roof supports, shot-driven motion, stable roof positions, reduced motion,
+  visible-position hit tests and falling origins on both board layouts.
+- Chromium browser smoke tests fire real shots in Arcade and Puzzles, assert
+  no Lab buttons remain, and check movement/hit positions at desktop and
+  mobile-sized viewports with the reduced-motion preference on and off.
+- Live GitHub Pages and hands-on phone playtesting are **separate checks**;
+  automated tests alone do not prove every physical device behaves correctly.
 
-`gravity-lab.js` provides a deterministic board; `gravity-hints.js`
-prepares marker geometry from `analyseSupports`, and
-`gravity-overlay.js` draws the markers without owning game logic.
-`game.js` handles the explicit test action and its turn-safety checks.
+## What to build next
 
-## G3.2: explicit Swing activation and reduced motion
+1. **Playtest**: assess shot impulse strength and spring damping in both
+   layouts, especially near walls, after bomb chains and on longer hangers.
+2. **More faithful attached physics**: conserve bond lengths locally, propagate
+   torque through connected groups, avoid overlapping sprites and make
+   stretching appear under loads — preserving hitbox/render parity.
+3. **Better load sharing and stickiness**: distribute loads through multiple
+   distinct roof anchors and tune actual support failure.
+4. **Earnable Extreme Gravity** within real levels, never a permanent
+   separate Gravity mode. Add scoring, warnings, balance and tutorial cues.
+5. Eventually build the larger Fizzlings rescue adventure, boss mechanics and
+   earn-only coin economy outlined in [VISION.md](VISION.md).
 
-The Lab defaults to the device's system motion preference. Pressing **Swing
-the chain** is an explicit user request to observe the diagnostic pendulum,
-so it enables motion for that **one Lab state only**. A fresh Lab, ordinary
-Arcade, and Puzzles continue respecting the system setting. The visible
-tip-displacement readout comes from `sway.js`'s live attached position map.
-Tests exercise this UI in desktop/mobile Chromium with both normal and
-reduced-motion preferences. After Surge, **Reset & swing** reloads the
-demonstration rather than leaving an inert button.
+### History
 
-## G3: actual gentle sway in ordinary play (v0.7.0)
-
-Attached bubble positions now move slightly and smoothly in ordinary Arcade
-and all puzzles. Physics remains conservative: ceiling anchors are fixed;
-singly supported hanging regions move more than multiple-anchor regions; shot
-impacts trigger local ripples which decay. Connection weight affects the
-movement amplitude, not automatic bond failure.
-
-**Position invariant:**
-- `sway.js` updates `state.attachedPositions` once per simulation tick.
-- `positions.js` exposes `bubblePosition(state, row, col)` for drawing,
-  explosions and release to the falling engine.
-- The aiming guide and live projectile pass that **same map** to the shared
-  `grid.js/shotBubbleCollision` predicate, so they see what players see.
-- Grid cell centres and graph adjacency still own matching and the final
-  snap location; visual movement is deliberately limited to stay fair.
-- During opening/row animations the aim guide is hidden, since the board is
-  temporarily presented with a separate entrance/row transition.
-- **Reduced motion** disables sway, leaving canonical positions.
-- The Gravity Lab now **uses live positions** as well. Its single-anchor
-  structure rotates as a rigid pendulum about a fixed ceiling pivot; the
-  braced structure stays nearly stationary. The support-warning overlay
-  reads the same live positions rather than drawing phantom fixed links.
-
-New support-aware movement is **not** a full elastic solver. It does not
-redistribute real tension over multiple anchors, physically stretch links,
-automatically sever connections, or provide earned Gravity Surge in levels.
-
-**CI for the G3 review branch:** 82 Node tests passed and Chromium browser
-checks passed at desktop 1300px / phone-sized 390px viewports. These are
-automated checks; hands-on mobile and GitHub Pages deployment remain separate.
-
-## Known limitations and next work
-
-1. **Load is coarse:** region weight and single-link tributary weight are
-   measured, but continuous force distribution across multiple anchors is not
-   solved. Extremely heavy **multiply supported** regions do not yet tear free.
-   They may need a separate overloading model.
-2. **Movement is not a spring solver:** G3 supports small, visibly live sway
-   but not continuous elastic link strain or realistic weight distribution.
-3. **Experimental activation only:** G2 has a lab-only button and falling
-   feedback; a balanced, earned Gravity Surge special for actual levels and
-   scoring still needs separate design.
-4. **Collision fairness:** G3 uses the *same current attached positions* for
-   rendering, projectile collision, aim guide and fall origins. All future
-   motion changes must keep that invariant.
-5. **Browser verification:** tests for support geometry run for desktop and
-   mobile layouts, but real-device behaviour still requires checking.
-
-## Proposed follow-up milestones
-
-- **G2: visual stress diagnostic and deliberate activation (v0.6.0).**
-  Isolated Gravity Lab with warnings and button; normal levels remain unchanged.
-- **G3: constrained, damped sway (v0.7.0 merged; v0.7.1 lab correction).** Integrated into normal
-  Arcade and puzzles, with a shared live-position query.
-- **G4: improve multi-anchor load sharing, stickiness and support failure.**
-  Tune isolated heavy dual-support boards; no arbitrary collapse under normal gravity.
-- **G5: more convincing elastic swinging and link stretch.** Evolve the
-  constrained solver while maintaining renderer/guide/collision parity.
-- **G6: gravity-led puzzles, earned specials, boss encounters and Fizzlings.**
-
-## Tests
-
-`tests/supports.test.js` checks single anchors, genuinely independent
-supports, heavy branches, same-anchor double bonds, optional strengthening,
-staggered phases, desktop/mobile geometry, side-effect-free planning and error
-cases. `tests/surge.test.js` checks the opt-in release and keeps scoring with
-the game coordinator. The GitHub Action runs `npm test` on PRs.
-
-G1 was merged in PR #5. G2's automated tests cover physics and both board
-layouts; its Chromium desktop/mobile smoke workflow confirms the lab controls,
-Surge falling and puzzle isolation. A separate real-device playtest remains useful.
+- G1 (PR #5): ceiling support graph and opt-in overloaded release calculations.
+- G2 (PR #8): temporary Gravity Lab demonstration for weight and bracing.
+- G3 (PR #9): initial subtle sway with shared moving collision positions.
+- G3.1–G3.2 (PRs #10–11): tuned a temporary pendulum Lab and its button;
+  the Lab was then retired rather than becoming a second game mode.
+- v0.8.0 (PR #12): actual Arcade/Puzzle response and removal of Lab UI/code.
