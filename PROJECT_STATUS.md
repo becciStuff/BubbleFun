@@ -91,8 +91,8 @@ and ensure visual movement never disagrees with the real hit tests.
 - [x] Integrated movement / removed Lab (PR #12).
 - [x] Initial bounded sag and blast impulses (PR #13).
 - [x] New physically driven spring/contact code on the PR #14 branch.
-- [ ] Ensure final Node + Chromium browser CI pass on **final PR #14 head**.
-- [ ] Review PR #14 and merge only when ready.
+- [x] **CI on PR #14 current head:** 88 Node tests passed (0 failures); Chromium smoke passed at 1300px/390px with reduced motion enabled and disabled (runs 40573850984 and 40573850927).
+- [ ] Review and merge PR #14 when happy, followed by a hands-on deployed game feel check.
 - [ ] After deploy, visually inspect screenshot-like side hangers, contacts,
       blast recoil and actual aim fairness on desktop and mobile.
 - [ ] Later: refine multi-anchor tension distribution, bond strength, richer
