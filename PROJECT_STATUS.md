@@ -2,12 +2,13 @@
 
 **Updated:** 28 October 2026 (NZ)  
 **Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.8.3 (PR #15), automatic contact matching and soft gel links  
-**Current review:** [PR #16](https://github.com/becciStuff/BubbleFun/pull/16) on `fix/full-contact-combos-row-continuity-084`  
-**Proposed version:** **v0.8.4**, mirrored in `version.json` and `package.json`  
-**Current goal:** Make contact combos pop the full connected colour group,
-including meaningful recontacts of existing links, and preserve physical swing
-when Arcade inserts a new ceiling row.
+**Merged baseline:** v0.8.4 (PR #16), full colour-group combos and row-drop momentum continuity  
+**Current review:** [PR #17](https://github.com/becciStuff/BubbleFun/pull/17) on `fix/only-new-colour-merges-085`  
+**Proposed version:** **v0.8.5**, mirrored in `version.json` and `package.json`  
+**Current goal:** Fix overly aggressive automatic popping. Only a real new
+physical contact joining **previously separate same-colour groups** may
+trigger match-three. Previously connected groups must not explode because
+their springs stretch or bounce.
 
 Read [VISION.md](VISION.md), [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) and
 [REFACTORING.md](REFACTORING.md) before adding more features.
@@ -60,25 +61,28 @@ but didn't adequately reflect how the game looked and felt.
 - Gravity Lab remains removed. Physical coordinates remain authoritative
   across drawing, aiming, collisions and falling.
 
-## PR #16: user-reported fixes (v0.8.4)
+## PR #17: correct colour-group matching (v0.8.5)
 
-- A group of **six matching bubbles plus a new matching contact** must pop
-  *all seven*, receive full combo points, and run normal bomb/falling cascades.
-- The previous contact emitter only signalled **brand-new extra bonds**. It
-  ignored old lattice bonds stretching apart and coming back together.
-  `physical-bonds.js` now observes a meaningful separation and subsequent
-  real touch as a new match event. Mere microvibrations cannot retrigger
-  matching; settling the initial board before a shot cannot award free pops.
-- `src/row-physics.js` transfers all existing physics offsets/velocities,
-  live positions, sticky and pending bonds, separated-bond history and wobble
-  values to `row+1,col` when Arcade adds a ceiling row. No dynamics reset.
-- `sway.js` holds the transferred state during the visual row-slide and then
-  resumes force integration instead of restarting swing from the hex grid.
-- Handcrafted Puzzle solution tests accept legitimate early gravity-assisted
-  victories but disallow winning before the player acts.
-- Node tests include full 7-bubble scoring, grid-bond recontact, animation
-  continuity, sticky links and the momentum of old hanging groups on both
-  layouts. Browser regression checks exercise the same two scenarios.
+The user found that v0.8.4 caused already-connected matching bubbles to
+pop when no genuinely new group had joined. The culprit was emitting a
+new match on an old lattice bond's re-touch, and processing new redundant
+sticky bonds without checking whether both endpoints were already linked
+through other same-colour paths.
+
+- `contact-matches.js` compares the same-colour connectivity **before**
+  versus **after** fresh physical sticky bonds. Only an actual merger of
+  previously separate colour groups can produce a match.
+- A *six-connected-blue group plus a separate seventh blue* still bursts
+  all seven with full combo scoring; a bouncing group of seven existing
+  blues stays untouched.
+- New redundant physical bonds remain valid support links, but don't
+  accidentally score points or pop pre-existing same-colour groups.
+- Remove the flawed re-touch match-event generator and obsolete
+  `separatedBonds` state. `sway.js`, row insertion and actual spring/contact
+  forces otherwise remain unchanged.
+- Automated tests explicitly reject false pops from an old bond, a new
+  redundant bond, and ordinary post-shot settling. Existing seven-bubble
+  matches, bombs, puzzle solvability and row momentum must keep passing.
 
 ## Architecture
 
@@ -132,7 +136,8 @@ and ensure visual movement never disagrees with the real hit tests.
 - [x] **CI on the PR #14 physics head:** 90 Node tests passed (0 failures), including a cantilever forming a new bond naturally and a projectile attaching near the actual displaced target (run 40574875781). Chromium smoke passed at 1300px/390px with reduced motion enabled and disabled (run 40574876036). Recheck on the final review commit.
 - [x] PR #14 merged: actual spring gravity and physical sticky bonds.
 - [x] PR #15 merged: contact-match lifecycle and gel link visuals.
-- [ ] Review PR #16, confirm final Node/browser CI and merge if happy.
+- [x] PR #16 merged (v0.8.4); continuous new-row gravity works.
+- [ ] Review PR #17 after final Node/browser CI; merge when satisfied.
 - [ ] Hands-on test a 6+1 colour contact and Arcade row-drop momentum on a live
       desktop and phone. Automated tests are not a replacement for this.
 - [ ] After deploy, visually inspect screenshot-like side hangers, contacts,
@@ -142,10 +147,10 @@ and ensure visual movement never disagrees with the real hit tests.
 
 ## Checkpoint handover
 
-> BubbleFun is at PR #16 for v0.8.4 (review branch). Contact-driven
-> 3+ matching is merged on main at v0.8.3. PR #16 fixes missed matches when
-> an existing spring link separates and re-touches, and makes a *whole*
-> connected 6+1 colour group pop as a combo. A newly inserted Arcade roof
-> row must preserve the existing bodies and physical velocities rather than
-> restarting the swing. No Gravity Lab. Modular physics and shared live
-> hit positions remain hard requirements.
+> BubbleFun is at PR #17 (v0.8.5) for correcting overly eager contact
+> matches. Previously connected same-colour bubbles must NOT burst when an
+> existing spring bond bounces or a redundant new link forms inside their
+> existing group. Actual newly joined colour components with 3+ members
+> must still pop the entire group, e.g. six blue + one new blue = seven pops.
+> PR #16's continuous row-drop momentum remains intact. Keep modular physics,
+> the real Arcade/Puzzle play styles, and shared moving hitboxes.
