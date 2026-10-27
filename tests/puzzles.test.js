@@ -65,7 +65,12 @@ test('every known puzzle solution still works on mobile and desktop boards', () 
     for (let index = 0; index < PUZZLES.length; index++) {
       const state = initialPuzzle(index, layout, () => .2);
       for (let i = 0; i < 50; i++) stepGame(state, .02);
+      assert.equal(state.status, 'playing',
+        'a puzzle must not auto-complete before the player has made a shot');
       for (const [row, col] of solutions[index]) {
+        // Gravity-driven contacts may earn a legitimate early victory.
+        // Never fire another shot once all puzzle targets are gone.
+        if (state.status === 'won') break;
         const p = shooterPosition(row, col + offset, 0, layout);
         aimShooter(state, p.x, p.y);
         assert.equal(fireShooter(state), true, `Puzzle ${index} ${layout.columns} cols before shot ${row},${col}: status=${state.status} shots=${state.shots} bombs=${state.bombs.size} falling=${state.falling.length}`);
@@ -73,7 +78,8 @@ test('every known puzzle solution still works on mobile and desktop boards', () 
       }
       assert.equal(state.status, 'won', `${state.puzzleName} must remain solvable on ${layout.columns}-column boards`);
       assert.equal(state.bombs.size, 0);
-      assert.equal(state.shots, solutions[index].length);
+      assert.ok(state.shots > 0 && state.shots <= solutions[index].length,
+        'physics can shorten, but must not invalidate, a known solution');
       assert.ok(state.shots <= state.shotLimit);
     }
   }
