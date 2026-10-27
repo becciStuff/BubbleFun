@@ -68,7 +68,7 @@ test('every known puzzle solution still works on mobile and desktop boards', () 
       for (const [row, col] of solutions[index]) {
         const p = shooterPosition(row, col + offset, 0, layout);
         aimShooter(state, p.x, p.y);
-        assert.equal(fireShooter(state), true);
+        assert.equal(fireShooter(state), true, `Puzzle ${index} ${layout.columns} cols before shot ${row},${col}: status=${state.status} shots=${state.shots} bombs=${state.bombs.size} falling=${state.falling.length}`);
         for (let i = 0; i < 230; i++) stepGame(state, .02);
       }
       assert.equal(state.status, 'won', `${state.puzzleName} must remain solvable on ${layout.columns}-column boards`);
