@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MOBILE_LAYOUT, DESKTOP_LAYOUT } from '../src/config.js';
-import { bondId, observeBondRecontacts } from '../src/physical-bonds.js';
+import { bondId } from '../src/physical-bonds.js';
 import { findContactMatches } from '../src/contact-matches.js';
 import { connectionThreadGeometry } from '../src/attachment-visuals.js';
 import { initialShooter, initialPuzzle, resolveContactMatches, stepGame } from '../src/game.js';
@@ -125,26 +125,47 @@ for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
     assert.equal(state.shots, 0, 'swing-assisted match costs no turn');
   });
 
-  test(`an old grid bond re-touching after real separation triggers the whole cluster (${layout.columns})`, () => {
+  test(`an old connection re-touching does NOT explode an already connected group (${layout.columns})`, () => {
     const state = initialShooter(() => .4, layout);
     const seven = ['0,2','1,2','2,2','3,2','3,1','4,1','4,2'];
     state.board = new Map(seven.map(k=>[k,'blue']));
     state.bombs.clear();
-    const bond = bondId('3,1','4,1'); // connected on the original hex grid
-    const edges = [['3,1','4,1']];
-    const positions = new Map([
-      ['3,1',{x:100,y:100}],['4,1',{x:100,y:160}],
+    state.shots = 3; // this remains true even after the user starts playing
+    const oldLink = bondId('3,1','4,1');
+    state.newContactBonds.add(oldLink); // simulate an erroneous bounce event
+    assert.equal(resolveContactMatches(state), 0);
+    assert.equal(state.board.size, 7, 'all existing connected blues stay on the board');
+    assert.equal(state.score, 0, 're-touching an old connection gives no free score');
+    assert.equal(state.newContactBonds.size, 0, 'ignored events are still consumed once');
+  });
+
+  test(`a new redundant sticky link inside an existing same-colour group does not pop it (${layout.columns})`, () => {
+    const state = initialShooter(() => .4, layout);
+    const cells = ['0,2','1,2','2,2','3,2','3,1','4,1','4,2'];
+    state.board = new Map(cells.map(k=>[k,'blue']));
+    state.bombs.clear();
+    const redundant = bondId('2,2','4,1');
+    state.extraBonds.add(redundant);
+    state.newContactBonds.add(redundant);
+    assert.equal(resolveContactMatches(state), 0,
+      'a new link between bubbles already reachable through blue neighbours is not a colour merge');
+    assert.equal(state.board.size, cells.length);
+    assert.equal(state.score, 0);
+    assert.ok(state.extraBonds.has(redundant), 'physical link is still valid, just not a new match');
+  });
+
+  test(`normal spring settling must not auto-pop a pre-existing 3+ group after a shot (${layout.columns})`, () => {
+    const state = initialShooter(() => .4, layout);
+    state.board = new Map([
+      ['0,2','blue'], ['1,2','blue'], ['2,2','blue'],
+      ['3,2','blue'], ['3,1','blue'], ['4,1','blue'],
     ]);
-    observeBondRecontacts(edges, positions, state.separatedBonds, state.newContactBonds);
-    assert.equal(state.separatedBonds.has(bond), true);
-    positions.get('4,1').y = 142; // bubble surfaces meet again
-    observeBondRecontacts(edges, positions, state.separatedBonds, state.newContactBonds);
-    assert.equal(state.newContactBonds.has(bond), true,
-      'already bonded neighbours still report a NEW physical touch');
-    assert.equal(resolveContactMatches(state), 7);
-    assert.equal(state.board.size, 0);
-    assert.equal(state.score, 140);
-    assert.equal(state.shots, 0);
+    state.bombs.clear();
+    state.shots = 1; // regression: previous code let already connected bonds pop after this
+    for (let frame = 0; frame < 140; frame++) stepGame(state, .045);
+    assert.equal(state.board.size, 6);
+    assert.equal(state.score, 0);
+    assert.equal(state.lastPop, 0);
   });
 }
 
