@@ -153,7 +153,11 @@ export function stepAttachedSway(state, dt) {
     resolveContacts(state.board,bodies,state.phase,state.layout,state.extraBonds,edges,state.newContactBonds);
     // A bond that was already present in the resting hex graph is ALSO a
     // new contact event if its bodies separated visibly and then touched.
-    observeBondRecontacts(edges,bodies,state.separatedBonds,state.newContactBonds);
+    // Initial hanging boards can stretch and settle before the user acts.
+    // Those passive re-touches are not earned matches. Once a shot has been
+    // fired, recontacts count as genuine physics-driven combo opportunities.
+    const recontactEvents = state.shots > 0 ? state.newContactBonds : new Set();
+    observeBondRecontacts(edges,bodies,state.separatedBonds,recontactEvents);
     // Project collision corrections back into velocities so collision does
     // not instantly vanish on the next physics substep.
     for (const key of keys) {
