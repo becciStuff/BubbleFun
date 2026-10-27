@@ -19,13 +19,13 @@ function shiftedLinks(links = new Set()) {
 export function shiftAttachedPhysicsForNewRow(state) {
   // Only call this after the old row cells have been translated one row,
   // before the transient visual row-shift begins.
-  state.swayDynamics = new Map([...state.swayDynamics ?? []]
+  state.swayDynamics = new Map([...(state.swayDynamics ?? [])]
     .map(([key, motion]) => [shiftedCellKey(key), { ...motion }]));
-  state.attachedPositions = new Map([...state.attachedPositions ?? []]
+  state.attachedPositions = new Map([...(state.attachedPositions ?? [])]
     .map(([key, p]) => [shiftedCellKey(key), { x: p.x, y: p.y + ROW_HEIGHT }]));
   state.extraBonds = shiftedLinks(state.extraBonds);
   state.newContactBonds = shiftedLinks(state.newContactBonds);
   state.separatedBonds = shiftedLinks(state.separatedBonds);
-  state.wobble = new Map([...state.wobble ?? []]
+  state.wobble = new Map([...(state.wobble ?? [])]
     .map(([key, motion]) => [shiftedCellKey(key), motion]));
 }
