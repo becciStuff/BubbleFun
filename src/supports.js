@@ -10,13 +10,13 @@ const toCell = key => key.split(',').map(Number);
 // the listed bubbles with no route to any ceiling anchor. A second independent
 // support creates a cycle, so neither of its bonds is incorrectly a bridge.
 export function analyseSupports(board, {
-  phase = 0, layout = MOBILE_LAYOUT, bondStrength = 1,
+  phase = 0, layout = MOBILE_LAYOUT, bondStrength = 1, extraBonds = null,
 } = {}) {
   const graph = new Map([[CEILING, []]]);
   for (const key of board.keys()) graph.set(key, []);
   for (const key of board.keys()) {
     const [row, col] = toCell(key);
-    const neighbours = shooterNeighbours(board, row, col, phase, layout)
+    const neighbours = shooterNeighbours(board, row, col, phase, layout, extraBonds)
       .map(([r, c]) => cellKey(r, c));
     graph.set(key, neighbours);
     if (row === 0) {

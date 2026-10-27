@@ -1,116 +1,108 @@
-# BubbleFun — project status
+# BubbleFun — current project status
 
-> This is the source of truth for picking up development later. Read
-> [VISION.md](VISION.md), [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) and
-> [REFACTORING.md](REFACTORING.md) before beginning new milestones.
+**Updated:** 28 October 2026 (NZ)  
+**Repository:** https://github.com/becciStuff/BubbleFun  
+**Merged baseline:** v0.8.1 (PR #13), static sag plus small explosion impulses  
+**Current review:** [PR #14](https://github.com/becciStuff/BubbleFun/pull/14) on `feature/real-gravity-contacts-082`  
+**Proposed version:** **v0.8.2**, mirrored in `version.json` and `package.json`  
+**Current goal:** Replace global artificial swaying with actual gravity-driven
+movement, new contact bonds and visible explosion recoil in normal play.
 
-**Updated:** 26 October 2026 (NZ)  
-**Repo:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.8.0, integrated Arcade/Puzzle sway (PR #12)  
-**Current review branch:** `feature/gravity-sag-explosion-response-081` — [PR #13](https://github.com/becciStuff/BubbleFun/pull/13)  
-**Proposed release version:** **v0.8.1**, from `version.json` and mirrored in `package.json`  
-**Current phase:** Weight-based downward settling at weak side bonds and
-explosion impulses within ordinary Arcade and Puzzles. Gravity Lab is gone.
+Read [VISION.md](VISION.md), [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) and
+[REFACTORING.md](REFACTORING.md) before adding more features.
 
-## What players should see after PR #13 merges
+## Player feedback that drives this milestone
 
-BubbleFun is a vanilla JS free-to-play bubble shooter with only two
-visible play styles: **Arcade** and **Puzzles** (Twin Towers,
-Heartbreaker, The Crown). The older Bubble Pop mode stays archived and
-hidden in `src/pop-mode.js`.
+The user provided screenshots showing (1) long single-supported side-hanging
+groups staying static in hex positions, (2) bubbles failing to connect when
+their swing brings them into physical contact, (3) pop/bomb explosions that
+do not convincingly shake survivors, and (4) an artificial synchronized
+back-and-forth motion incorrectly presented as gravity.
 
-- Side-hanging single-bond clusters rotate **down under gravity**, provided
-  other bubbles do not block their movement. They stay attached under Normal Gravity.
-- After a pop or bomb blast, connected surviving bubbles recoil and damp out.
-- Bubbles still match colours, bombs chain, disconnected pieces fall,
-  scores/combos accumulate, and responsive mobile/desktop boards work.
-- **Attached bubbles move naturally** as part of ordinary gameplay.
-  Single-ceiling hangers have a small pendulum effect. Densely supported
-  formations flex subtly instead of being totally still. **Shot impacts
-  produce substantially more noticeable connected-bubble ripples.**
-- Tiny translucent joints show when bubbles stretch their attachment a bit.
-  Roof anchors do not move. Reduced-motion settings disable the animation.
-- The visible bubble positions and actual projectile/aim/cascade collision
-  geometry are shared. The resting hex grid continues to own colour matching
-  and the final snapped shot slot.
-- **No Gravity Lab, no Swing button, no Load Test Board, no in-game
-  Gravity Surge button.** Standalone Lab source files and UI have been
-  removed. The weight/strength analysis remains internally available for a
-  future earned special.
-- No ordinary gravity breaks ceiling-supported groups purely for being heavy.
-  Extreme Gravity support breaking is not yet a feature in levels.
+**These are requirements, not cosmetic polish.** Earlier Node tests passed
+but didn't adequately reflect how the game looked and felt.
+
+## What PR #14 changes
+
+- The only visible play styles remain **Arcade** and **Puzzles** (Twin
+  Towers, Heartbreaker, The Crown). Gravity Lab remains removed.
+- `src/sway.js` now integrates **gravity, elastic adhesive bonds, damping
+  and collision forces** instead of sinusoidal animation or static sag targets.
+- `src/physical-bonds.js` manages actual spring links and contacts. If a
+  moving chain meets another bubble, it forms a sticky bond.
+- Dynamic contacts also participate in `grid.js` colour matching, ceiling
+  connectivity and `supports.js` support analysis. Removing the original
+  support won't drop a group while its newer attachment holds it.
+- The same attached-position map controls sprite placement, aiming, real
+  projectile collision and falling spawn points. A shot at a moved target
+  physically joins near the visible hit before relaxing towards its grid cell.
+- Popped matches and bombs inject real **local recoil** into surviving
+  bubbles, which propagates through springs, oscillates and damps out.
+- Ceiling row bubbles stay pinned. Supported bubbles do not snap under
+  normal gravity. Unsupported groups fall. Reduced-motion preferences
+  keep attached bubbles static.
+- Arcade/Puzzle scoring, existing puzzle designs, bombs, rows and combo
+  logic continue to be owned by `game.js`.
 
 ## Architecture
 
 ```text
-src/config.js             Shared layout and tuning
-src/grid.js               Hex lattice, neighbors, match and shared collision
-src/supports.js           Load/ceiling anchor graph and break planning
-src/sag.js                Pure hanging bridge sag targets and collision constraints
-src/sway.js               Shot/blast impulses and damped connected motion
-src/positions.js          Shared live attached positions
-src/gravity.js            Detached/falling simulation + internal Surge API
-src/attachment-visuals.js Small visual connector renderer
-src/render.js             Bubble drawing and aim guide
-src/game.js               Match, score, turn and progression coordinator
-src/puzzles.js            Three handcrafted puzzle definitions
-src/effects.js            Explosions, particles, pulses
-src/app.js                Input, UI and scores
-src/pop-mode.js           Archived Bubble Pop
-tests/                    Node plus Playwright responsive browser coverage
+src/config.js             Dimensions and colour constants
+src/grid.js               Resting hex grid, optional dynamic neighbour links
+src/supports.js           Ceiling graph, anchor loads, future Extreme Gravity
+src/physical-bonds.js     Sticky contacts, link graph and collision response
+src/sway.js               Gravity, spring integration, local shot/blast momentum
+src/positions.js          Shared current physical bubble positions
+src/gravity.js            Detachment and falling physics, unwired Surge API
+src/attachment-visuals.js Real link rendering
+src/render.js             Canvas and aim guide from live positions
+src/game.js               Rules, scoring and thin physics calls
+src/app.js                Input and UI
+src/puzzles.js            Handcrafted puzzles
+src/effects.js            Visual effects separate from physical motion
+src/pop-mode.js           Archived Bubble Pop mode, hidden
+tests/                    Physics, puzzle, support, browser regression checks
 ```
 
-**Avoid mega-files.** Keep geometry, support analysis, attached motion, falls,
-visuals and gameplay orchestration in separate modules.
+Do not grow a monolithic `game.js`. Keep spring/contact behaviour isolated
+and ensure visual movement never disagrees with the real hit tests.
 
-## Key design agreements
+## Hard rules
 
-1. Gravity is **part of Arcade and Puzzles**, not a separate game mode.
-2. Normal gravity keeps any ceiling-connected structure attached regardless
-   of weight; lose the last ceiling path and it falls.
-3. Distinct ceiling anchors count as independent supports. Two links back to
-   one roof bubble aren't two separate anchors.
-4. An eventual **Extreme Gravity** special can break overloaded weak bonds,
-   but only with a tested multi-support load-sharing model, warnings, rewards
-   and clear player activation.
-5. **Render, aim, shot collision and falling origins must use the same live
-   positions**. Stable hex cells remain the basis for matching and snapping.
-6. Reduced motion, touch use, puzzle goals and fair gameplay matter on both
-   mobile and desktop.
-7. The release number comes from `version.json` and changes deliberately,
-   with the npm version commands keeping `package.json` in sync.
-8. Future: Fizzlings rescue adventure, earn-only coins, no paid power-ups,
-   bosses, special shots, and worlds from VISION.md.
+1. Gravity is **part of the actual game**, never another mode.
+2. Weight makes singly supported branches droop/swing. The connection itself
+   doesn't snap under Normal Gravity; only loss of all supports detaches.
+3. Newly touching bubbles **stick physically**, provide support paths and
+   may become colour-connected groups.
+4. Explosions should drive neighbouring connected structures into motion,
+   transferring momentum through real attachments, then settling.
+5. No periodic animation masquerading as physics.
+6. A future player-earned Extreme Gravity power can break overloaded bonds,
+   subject to playtesting and puzzle balance. It is NOT currently playable.
+7. `version.json` controls the on-screen version.
+8. No payments/pay-to-win; planned Fizzlings rescue world, bosses and earn-only
+   currency are in [VISION.md](VISION.md).
 
-## Milestones
+## Next actions
 
-- [x] Structural refactor into small modules (PRs #1–4).
-- [x] G1 separate support/weight calculations (PR #5).
-- [x] G2 temporary Gravity Lab demo for physical comparisons (PR #8).
-- [x] G3 initial subtle sway with shared hit positions (PR #9).
-- [x] G3.1/G3.2 diagnostic pendulum and button fixes (PRs #10–11).
-- [x] v0.8.0 code on review branch: retire Lab UI/code, react to actual
-      shots in Arcade/Puzzles, add elastic-looking joints and replacement tests.
-- [x] PR #12 merged (v0.8.0): Gravity Lab removed, motion in normal play.
-- [ ] Review and merge PR #13 after final Node/Chromium CI. Check side-hanging
-      sags and pop/bomb recoil on a live desktop and real phone.
-- [ ] Hand-play Arcade and all Puzzles after deploy on actual phones/desktops.
-- [ ] Better spring/bond physics, real multi-anchor load sharing, controlled
-      Extreme Gravity special *inside the real game*.
+- [x] Structural refactor PRs #1–4.
+- [x] G1 weight/support graph (PR #5).
+- [x] Early temporary Gravity Lab and swaying prototypes (PRs #8–11).
+- [x] Integrated movement / removed Lab (PR #12).
+- [x] Initial bounded sag and blast impulses (PR #13).
+- [x] New physically driven spring/contact code on the PR #14 branch.
+- [x] **CI on the PR #14 physics head:** 90 Node tests passed (0 failures), including a cantilever forming a new bond naturally and a projectile attaching near the actual displaced target (run 40574875781). Chromium smoke passed at 1300px/390px with reduced motion enabled and disabled (run 40574876036). Recheck on the final review commit.
+- [ ] Review and merge PR #14 when happy, followed by a hands-on deployed game feel check.
+- [ ] After deploy, visually inspect screenshot-like side hangers, contacts,
+      blast recoil and actual aim fairness on desktop and mobile.
+- [ ] Later: refine multi-anchor tension distribution, bond strength, richer
+      elastic structures, balanced Extreme Gravity as a real-game special.
 
-## Verification
+## Checkpoint handover
 
-The v0.8.0 baseline passed 75 Node tests and desktop/mobile Chromium checks.
-PR #13 adds sag/explosion regression tests and a browser smoke scenario to
-verify both behaviours and reduced-motion handling. Verify final workflow
-results before merge; physical-device playtesting remains separate. Live GitHub Pages and real-device tests have not been
-personally verified. Do not misstate automated checks as manual playtests.
-
-## Handover note
-
-> Continue BubbleFun from https://github.com/becciStuff/BubbleFun. Start by
-> checking whether PR #13 (v0.8.1 gravity sag and explosion recoil)
-> merged. Keep only Arcade and Puzzles as visible play styles, retain
-> modular physics, and preserve shared moving hitboxes. Don't reintroduce
-> the Lab. See GRAVITY_DESIGN.md and VISION.md for the planned advanced gravity
-> and Fizzlings roadmap.
+> BubbleFun is at PR #14 for v0.8.2. Previous faux sine swaying was
+> rejected in user playtesting. The new work uses gravity, spring constraints,
+> sticky contacts, shared hitboxes and true explosion impulses. Look at
+> `GRAVITY_DESIGN.md`; verify PR merge/CI before doing more. Gravity Lab stays
+> removed. Preserve modular architecture and avoid overclaiming automatic tests
+> as proof of subjective motion quality.

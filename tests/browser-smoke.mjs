@@ -104,6 +104,31 @@ try {
         assert.ok(response.recoil > 1, 'a survivor really responds to an explosion');
       }
 
+      // Two moving structures can *genuinely* stick at contact, not merely
+      // appear to touch. The newly formed bond must survive graph traversal.
+      const contact = await page.evaluate(async () => {
+        const [{ initialShooter, stepGame }, { MOBILE_LAYOUT, DESKTOP_LAYOUT },
+          { shooterPosition, floatingShooter }, { bondId }] = await Promise.all([
+            import('./src/game.js'), import('./src/config.js'),
+            import('./src/grid.js'), import('./src/physical-bonds.js'),
+          ]);
+        const layout = innerWidth>=900 ? DESKTOP_LAYOUT : MOBILE_LAYOUT;
+        const s=initialShooter(()=>.42,layout);
+        s.board=new Map(['0,2','1,2','2,2','0,6','1,6','2,6'].map(k=>[k,'pink']));
+        s.reducedMotion=false;
+        s.bombs.clear();
+        const from=shooterPosition(2,2,0,layout),to=shooterPosition(2,6,0,layout);
+        s.swayDynamics.set('2,2',{x:to.x-from.x-41.2,y:0,vx:0,vy:0});
+        stepGame(s,.014);
+        const stuck=s.extraBonds.has(bondId('2,2','2,6'));
+        s.board.delete('0,2');s.board.delete('1,2');
+        const attached=!floatingShooter(s.board,0,layout,s.extraBonds)
+          .some(([r,c])=>r===2&&c===2);
+        return {stuck,attached};
+      });
+      assert.deepEqual(contact,{stuck:true,attached:true},
+        'real bubble-to-bubble contact creates a load-bearing connection');
+
       // Puzzles are the second real gameplay route — not another lab.
       await page.locator('[data-play="puzzle"]').click();
       assert.match(await page.locator('#game-title').textContent(), /Puzzle/);

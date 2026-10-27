@@ -9,8 +9,8 @@ export { analyseSupports, planGravitySurge } from './supports.js';
 
 // Currently, anything without a ceiling path drops. Future support-strength
 // rules can be introduced here without changing grid geometry.
-export function findDetachedBubbles(board, phase = 0, layout = MOBILE_LAYOUT) {
-  return floatingShooter(board, phase, layout);
+export function findDetachedBubbles(board, phase = 0, layout = MOBILE_LAYOUT, extraBonds = null) {
+  return floatingShooter(board, phase, layout, extraBonds);
 }
 
 // Detached bubbles cannot match other hanging groups during the fall.
@@ -75,7 +75,7 @@ export function stepFallingBubbles(fallingBubbles, layout, dt, {
 // Normal gameplay does not call it, so its gravity remains unchanged.
 export function releaseGravitySurge(state, { random = Math.random, ...settings } = {}) {
   const plan = planGravitySurge(state.board, {
-    phase: state.phase, layout: state.layout, ...settings,
+    phase: state.phase, layout: state.layout, extraBonds: state.extraBonds, ...settings,
   });
   const released = releaseFloatingShooter(state, plan.detached, random);
   return { ...plan, released };

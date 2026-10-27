@@ -6,9 +6,38 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.1 adds gravity sag and blast recoil within Arcade and Puzzles**, with no Gravity Lab in the UI.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.2 replaces periodic wobble with physical gravity, springs and contact adhesion**, with no Gravity Lab in the UI.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
+
+## v0.8.2 — Genuine connected gravity, not a sine-wave animation
+
+The attached bubble movement has been rebuilt as **real simulated motion**
+inside normal **Arcade and Puzzles**. There is **no Gravity Lab**.
+
+- Gravity continuously pulls bubble centres downward; sticky spring bonds
+  resist stretching. Sideways-hung chains can swing under their own weight
+  instead of following a pre-scripted, periodic wobble.
+- When **two moving bubbles touch**, they form an actual new sticky contact.
+  That connection participates in spring physics, ceiling support and
+  same-colour matching. Bright mint threads show new contacts.
+- Bubbles push apart on contact rather than clipping through each other.
+  Ceiling anchors remain fixed.
+- Shots, pops and bombs give real **local impulses** to surviving structures.
+  Those motions spread through physical bonds, oscillate and gradually die
+  away. When there are no forces or impacts, we do not add a sine wave.
+- Aim guide, projectile collisions, visible bubbles and the start positions
+  of falling bubbles continue sharing **one live position map**. Fired bubbles
+  hit a *moving* target where it actually appears, then settle towards a
+  permitted resting hex cell.
+- Normal gravity never cuts a still-attached bond because it's heavy.
+  Dropping requires losing all ceiling support; Extreme Gravity is for a
+  later earned in-game special, not a separate mode.
+- Reduced-motion devices remain on static, valid hex positions.
+
+This is an **initial spring-and-contact physics implementation**, not a
+finished unrestricted soft-body engine. Long chains, near-edge collisions
+and puzzle solutions need continued hands-on tuning after release.
 
 ## v0.8.1 — Dangling branches sag; explosions shake their neighbours
 
@@ -63,11 +92,11 @@ on desktop and mobile-sized screens.
 
 ## Release tracking
 
-**Current version: v0.8.1** on the gravity-sag feature review branch. Gravity reacts to
+**Current version: v0.8.2** on the contact-physics feature review branch. Gravity reacts to
 shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
 Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.8.1**, loading the number from
+The header badge reads **Version 0.8.2**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -75,9 +104,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.8.1 → 0.8.2
+npm run version:patch   # e.g. 0.8.2 → 0.8.3
 # or
-npm run version:minor   # e.g. 0.8.1 → 0.9.0
+npm run version:minor   # e.g. 0.8.2 → 0.9.0
 npm test
 ```
 
@@ -152,7 +181,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/supports.js` — gravity support graph, suspended weight and independent ceiling anchors (merged in G1)
 - `src/gravity.js` — detached-bubble detection, falling motion and opt-in Surge
 - `src/sway.js` — damped attached springs and shot/explosion impulses
-- `src/sag.js` — gravity-resting positions for weakly supported hanging branches
+- `src/physical-bonds.js` — contact detection, sticky bonds and collision separation
 - `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
 - `src/attachment-visuals.js` — subtle glass-like links between live bubble centres
 - `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
@@ -168,7 +197,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/surge.test.js` — opt-in gravity detachment and scoring boundaries
 - `tests/browser-smoke.mjs` — real Arcade/Puzzle firing across responsive layouts and motion preferences
 - `tests/sway.test.js` — live collision points, support-sensitive sway and reduced motion
-- `tests/sag.test.js` — single-link sag, bounds and geometry
+- `tests/physical-gravity.test.js` — force-driven sag, contact adhesion and matching
 - `tests/explosion-motion.test.js` — survivor recoil and damping
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
