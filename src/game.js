@@ -71,7 +71,7 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
     falling: [], lastDrop: 0, lastBombs: 0, recoil: 0, comboLevel: 0, highestCombo: 1,
     comboDisplay: 0, lastChain: null, pendingRow: false, pendingDanger: false,
     wobble: new Map(), rowShift: 0, introTime: 0, pendingPuzzleLoss: false,
-    attachedPositions: new Map(), swayDynamics: new Map(), extraBonds: new Set(), newContactBonds: new Set(), separatedBonds: new Set(), swayClock: 0,
+    attachedPositions: new Map(), swayDynamics: new Map(), extraBonds: new Set(), newContactBonds: new Set(), swayClock: 0,
     ...visualState(),
   };
 }

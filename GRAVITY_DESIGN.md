@@ -1,7 +1,7 @@
 # BubbleFun — gravity physics and gameplay
 
-**Current review milestone: v0.8.4 — full matching groups on re-contact
-and continuous physical motion across ceiling-row insertion.** No Gravity Lab or separate
+**Current review milestone: v0.8.5 — only genuinely new colour-group merges
+may trigger gravity-assisted matches.** No Gravity Lab or separate
 play style.
 
 ## Non-negotiable behaviour
@@ -137,6 +137,30 @@ animation ends, springs react to the new ceiling while preserving momentum.
 Both rules are tested on desktop and mobile layouts; actual gameplay feedback
 is still required for the visual feel.
 
+## v0.8.5: require genuinely new same-colour connectivity
+
+User playtesting found that recontact events introduced in v0.8.4
+**over-triggered automatic matches**, sometimes destroying an entire group
+that had already been connected before the alleged contact.
+
+- An actual new sticky bond can trigger match-three **only if its endpoints
+  belonged to different same-colour components immediately before that bond
+  was introduced**.
+- `contact-matches.js` forms the pre-contact graph by excluding the freshly
+  introduced sticky bonds from `extraBonds`. It compares those old groups
+  with the full graph after attachment.
+- If two formerly separate same-colour groups join and total 3+ bubbles,
+  pop the **entire resulting connected group** (six blues + one new blue
+  means seven bubbles pop, with full combo/bomb/cascade rules).
+- A redundant additional bond, or an existing lattice/spring bond simply
+  oscillating back into place, **does not make a new colour component**.
+  Those events must never pop a previously connected cluster.
+- The erroneous `observeBondRecontacts` event emission is removed, along
+  with obsolete separated-bond state. Actual spring forces, newly formed
+  sticky physics contacts and continuous row-drop velocities stay intact.
+- Handcrafted Puzzles and regular Arcade must not score or win from
+  merely relaxing previously connected bonds.
+
 ## Limits and what to tune next
 
 This is a browser-friendly elastic approximation, **not** a complete
@@ -175,6 +199,9 @@ are separate; passing automation is not proof of perfectly tuned game feel.
 - PR #13: bounded static sag and explosion impulses.
 - **PR #14 / v0.8.2: actual force-driven motion and sticky contacts.**
 - **PR #15 / v0.8.3: automatic 3+ pops from new contacts and soft gel links.**
-- **PR #16 / v0.8.4: full 6+1 combos on re-contact and continuous row-drop physics.**
+- **PR #16 / v0.8.4: full 6+1 combos and continuous row-drop physics; the
+  re-contact trigger proved over-broad in playtesting.**
+- **PR #17 / v0.8.5: remove false re-contact triggers; require newly merged
+  colour components before firing match-three.**
 - Future: tune mass, elastic deformation, contact constraints, per-bond
   strength, earned in-game Extreme Gravity, Fizzlings and level progression.

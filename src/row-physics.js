@@ -25,7 +25,6 @@ export function shiftAttachedPhysicsForNewRow(state) {
     .map(([key, p]) => [shiftedCellKey(key), { x: p.x, y: p.y + ROW_HEIGHT }]));
   state.extraBonds = shiftedLinks(state.extraBonds);
   state.newContactBonds = shiftedLinks(state.newContactBonds);
-  state.separatedBonds = shiftedLinks(state.separatedBonds);
   state.wobble = new Map([...(state.wobble ?? [])]
     .map(([key, motion]) => [shiftedCellKey(key), motion]));
 }

@@ -20,7 +20,6 @@ for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
     const newBond = bondId('2,3','3,3');
     state.extraBonds.add(oldBond);
     state.newContactBonds.add(oldBond);
-    state.separatedBonds.add(oldBond);
     descendShooter(state, () => .11);
     assert.equal(state.phase,1);
     assert.equal(state.board.has(newCell),true);
@@ -32,7 +31,7 @@ for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
     });
     assert.ok(Math.abs(bubblePosition(state,3,3).y - state.rowShift - oldPosition.y)<1e-8,
       'the old bubble stays in precisely the same visible place at the start of the drop');
-    for (const set of [state.extraBonds,state.newContactBonds,state.separatedBonds]) {
+    for (const set of [state.extraBonds,state.newContactBonds]) {
       assert.ok(set.has(newBond),'sticky, pending and separated bonds must follow their original cells');
       assert.equal(set.has(oldBond),false,'no stale bond references after key translation');
     }
