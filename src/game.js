@@ -11,6 +11,7 @@ import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles } from 
 import { bubblePosition } from './positions.js';
 import { stepAttachedSway, kickAttachedSway, kickExplosionSway } from './sway.js';
 import { findContactMatches } from './contact-matches.js';
+import { shiftAttachedPhysicsForNewRow } from './row-physics.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -70,7 +71,7 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
     falling: [], lastDrop: 0, lastBombs: 0, recoil: 0, comboLevel: 0, highestCombo: 1,
     comboDisplay: 0, lastChain: null, pendingRow: false, pendingDanger: false,
     wobble: new Map(), rowShift: 0, introTime: 0, pendingPuzzleLoss: false,
-    attachedPositions: new Map(), swayDynamics: new Map(), extraBonds: new Set(), newContactBonds: new Set(), swayClock: 0,
+    attachedPositions: new Map(), swayDynamics: new Map(), extraBonds: new Set(), newContactBonds: new Set(), separatedBonds: new Set(), swayClock: 0,
     ...visualState(),
   };
 }
@@ -227,12 +228,11 @@ export function descendShooter(state, random = Math.random) {
     if (shiftedBombs.size < 4 && random() < .09) shiftedBombs.add(key(0, col));
   }
   state.bombs = shiftedBombs;
-  // The board's row keys changed; the old physical links and velocities
-  // refer to different cells. They rebuild from the new live lattice.
-  state.extraBonds.clear();
-  state.newContactBonds.clear();
-  state.swayDynamics.clear();
-  state.attachedPositions.clear();
+  // The cells moved down by one row, but they are the SAME physical
+  // bodies. Move their keys and world coordinates without erasing swing
+  // momentum or sticky connections. The new ceiling will then constrain
+  // them naturally when the visual drop finishes.
+  shiftAttachedPhysicsForNewRow(state);
   state.shotsUntilRow = SHOTS_PER_ROW;
   state.pendingRow = false;
   state.rowShift = ROW_HEIGHT;
