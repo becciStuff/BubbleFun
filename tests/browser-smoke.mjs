@@ -198,6 +198,30 @@ try {
       assert.deepEqual(fixes,{popped:7,remaining:0,score:280,samePlace:true,momentum:72},
         'entire connected colour group pops and descending rows preserve live motion');
 
+      // A previously connected colour group must survive additional bonds
+      // or bouncing. The new contact must actually merge colour COMPONENTS.
+      const noFalsePop = await page.evaluate(async () => {
+        const [{ initialShooter, resolveContactMatches, stepGame },
+          { MOBILE_LAYOUT, DESKTOP_LAYOUT }, { bondId }] = await Promise.all([
+          import('./src/game.js'), import('./src/config.js'),
+          import('./src/physical-bonds.js'),
+        ]);
+        const layout = innerWidth >= 900 ? DESKTOP_LAYOUT : MOBILE_LAYOUT;
+        const state = initialShooter(() => .4, layout);
+        state.board = new Map(
+          ['0,2','1,2','2,2','3,2','3,1','4,1','4,2'].map(k => [k,'blue']));
+        state.bombs.clear();
+        state.shots = 2;
+        const redundant = bondId('2,2','4,1');
+        state.extraBonds.add(redundant);
+        state.newContactBonds.add(redundant);
+        const first = resolveContactMatches(state);
+        for (let i = 0; i < 60; i++) stepGame(state,.045);
+        return {first,board:state.board.size,score:state.score,shots:state.shots};
+      });
+      assert.deepEqual(noFalsePop,{first:0,board:7,score:0,shots:2},
+        'no auto-pop when a new bond is redundant within an existing colour group');
+
       // Puzzles are the second real gameplay route — not another lab.
       await page.locator('[data-play="puzzle"]').click();
       assert.match(await page.locator('#game-title').textContent(), /Puzzle/);
