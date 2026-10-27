@@ -24,7 +24,7 @@ for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
     const base = shooterPosition(2,7,0,layout);
     for(let i=0;i<7;i++) stepAttachedSway(state,.045);
     const live = bubblePosition(state,2,7);
-    assert.ok(live.x > base.x + 1.2, 'survivors visibly recoil');
+    assert.ok(live.x > base.x + 5, 'surviving group should recoil a clearly visible distance');
     assert.deepEqual(bubblePosition(state,0,7),shooterPosition(0,7,0,layout),
       'ceiling anchoring remains fixed after explosion');
   });
