@@ -120,7 +120,7 @@ test('a projectile attaches to a displaced bubble where it appears, not its stal
   assert.equal(state.score,score,'single unmatched shot must not invent points');
 });
 
-test('without new impacts an attached structure actually comes to rest',()=>{test('without new impacts an attached structure actually comes to rest',()=>{
+test('without new impacts an attached structure actually comes to rest',()=>{
   const state=makeState(MOBILE_LAYOUT,['0,3','1,3','2,3','2,2']);
   for(let i=0;i<240;i++) stepAttachedSway(state,.045);
   const settled=bubblePosition(state,2,2);
