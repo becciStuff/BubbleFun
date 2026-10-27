@@ -70,12 +70,14 @@ export function stepAttachedSway(state, dt) {
   state.attachedPositions ??= new Map();
   state.swayDynamics ??= new Map();
   state.extraBonds ??= new Set();
+  state.newContactBonds ??= new Set();
   dt = clamp(dt,0,.045);
   state.swayClock = (state.swayClock ?? 0)+dt;
   if (state.reducedMotion) {
     state.attachedPositions.clear();
     state.swayDynamics.clear();
     state.extraBonds.clear();
+    state.newContactBonds.clear();
     return state.attachedPositions;
   }
   // The entrance / descending-row visuals have their own interpolation.
@@ -142,7 +144,7 @@ export function stepAttachedSway(state, dt) {
         Math.min(floor,base.y+MAX_OFFSET_Y));
     }
     const before = new Map(keys.map(k=>[k,{x:bodies.get(k).x,y:bodies.get(k).y}]));
-    resolveContacts(state.board,bodies,state.phase,state.layout,state.extraBonds,edges);
+    resolveContacts(state.board,bodies,state.phase,state.layout,state.extraBonds,edges,state.newContactBonds);
     // Project collision corrections back into velocities so collision does
     // not instantly vanish on the next physics substep.
     for (const key of keys) {
