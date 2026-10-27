@@ -133,9 +133,15 @@ export function aimShooter(state, x, y) {
   state.angle = Math.max(-1.15, Math.min(1.15, Math.atan2(x - state.layout.width / 2, state.layout.launchY - y)));
 }
 
-function landingSlot(state, x, y) {
+function landingSlot(state, x, y, hitCell = null) {
+  const restingHit = hitCell
+    ? shooterPosition(hitCell[0],hitCell[1],state.phase,state.layout) : null;
+  const movingHit = hitCell ? bubblePosition(state,...hitCell) : null;
+  const shiftX = movingHit ? movingHit.x-restingHit.x : 0;
+  const shiftY = movingHit ? movingHit.y-restingHit.y : 0;
   let closest = null;
   let minDistance = Infinity;
+  let fallback = null, fallbackDistance = Infinity;
   const maxRow = Math.min(18, Math.max(1, ...Array.from(state.board.keys(), k => Number(k.split(',')[0]) + 1)));
   for (let r = 0; r <= maxRow; r++) {
     for (let c = 0; c < shooterColumns(r, state.phase, state.layout); c++) {
@@ -144,10 +150,16 @@ function landingSlot(state, x, y) {
       if (r !== 0 && neighbours(state.board, r, c, state.phase, state.layout).length === 0) continue;
       const p = shooterPosition(r, c, state.phase, state.layout);
       const distance = Math.hypot(x - p.x, y - p.y);
-      if (distance < minDistance) { minDistance = distance; closest = [r, c]; }
+      if (distance < fallbackDistance) { fallbackDistance = distance; fallback = [r,c]; }
+      if (restingHit && Math.hypot(p.x-restingHit.x,p.y-restingHit.y)>PITCH+1.5) continue;
+      // The collision target may have swung far from its original hex cell.
+      // Evaluate neighbouring vacant snap cells relative to that *live* body.
+      const movedDistance = Math.hypot(x-(p.x+shiftX),y-(p.y+shiftY));
+      if (movedDistance < minDistance) { minDistance = movedDistance; closest = [r, c]; }
     }
   }
-  return closest && minDistance <= PITCH * 1.65 ? closest : null;
+  if (hitCell && closest) return closest;
+  return fallback && fallbackDistance <= PITCH * 1.65 ? fallback : null;
 }
 
 function removeCells(state, cells, effectCount) {
@@ -269,13 +281,30 @@ function settleShooter(state) {
   }
 }
 
-function lockShooter(state) {
+function lockShooter(state, hitCell = null) {
   const shot = state.projectile;
   state.projectile = null;
-  const slot = landingSlot(state, shot.x, shot.y);
+  const slot = landingSlot(state, shot.x, shot.y, hitCell);
   if (!slot) { state.status = 'lost'; emit(state, 'lose'); return; }
   const [row, col] = slot;
   state.board.set(key(row, col), shot.colour);
+  // A shot hitting a displaced bubble starts physically at the point of
+  // contact. It then settles towards its hex slot through the SAME springs.
+  // The resting cell is still the authority for colours and puzzles.
+  if (hitCell && !state.reducedMotion) {
+    const hit = bubblePosition(state,...hitCell);
+    const dx = shot.x-hit.x, dy=shot.y-hit.y;
+    const length = Math.max(.01,Math.hypot(dx,dy));
+    const x = hit.x+dx/length*PITCH;
+    const y = hit.y+dy/length*PITCH;
+    const base = shooterPosition(row,col,state.phase,state.layout);
+    const px = Math.max(state.layout.left+RADIUS,Math.min(state.layout.width-state.layout.left-RADIUS,x));
+    const py = Math.max(state.layout.top+RADIUS,Math.min(state.layout.launchY-RADIUS*1.65,y));
+    state.swayDynamics.set(key(row,col),{
+      x:px-base.x,y:py-base.y,vx:shot.vx*.10,vy:shot.vy*.10,
+    });
+    state.attachedPositions.set(key(row,col),{x:px,y:py});
+  }
   const impact = bubblePosition(state, row, col);
   const same = connectedShooter(state.board, row, col, state.phase, true, state.layout, state.extraBonds);
   for (const [k] of state.board) {
@@ -384,8 +413,10 @@ export function stepGame(state, dt) {
     if (shot.x < low) { shot.x = low + (low - shot.x); shot.vx = Math.abs(shot.vx); }
     if (shot.x > high) { shot.x = high - (shot.x - high); shot.vx = -Math.abs(shot.vx); }
     if (shot.y <= state.layout.top + RADIUS) { shot.y = state.layout.top + RADIUS; lockShooter(state); break; }
-    if (shotBubbleCollision(state.board, shot.x, shot.y, state.phase, state.layout, state.attachedPositions)) {
-      lockShooter(state);
+    const hitCell = shotBubbleCollision(state.board,shot.x,shot.y,
+      state.phase,state.layout,state.attachedPositions);
+    if (hitCell) {
+      lockShooter(state,hitCell);
       break;
     }
   }
