@@ -6,9 +6,29 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.2 replaces periodic wobble with physical gravity, springs and contact adhesion**, with no Gravity Lab in the UI.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.3 adds automatic 3+ matches when swinging bubbles stick together**, with no Gravity Lab in the UI.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
+
+## v0.8.3 — Match-three from swinging contacts, softer connections
+
+When two **already attached** bubble structures swing together and make a
+new sticky connection, the game immediately examines the connected colours.
+**Three or more bubbles of the same colour pop automatically**, even when
+the player hasn't fired a new shot. This uses the existing score, sound,
+bomb-chain and unsupported-falling systems. The contact itself **doesn't
+spend a shot or Puzzle ammunition**; new contacts are processed once, not on
+every animation frame.
+
+The connection art is also gentler: the bright rigid-looking bars have
+become **short, slightly bowed, translucent gel-like bonds**, drawn only
+across the visible space between bubble rims. Unstretched touching bubbles
+need no glowing rod. New physical contacts still get a mint tint.
+
+Gravity can now help complete a handcrafted Puzzle with **fewer shots**
+than its original known solution; puzzle regression tests require legitimate
+wins within the old shot count and ensure puzzles don't auto-complete before
+any shot.
 
 ## v0.8.2 — Genuine connected gravity, not a sine-wave animation
 
@@ -92,11 +112,11 @@ on desktop and mobile-sized screens.
 
 ## Release tracking
 
-**Current version: v0.8.2** on the contact-physics feature review branch. Gravity reacts to
+**Current version: v0.8.3** on the contact-match review branch. Gravity reacts to
 shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
 Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.8.2**, loading the number from
+The header badge reads **Version 0.8.3**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -104,9 +124,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.8.2 → 0.8.3
+npm run version:patch   # e.g. 0.8.3 → 0.8.4
 # or
-npm run version:minor   # e.g. 0.8.2 → 0.9.0
+npm run version:minor   # e.g. 0.8.3 → 0.9.0
 npm test
 ```
 
@@ -182,6 +202,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/gravity.js` — detached-bubble detection, falling motion and opt-in Surge
 - `src/sway.js` — damped attached springs and shot/explosion impulses
 - `src/physical-bonds.js` — contact detection, sticky bonds and collision separation
+- `src/contact-matches.js` — pure 3+ match detection from newly created physical bonds
 - `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
 - `src/attachment-visuals.js` — subtle glass-like links between live bubble centres
 - `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
@@ -198,6 +219,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/browser-smoke.mjs` — real Arcade/Puzzle firing across responsive layouts and motion preferences
 - `tests/sway.test.js` — live collision points, support-sensitive sway and reduced motion
 - `tests/physical-gravity.test.js` — force-driven sag, contact adhesion and matching
+- `tests/contact-matches.test.js` — full contact-to-pop scoring, bomb and Puzzle integration plus softer bond geometry
 - `tests/explosion-motion.test.js` — survivor recoil and damping
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 

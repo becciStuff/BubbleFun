@@ -10,6 +10,7 @@ import { createPuzzleBoard } from './puzzles.js';
 import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles } from './gravity.js';
 import { bubblePosition } from './positions.js';
 import { stepAttachedSway, kickAttachedSway, kickExplosionSway } from './sway.js';
+import { findContactMatches } from './contact-matches.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -69,7 +70,7 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
     falling: [], lastDrop: 0, lastBombs: 0, recoil: 0, comboLevel: 0, highestCombo: 1,
     comboDisplay: 0, lastChain: null, pendingRow: false, pendingDanger: false,
     wobble: new Map(), rowShift: 0, introTime: 0, pendingPuzzleLoss: false,
-    attachedPositions: new Map(), swayDynamics: new Map(), extraBonds: new Set(), swayClock: 0,
+    attachedPositions: new Map(), swayDynamics: new Map(), extraBonds: new Set(), newContactBonds: new Set(), swayClock: 0,
     ...visualState(),
   };
 }
@@ -229,6 +230,7 @@ export function descendShooter(state, random = Math.random) {
   // The board's row keys changed; the old physical links and velocities
   // refer to different cells. They rebuild from the new live lattice.
   state.extraBonds.clear();
+  state.newContactBonds.clear();
   state.swayDynamics.clear();
   state.attachedPositions.clear();
   state.shotsUntilRow = SHOTS_PER_ROW;
@@ -334,6 +336,47 @@ function lockShooter(state, hitCell = null) {
   if (!state.pendingBombs.length) settleShooter(state);
 }
 
+// Physical contacts can create real colour matches after a shot or blast.
+// Consume only *new* sticky links — a static cluster must never auto-pop just
+// because the simulation takes another frame. All rewards and cascades stay
+// in the same game-owned lifecycle as normal shot matches.
+export function resolveContactMatches(state) {
+  if (!state.newContactBonds?.size || state.mode !== 'shooter' ||
+      state.status !== 'playing' || state.projectile || state.pendingBombs.length ||
+      state.falling.length || state.introTime > 0 || state.rowShift > .5) return 0;
+  const contacts = state.newContactBonds;
+  state.newContactBonds = new Set();
+  const groups = findContactMatches(state.board, {
+    phase: state.phase, layout: state.layout,
+    extraBonds: state.extraBonds, newContacts: contacts,
+  });
+  let popped = 0;
+  for (const group of groups) {
+    const first = group[0];
+    const origin = bubblePosition(state, first[0], first[1]);
+    const bonus = Math.min(8, Math.max(1, state.comboLevel + 1));
+    state.comboLevel = bonus;
+    state.highestCombo = Math.max(state.highestCombo, bonus);
+    state.comboDisplay = 2.8;
+    state.pendingBombs.push(...removeCells(state, group, 12));
+    const points = group.length * 20 * bonus;
+    state.score += points;
+    state.lastPop += group.length;
+    state.shake = Math.max(state.shake, .6);
+    addPulse(state, origin.x, origin.y, 'yellow', 1.1);
+    addCallout(state, origin.x, origin.y - 23,
+      `STICKY POP! +${points}`, 'yellow');
+    popped += group.length;
+  }
+  if (!popped) return 0;
+  // A contact-created bomb behaves exactly like a normal matched bomb:
+  // the queue processes the next blast before gravity settles the board.
+  if (state.pendingBombs.length) state.bombClock = Math.max(state.bombClock, .16);
+  emit(state, 'pop');
+  if (!state.pendingBombs.length) settleShooter(state);
+  return popped;
+}
+
 export function stepGame(state, dt) {
   dt = Math.min(.045, Math.max(0, dt));
   state.shake = Math.max(0, state.shake - dt * 2.4);
@@ -349,7 +392,10 @@ export function stepGame(state, dt) {
     }
   }
   if (state.comboDisplay) state.comboDisplay = Math.max(0, state.comboDisplay - dt);
-  if (state.mode === 'shooter') stepAttachedSway(state, dt);
+  if (state.mode === 'shooter') {
+    stepAttachedSway(state, dt);
+    resolveContactMatches(state);
+  }
   updateVisualEffects(state, dt);
 
   if (state.mode === 'shooter') {

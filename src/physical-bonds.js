@@ -34,7 +34,7 @@ export function cleanExtraBonds(board, bonds = new Set()) {
 // Resolve physical contacts BEFORE publishing visible positions. Non-neighbour
 // contacts become genuine sticky bonds, so two swinging groups can link up.
 // Never move the roof. Existing hex links are supplied as edges.
-export function resolveContacts(board, positions, phase, layout, extraBonds, edges) {
+export function resolveContacts(board, positions, phase, layout, extraBonds, edges, newContacts = null) {
   const keys = [...board.keys()];
   const present = new Set(edges.map(([a,b]) => bondId(a,b)));
   const minGap = RADIUS * 2 - .85;
@@ -54,6 +54,7 @@ export function resolveContacts(board, positions, phase, layout, extraBonds, edg
       if (!present.has(link)) {
         extraBonds.add(link);
         present.add(link);
+        newContacts?.add(link);
         added++;
       }
       if (dist >= minGap) continue;

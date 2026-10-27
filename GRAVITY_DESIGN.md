@@ -1,7 +1,7 @@
 # BubbleFun — gravity physics and gameplay
 
-**Current review milestone: v0.8.2 — real gravity, spring bonds and sticky
-contact inside ordinary Arcade and Puzzles.** No Gravity Lab or separate
+**Current review milestone: v0.8.3 — sticky contacts can trigger automatic
+match-three and connection graphics look elastic.** No Gravity Lab or separate
 play style.
 
 ## Non-negotiable behaviour
@@ -21,7 +21,10 @@ play style.
    turns and colours. A moving shot attaches near the visibly hit bubble
    before its physical position relaxes towards the selected empty hex cell.
 7. New sticky contacts participate in ceiling support and same-colour match
-   connectivity. Unconnected pieces fall through the existing gravity engine.
+   connectivity. **If a newly formed contact creates a group of 3+ identical
+   colours, pop it automatically**, using the real scoring/bomb/cascade code.
+   Never spontaneously pop an old group just because another frame passed.
+   Unconnected pieces fall through the existing gravity engine.
 8. Reduced-motion preferences keep positions static without changing game rules.
 9. A later **Extreme Gravity special** can sever overloaded bonds, but the
    initial version is not a player control. Do not introduce a new mode.
@@ -33,11 +36,12 @@ config.js               Board dimensions and tuning
 grid.js                 Hex slots, ordinary + sticky connectivity and hit tests
 supports.js             Roof support analysis, weak bonds and overload planning
 physical-bonds.js       Spring graph, collision resolution and sticky new links
+contact-matches.js      Pure newly-joined 3+ same-colour detection
 sway.js                 Downward gravity, spring forces, damping and hit impulses
 positions.js            One live position lookup for all systems
 gravity.js              Detachment, falling bodies and optional Surge API
-attachment-visuals.js   Thin drawn bonds and fresh sticky-contact highlights
-game.js                 Shots, matches, score and lifecycle (thin physics hooks)
+attachment-visuals.js   Soft curved gel between bubble rims only when stretched
+game.js                 Shots, automatic matches, score and lifecycle (thin physics hooks)
 render.js               Canvas, aim guide, live bubbles and visual effects
 app.js                  Player input, UI and sound
 ```
@@ -80,6 +84,30 @@ app.js                  Player input, UI and sound
 - Reduced motion disables the animated physics while retaining stable
   matching and ordinary disconnection/falling behaviour.
 
+## v0.8.3: automatic gravity-assisted matches
+
+Each new actual physical contact is recorded once in
+`state.newContactBonds`, without changes to how bond forces are calculated.
+After a safe simulation tick, `contact-matches.js` searches the *entire
+same-colour connected group* for each new bond. Group sizes of 3+ go through
+the normal `game.js` removal/score/effect/bomb queue, and then the existing
+unsupported cascade. This must not consume a shot or a handcrafted Puzzle's
+ammunition, and duplicates in one frame must not award points twice.
+
+Contact events are retained while a projectile, bomb chain, entrance or
+falling animation is in progress. They are consumed when the turn is safe.
+Existing same-colour groups never burst merely because an animation frame
+passed without a **new physical contact**.
+
+The lines in the user's screenshot resembled straight bright rods. The
+attachment overlay now renders only the **exposed gap** between bubble rims,
+with a slight curve and low-opacity gel/glint strokes. The curve isn't a
+scripted animation; it follows physical positions every frame.
+
+Puzzle solutions may legitimately finish in fewer shots via physical
+contacts. Test the known routes as **upper bounds** and ensure no Puzzle
+wins before the player acts.
+
 ## Limits and what to tune next
 
 This is a browser-friendly elastic approximation, **not** a complete
@@ -117,5 +145,6 @@ are separate; passing automation is not proof of perfectly tuned game feel.
 - PR #12: gravity visualisation integrated into Arcade/Puzzles.
 - PR #13: bounded static sag and explosion impulses.
 - **PR #14 / v0.8.2: actual force-driven motion and sticky contacts.**
+- **PR #15 / v0.8.3: automatic 3+ pops from new contacts and soft gel links.**
 - Future: tune mass, elastic deformation, contact constraints, per-bond
   strength, earned in-game Extreme Gravity, Fizzlings and level progression.
