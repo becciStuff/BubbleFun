@@ -2,11 +2,11 @@
 
 **Updated:** 28 October 2026 (NZ)  
 **Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.8.1 (PR #13), static sag plus small explosion impulses  
-**Current review:** [PR #14](https://github.com/becciStuff/BubbleFun/pull/14) on `feature/real-gravity-contacts-082`  
-**Proposed version:** **v0.8.2**, mirrored in `version.json` and `package.json`  
-**Current goal:** Replace global artificial swaying with actual gravity-driven
-movement, new contact bonds and visible explosion recoil in normal play.
+**Merged baseline:** v0.8.2 (PR #14), spring gravity and sticky physical contacts  
+**Current review:** [PR #15](https://github.com/becciStuff/BubbleFun/pull/15) on `feature/contact-match-soft-bonds-083`  
+**Proposed version:** **v0.8.3**, mirrored in `version.json` and `package.json`  
+**Current goal:** Turn real, new sticky contacts into automatic same-colour
+3+ pops, and make connection threads look like soft stretched bonds.
 
 Read [VISION.md](VISION.md), [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) and
 [REFACTORING.md](REFACTORING.md) before adding more features.
@@ -44,6 +44,21 @@ but didn't adequately reflect how the game looked and felt.
 - Arcade/Puzzle scoring, existing puzzle designs, bombs, rows and combo
   logic continue to be owned by `game.js`.
 
+## New PR #15 functionality
+
+- `physical-bonds.js` records newly touched physical bonds as events.
+- `contact-matches.js` detects a whole connected same-colour group of 3+
+  joined by a NEW bond, with no duplicate processing.
+- `game.js` awards regular match points, triggers the same pop particles and
+  bomb queue, then settles falling bubbles. No extra shot is consumed.
+- A Puzzle can finish in fewer shots thanks to an additional contact match;
+  every Puzzle must still need player input and remain completable within its
+  previously known solution path.
+- `attachment-visuals.js` draws short translucent, gently curved gel threads
+  only where bubble rims actually separate, rather than bright centre-to-centre rods.
+- Gravity Lab remains removed. Physical coordinates remain authoritative
+  across drawing, aiming, collisions and falling.
+
 ## Architecture
 
 ```text
@@ -51,6 +66,7 @@ src/config.js             Dimensions and colour constants
 src/grid.js               Resting hex grid, optional dynamic neighbour links
 src/supports.js           Ceiling graph, anchor loads, future Extreme Gravity
 src/physical-bonds.js     Sticky contacts, link graph and collision response
+src/contact-matches.js    Pure 3+ match detection on newly created bonds
 src/sway.js               Gravity, spring integration, local shot/blast momentum
 src/positions.js          Shared current physical bubble positions
 src/gravity.js            Detachment and falling physics, unwired Surge API
@@ -92,7 +108,10 @@ and ensure visual movement never disagrees with the real hit tests.
 - [x] Initial bounded sag and blast impulses (PR #13).
 - [x] New physically driven spring/contact code on the PR #14 branch.
 - [x] **CI on the PR #14 physics head:** 90 Node tests passed (0 failures), including a cantilever forming a new bond naturally and a projectile attaching near the actual displaced target (run 40574875781). Chromium smoke passed at 1300px/390px with reduced motion enabled and disabled (run 40574876036). Recheck on the final review commit.
-- [ ] Review and merge PR #14 when happy, followed by a hands-on deployed game feel check.
+- [x] PR #14 merged: actual spring gravity and physical sticky bonds.
+- [ ] Review PR #15 after Node and browser CI confirms contact pop and Puzzle handling.
+- [ ] Inspect v0.8.3 on the deployed game — especially matching through contact,
+      bomb cascades and softer lines.
 - [ ] After deploy, visually inspect screenshot-like side hangers, contacts,
       blast recoil and actual aim fairness on desktop and mobile.
 - [ ] Later: refine multi-anchor tension distribution, bond strength, richer
@@ -100,9 +119,8 @@ and ensure visual movement never disagrees with the real hit tests.
 
 ## Checkpoint handover
 
-> BubbleFun is at PR #14 for v0.8.2. Previous faux sine swaying was
-> rejected in user playtesting. The new work uses gravity, spring constraints,
-> sticky contacts, shared hitboxes and true explosion impulses. Look at
-> `GRAVITY_DESIGN.md`; verify PR merge/CI before doing more. Gravity Lab stays
-> removed. Preserve modular architecture and avoid overclaiming automatic tests
-> as proof of subjective motion quality.
+> BubbleFun is at PR #15 for v0.8.3. Spring gravity, recoil and sticky
+> physical contacts are merged (PR #14). PR #15 adds automatic 3+ matching
+> when moving bubbles touch, plus translucent gel-like connection art.
+> Verify merge/CI before new work. Gravity Lab stays removed; the single
+> live-position map still governs aim, rendering and collisions.
