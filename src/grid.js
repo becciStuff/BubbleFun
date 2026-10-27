@@ -16,7 +16,7 @@ export function shooterPosition(row, col, phase = 0, layout = MOBILE_LAYOUT) {
   };
 }
 
-export function shooterNeighbours(board, row, col, phase = 0, layout = MOBILE_LAYOUT) {
+export function shooterNeighbours(board, row, col, phase = 0, layout = MOBILE_LAYOUT, extraBonds = null) {
   const origin = shooterPosition(row, col, phase, layout);
   const nearby = [];
   for (let r = Math.max(0, row - 1); r <= row + 1; r++) {
@@ -27,16 +27,30 @@ export function shooterNeighbours(board, row, col, phase = 0, layout = MOBILE_LA
       if (Math.hypot(origin.x - p.x, origin.y - p.y) <= CLUSTER_THRESHOLD) nearby.push([r, c]);
     }
   }
+  // Added when two already-attached bubbles physically touch during a swing.
+  // These are real mechanical links, not just lines drawn on the canvas.
+  if (extraBonds?.size) {
+    const from = cellKey(row,col);
+    const included = new Set(nearby.map(([r,c]) => cellKey(r,c)));
+    for (const bond of extraBonds) {
+      const [a,b] = bond.split('|');
+      const opposite = a===from ? b : b===from ? a : null;
+      if (opposite && board.has(opposite) && !included.has(opposite)) {
+        nearby.push(opposite.split(',').map(Number));
+        included.add(opposite);
+      }
+    }
+  }
   return nearby;
 }
 
-export function connectedShooter(board, row, col, phase = 0, colourOnly = true, layout = MOBILE_LAYOUT) {
+export function connectedShooter(board, row, col, phase = 0, colourOnly = true, layout = MOBILE_LAYOUT, extraBonds = null) {
   const original = board.get(cellKey(row, col));
   if (!original) return [];
   const found = new Set([cellKey(row, col)]);
   const queue = [[row, col]];
   for (let i = 0; i < queue.length; i++) {
-    for (const [nr, nc] of shooterNeighbours(board, ...queue[i], phase, layout)) {
+    for (const [nr, nc] of shooterNeighbours(board, ...queue[i], phase, layout, extraBonds)) {
       const k = cellKey(nr, nc);
       if (found.has(k) || (colourOnly && board.get(k) !== original)) continue;
       found.add(k);
@@ -47,12 +61,12 @@ export function connectedShooter(board, row, col, phase = 0, colourOnly = true, 
 }
 
 // A bubble is attached if any colour-connected path reaches the top row.
-export function floatingShooter(board, phase = 0, layout = MOBILE_LAYOUT) {
+export function floatingShooter(board, phase = 0, layout = MOBILE_LAYOUT, extraBonds = null) {
   const connected = new Set();
   for (let col = 0; col < shooterColumns(0, phase, layout); col++) {
     const start = cellKey(0, col);
     if (!board.has(start) || connected.has(start)) continue;
-    for (const [r, c] of connectedShooter(board, 0, col, phase, false, layout)) connected.add(cellKey(r, c));
+    for (const [r, c] of connectedShooter(board, 0, col, phase, false, layout, extraBonds)) connected.add(cellKey(r, c));
   }
   return Array.from(board.keys()).filter(k => !connected.has(k)).map(k => k.split(',').map(Number));
 }
