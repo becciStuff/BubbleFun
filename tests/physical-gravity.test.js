@@ -79,6 +79,20 @@ for(const layout of [MOBILE_LAYOUT,DESKTOP_LAYOUT]) {
   });
 }
 
+test('without new impacts an attached structure actually comes to rest',()=>{
+  const state=makeState(MOBILE_LAYOUT,['0,3','1,3','2,3','2,2']);
+  for(let i=0;i<240;i++) stepAttachedSway(state,.045);
+  const settled=bubblePosition(state,2,2);
+  let maxTravel=0;
+  for(let i=0;i<80;i++) {
+    stepAttachedSway(state,.045);
+    maxTravel=Math.max(maxTravel,distance(settled,bubblePosition(state,2,2)));
+  }
+  const v=state.swayDynamics.get('2,2');
+  assert.ok(maxTravel<3.5,`gravity should settle, not pulse forever: ${maxTravel}px`);
+  assert.ok(Math.hypot(v.vx,v.vy)<8,'stable structure should have nearly zero velocity');
+});
+
 test('no artificial ambient oscillation is injected into physics',async()=>{
   const {readFile}=await import('node:fs/promises');
   const src=await readFile(new URL('../src/sway.js',import.meta.url),'utf8');
