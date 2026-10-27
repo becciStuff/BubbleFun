@@ -6,9 +6,27 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.4 fixes whole-colour contact combos and continuous gravity during row insertion**, with no Gravity Lab in the UI.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.5 limits gravity match triggering to newly merged colour groups, while preserving full combos and row continuity**, with no Gravity Lab in the UI.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
+
+## v0.8.5 — Only genuinely new colour groups pop
+
+This corrects an over-eager change from v0.8.4. Simply stretching an
+existing bubble bond and letting it touch again must **not** pop an already
+connected same-colour cluster. A group held together all along is still the
+*same group*, even if its springs oscillate.
+
+A gravity-assisted match now requires a **new physical sticky contact that
+actually joins previously separate same-colour components**. Six connected
+blue bubbles plus a separate seventh blue that swings into them still make a
+seven-bubble combo. Adding a redundant bond inside an already-connected blue
+group does not trigger a pop, score or bomb chain.
+
+`contact-matches.js` compares colour connectivity *before and after*
+new contacts. The experimental re-touch-to-match event is retired from
+`sway.js`; the real spring simulation, new sticky bonds, and the v0.8.4
+ceiling-row motion continuity remain intact.
 
 ## v0.8.4 — Whole-group contact combos and uninterrupted row drops
 
@@ -131,11 +149,11 @@ on desktop and mobile-sized screens.
 
 ## Release tracking
 
-**Current version: v0.8.4** on the connected-combos/row-continuity review branch. Gravity reacts to
+**Current version: v0.8.5** on the correctly-scoped contact matches review branch. Gravity reacts to
 shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
 Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.8.4**, loading the number from
+The header badge reads **Version 0.8.5**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -143,9 +161,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.8.4 → 0.8.5
+npm run version:patch   # e.g. 0.8.5 → 0.8.6
 # or
-npm run version:minor   # e.g. 0.8.4 → 0.9.0
+npm run version:minor   # e.g. 0.8.5 → 0.9.0
 npm test
 ```
 
