@@ -73,3 +73,23 @@ export function resolveContacts(board, positions, phase, layout, extraBonds, edg
   }
   return added;
 }
+
+// Hex neighbours are already bonded on the *resting* grid. They can still
+// stretch well apart during a swing and later touch again. That re-contact
+// must be a real match event, even though it isn't a brand-new extraBond.
+// Hysteresis prevents tiny spring vibrations from repeatedly generating pops.
+export function observeBondRecontacts(edges, positions, separated, newContacts) {
+  const releasedAt = RADIUS * 2 + 8;
+  const touchingAt = RADIUS * 2 + .65;
+  const active = new Set();
+  for (const [a, b] of edges) {
+    const id = bondId(a, b);
+    active.add(id);
+    const pa = positions.get(a), pb = positions.get(b);
+    if (!pa || !pb) continue;
+    const distance = Math.hypot(pa.x - pb.x, pa.y - pb.y);
+    if (distance > releasedAt) separated.add(id);
+    else if (distance <= touchingAt && separated.delete(id)) newContacts.add(id);
+  }
+  for (const id of separated) if (!active.has(id)) separated.delete(id);
+}
