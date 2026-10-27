@@ -84,7 +84,6 @@ export function stepAttachedSway(state, dt) {
   if (state.introTime > 0) {
     state.attachedPositions.clear();
     state.swayDynamics.clear();
-    state.separatedBonds.clear();
     return state.attachedPositions;
   }
   // A new ceiling row moves the same old bodies down together. Hold their
