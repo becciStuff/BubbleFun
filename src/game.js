@@ -69,7 +69,7 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
     falling: [], lastDrop: 0, lastBombs: 0, recoil: 0, comboLevel: 0, highestCombo: 1,
     comboDisplay: 0, lastChain: null, pendingRow: false, pendingDanger: false,
     wobble: new Map(), rowShift: 0, introTime: 0, pendingPuzzleLoss: false,
-    attachedPositions: new Map(), swayDynamics: new Map(), swayClock: 0,
+    attachedPositions: new Map(), swayDynamics: new Map(), extraBonds: new Set(), swayClock: 0,
     ...visualState(),
   };
 }
@@ -214,6 +214,11 @@ export function descendShooter(state, random = Math.random) {
     if (shiftedBombs.size < 4 && random() < .09) shiftedBombs.add(key(0, col));
   }
   state.bombs = shiftedBombs;
+  // The board's row keys changed; the old physical links and velocities
+  // refer to different cells. They rebuild from the new live lattice.
+  state.extraBonds.clear();
+  state.swayDynamics.clear();
+  state.attachedPositions.clear();
   state.shotsUntilRow = SHOTS_PER_ROW;
   state.pendingRow = false;
   state.rowShift = ROW_HEIGHT;
@@ -233,7 +238,7 @@ function ceilingReachedLauncher(state) {
 }
 
 function settleShooter(state) {
-  const floaters = findDetachedBubbles(state.board, state.phase, state.layout);
+  const floaters = findDetachedBubbles(state.board, state.phase, state.layout, state.extraBonds);
   const detached = releaseFloatingShooter(state, floaters);
   state.lastDrop += detached;
   state.lastPop += detached;
@@ -272,7 +277,7 @@ function lockShooter(state) {
   const [row, col] = slot;
   state.board.set(key(row, col), shot.colour);
   const impact = bubblePosition(state, row, col);
-  const same = connectedShooter(state.board, row, col, state.phase, true, state.layout);
+  const same = connectedShooter(state.board, row, col, state.phase, true, state.layout, state.extraBonds);
   for (const [k] of state.board) {
     const [r, c] = k.split(',').map(Number);
     const p = bubblePosition(state, r, c);
