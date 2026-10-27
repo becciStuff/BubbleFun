@@ -79,6 +79,23 @@ for(const layout of [MOBILE_LAYOUT,DESKTOP_LAYOUT]) {
   });
 }
 
+test('a freely sagging cantilever can collide and form a NEW bond naturally',()=>{
+  // A horizontal branch extends from a pinned ceiling support. A lower
+  // separately positioned bubble is close enough for its falling tip to hit.
+  // No forced overlap or prearranged sticky edge is provided.
+  const state=makeState(MOBILE_LAYOUT,
+    ['0,4','1,4','2,4','2,3','2,2','3,3','4,3']);
+  let newLink=null;
+  for(let i=0;i<300;i++){
+    stepAttachedSway(state,.045);
+    if(state.extraBonds.size){newLink=[...state.extraBonds][0];break;}
+  }
+  assert.ok(newLink,
+    'gravity-driven swing should be capable of forming a contact without a scripted trigger');
+  const [a,b]=newLink.split('|');
+  assert.ok(state.board.has(a)&&state.board.has(b),'both endpoints are real attached bubbles');
+});
+
 test('without new impacts an attached structure actually comes to rest',()=>{
   const state=makeState(MOBILE_LAYOUT,['0,3','1,3','2,3','2,2']);
   for(let i=0;i<240;i++) stepAttachedSway(state,.045);
