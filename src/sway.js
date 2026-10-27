@@ -3,7 +3,7 @@
 // bubble centres and the SAME centres are used for drawing and shooting.
 import { RADIUS, PITCH } from './config.js';
 import { shooterPosition } from './grid.js';
-import { bondEdges, cleanExtraBonds, resolveContacts } from './physical-bonds.js';
+import { bondEdges, cleanExtraBonds, resolveContacts, observeBondRecontacts } from './physical-bonds.js';
 
 const GRAVITY = 395;           // Downward force, in pixels/s².
 const SPRING = 170;            // Adhesive bubble-to-bubble bond stiffness.
@@ -71,6 +71,7 @@ export function stepAttachedSway(state, dt) {
   state.swayDynamics ??= new Map();
   state.extraBonds ??= new Set();
   state.newContactBonds ??= new Set();
+  state.separatedBonds ??= new Set();
   dt = clamp(dt,0,.045);
   state.swayClock = (state.swayClock ?? 0)+dt;
   if (state.reducedMotion) {
@@ -78,15 +79,20 @@ export function stepAttachedSway(state, dt) {
     state.swayDynamics.clear();
     state.extraBonds.clear();
     state.newContactBonds.clear();
+    state.separatedBonds.clear();
     return state.attachedPositions;
   }
-  // The entrance / descending-row visuals have their own interpolation.
-  // Restart physics when those board transforms end.
-  if (state.introTime > 0 || state.rowShift > .5) {
+  // The opening entrance has no pre-existing physical history.
+  if (state.introTime > 0) {
     state.attachedPositions.clear();
     state.swayDynamics.clear();
+    state.separatedBonds.clear();
     return state.attachedPositions;
   }
+  // A new ceiling row moves the same old bodies down together. Hold their
+  // remapped positions and velocities during the visual row transition;
+  // resuming physics must NOT start a fresh swing from zero.
+  if (state.rowShift > .5) return state.attachedPositions;
 
   cleanExtraBonds(state.board,state.extraBonds);
   const keys = [...state.board.keys()];
@@ -145,6 +151,13 @@ export function stepAttachedSway(state, dt) {
     }
     const before = new Map(keys.map(k=>[k,{x:bodies.get(k).x,y:bodies.get(k).y}]));
     resolveContacts(state.board,bodies,state.phase,state.layout,state.extraBonds,edges,state.newContactBonds);
+    // A bond that was already present in the resting hex graph is ALSO a
+    // new contact event if its bodies separated visibly and then touched.
+    // Initial hanging boards can stretch and settle before the user acts.
+    // Those passive re-touches are not earned matches. Once a shot has been
+    // fired, recontacts count as genuine physics-driven combo opportunities.
+    const recontactEvents = state.shots > 0 ? state.newContactBonds : new Set();
+    observeBondRecontacts(edges,bodies,state.separatedBonds,recontactEvents);
     // Project collision corrections back into velocities so collision does
     // not instantly vanish on the next physics substep.
     for (const key of keys) {

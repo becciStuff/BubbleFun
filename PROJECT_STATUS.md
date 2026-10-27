@@ -2,11 +2,12 @@
 
 **Updated:** 28 October 2026 (NZ)  
 **Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.8.2 (PR #14), spring gravity and sticky physical contacts  
-**Current review:** [PR #15](https://github.com/becciStuff/BubbleFun/pull/15) on `feature/contact-match-soft-bonds-083`  
-**Proposed version:** **v0.8.3**, mirrored in `version.json` and `package.json`  
-**Current goal:** Turn real, new sticky contacts into automatic same-colour
-3+ pops, and make connection threads look like soft stretched bonds.
+**Merged baseline:** v0.8.3 (PR #15), automatic contact matching and soft gel links  
+**Current review:** [PR #16](https://github.com/becciStuff/BubbleFun/pull/16) on `fix/full-contact-combos-row-continuity-084`  
+**Proposed version:** **v0.8.4**, mirrored in `version.json` and `package.json`  
+**Current goal:** Make contact combos pop the full connected colour group,
+including meaningful recontacts of existing links, and preserve physical swing
+when Arcade inserts a new ceiling row.
 
 Read [VISION.md](VISION.md), [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) and
 [REFACTORING.md](REFACTORING.md) before adding more features.
@@ -59,6 +60,26 @@ but didn't adequately reflect how the game looked and felt.
 - Gravity Lab remains removed. Physical coordinates remain authoritative
   across drawing, aiming, collisions and falling.
 
+## PR #16: user-reported fixes (v0.8.4)
+
+- A group of **six matching bubbles plus a new matching contact** must pop
+  *all seven*, receive full combo points, and run normal bomb/falling cascades.
+- The previous contact emitter only signalled **brand-new extra bonds**. It
+  ignored old lattice bonds stretching apart and coming back together.
+  `physical-bonds.js` now observes a meaningful separation and subsequent
+  real touch as a new match event. Mere microvibrations cannot retrigger
+  matching; settling the initial board before a shot cannot award free pops.
+- `src/row-physics.js` transfers all existing physics offsets/velocities,
+  live positions, sticky and pending bonds, separated-bond history and wobble
+  values to `row+1,col` when Arcade adds a ceiling row. No dynamics reset.
+- `sway.js` holds the transferred state during the visual row-slide and then
+  resumes force integration instead of restarting swing from the hex grid.
+- Handcrafted Puzzle solution tests accept legitimate early gravity-assisted
+  victories but disallow winning before the player acts.
+- Node tests include full 7-bubble scoring, grid-bond recontact, animation
+  continuity, sticky links and the momentum of old hanging groups on both
+  layouts. Browser regression checks exercise the same two scenarios.
+
 ## Architecture
 
 ```text
@@ -66,7 +87,8 @@ src/config.js             Dimensions and colour constants
 src/grid.js               Resting hex grid, optional dynamic neighbour links
 src/supports.js           Ceiling graph, anchor loads, future Extreme Gravity
 src/physical-bonds.js     Sticky contacts, link graph and collision response
-src/contact-matches.js    Pure 3+ match detection on newly created bonds
+src/contact-matches.js    Whole-colour 3+ detection on new contact events
+src/row-physics.js        Keep live positions, momentum and sticky bonds through row drops
 src/sway.js               Gravity, spring integration, local shot/blast momentum
 src/positions.js          Shared current physical bubble positions
 src/gravity.js            Detachment and falling physics, unwired Surge API
@@ -109,9 +131,10 @@ and ensure visual movement never disagrees with the real hit tests.
 - [x] New physically driven spring/contact code on the PR #14 branch.
 - [x] **CI on the PR #14 physics head:** 90 Node tests passed (0 failures), including a cantilever forming a new bond naturally and a projectile attaching near the actual displaced target (run 40574875781). Chromium smoke passed at 1300px/390px with reduced motion enabled and disabled (run 40574876036). Recheck on the final review commit.
 - [x] PR #14 merged: actual spring gravity and physical sticky bonds.
-- [ ] Review PR #15 after Node and browser CI confirms contact pop and Puzzle handling.
-- [ ] Inspect v0.8.3 on the deployed game — especially matching through contact,
-      bomb cascades and softer lines.
+- [x] PR #15 merged: contact-match lifecycle and gel link visuals.
+- [ ] Review PR #16, confirm final Node/browser CI and merge if happy.
+- [ ] Hands-on test a 6+1 colour contact and Arcade row-drop momentum on a live
+      desktop and phone. Automated tests are not a replacement for this.
 - [ ] After deploy, visually inspect screenshot-like side hangers, contacts,
       blast recoil and actual aim fairness on desktop and mobile.
 - [ ] Later: refine multi-anchor tension distribution, bond strength, richer
@@ -119,8 +142,10 @@ and ensure visual movement never disagrees with the real hit tests.
 
 ## Checkpoint handover
 
-> BubbleFun is at PR #15 for v0.8.3. Spring gravity, recoil and sticky
-> physical contacts are merged (PR #14). PR #15 adds automatic 3+ matching
-> when moving bubbles touch, plus translucent gel-like connection art.
-> Verify merge/CI before new work. Gravity Lab stays removed; the single
-> live-position map still governs aim, rendering and collisions.
+> BubbleFun is at PR #16 for v0.8.4 (review branch). Contact-driven
+> 3+ matching is merged on main at v0.8.3. PR #16 fixes missed matches when
+> an existing spring link separates and re-touches, and makes a *whole*
+> connected 6+1 colour group pop as a combo. A newly inserted Arcade roof
+> row must preserve the existing bodies and physical velocities rather than
+> restarting the swing. No Gravity Lab. Modular physics and shared live
+> hit positions remain hard requirements.

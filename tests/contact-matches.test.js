@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MOBILE_LAYOUT, DESKTOP_LAYOUT } from '../src/config.js';
-import { bondId } from '../src/physical-bonds.js';
+import { bondId, observeBondRecontacts } from '../src/physical-bonds.js';
 import { findContactMatches } from '../src/contact-matches.js';
 import { connectionThreadGeometry } from '../src/attachment-visuals.js';
 import { initialShooter, initialPuzzle, resolveContactMatches, stepGame } from '../src/game.js';
@@ -100,6 +100,53 @@ test('multiple fresh contacts connecting one group cannot double-count the same 
   assert.equal(groups.length,1);
   assert.equal(groups[0].length,3);
 });
+
+for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
+  test(`six already-connected blues + one swinging blue all burst, with combo scoring (${layout.columns})`, () => {
+    const state = initialShooter(() => .4, layout);
+    const six = ['1,2','2,2','3,2','3,1','4,1','4,2'];
+    state.board = new Map([
+      ['0,2','green'], ...six.map(k=>[k,'blue']),
+      ['0,6','pink'],['1,6','yellow'],['2,6','blue'],
+    ]);
+    state.bombs.clear();
+    const bond = bondId('2,2','2,6');
+    // This is the swinging leaf arriving at a *whole* connected colour group.
+    state.extraBonds.add(bond);
+    state.newContactBonds.add(bond);
+    state.comboLevel = 1; // previous match in the same chain
+    const oldScore = state.score;
+    assert.equal(resolveContactMatches(state), 7);
+    for (const k of [...six, '2,6']) assert.equal(state.board.has(k), false,
+      `connected blue ${k} must also burst, not just the pair that touched`);
+    assert.equal(state.lastPop, 7);
+    assert.equal(state.score - oldScore, 7 * 20 * 2, 'combo scores the full group');
+    assert.equal(state.comboLevel, 2);
+    assert.equal(state.shots, 0, 'swing-assisted match costs no turn');
+  });
+
+  test(`an old grid bond re-touching after real separation triggers the whole cluster (${layout.columns})`, () => {
+    const state = initialShooter(() => .4, layout);
+    const seven = ['0,2','1,2','2,2','3,2','3,1','4,1','4,2'];
+    state.board = new Map(seven.map(k=>[k,'blue']));
+    state.bombs.clear();
+    const bond = bondId('3,1','4,1'); // connected on the original hex grid
+    const edges = [['3,1','4,1']];
+    const positions = new Map([
+      ['3,1',{x:100,y:100}],['4,1',{x:100,y:160}],
+    ]);
+    observeBondRecontacts(edges, positions, state.separatedBonds, state.newContactBonds);
+    assert.equal(state.separatedBonds.has(bond), true);
+    positions.get('4,1').y = 142; // bubble surfaces meet again
+    observeBondRecontacts(edges, positions, state.separatedBonds, state.newContactBonds);
+    assert.equal(state.newContactBonds.has(bond), true,
+      'already bonded neighbours still report a NEW physical touch');
+    assert.equal(resolveContactMatches(state), 7);
+    assert.equal(state.board.size, 0);
+    assert.equal(state.score, 140);
+    assert.equal(state.shots, 0);
+  });
+}
 
 test('gel bonds render only the exposed gap and curve rather than connecting bubble centres',()=>{
   assert.equal(connectionThreadGeometry({x:20,y:20},{x:62,y:20}),null,

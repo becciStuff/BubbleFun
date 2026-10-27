@@ -1,7 +1,7 @@
 # BubbleFun — gravity physics and gameplay
 
-**Current review milestone: v0.8.3 — sticky contacts can trigger automatic
-match-three and connection graphics look elastic.** No Gravity Lab or separate
+**Current review milestone: v0.8.4 — full matching groups on re-contact
+and continuous physical motion across ceiling-row insertion.** No Gravity Lab or separate
 play style.
 
 ## Non-negotiable behaviour
@@ -36,7 +36,8 @@ config.js               Board dimensions and tuning
 grid.js                 Hex slots, ordinary + sticky connectivity and hit tests
 supports.js             Roof support analysis, weak bonds and overload planning
 physical-bonds.js       Spring graph, collision resolution and sticky new links
-contact-matches.js      Pure newly-joined 3+ same-colour detection
+contact-matches.js      Pure full-component 3+ detection on new/re-contacts
+row-physics.js          Transfer moving bodies, momentum and bonds on row insertion
 sway.js                 Downward gravity, spring forces, damping and hit impulses
 positions.js            One live position lookup for all systems
 gravity.js              Detachment, falling bodies and optional Surge API
@@ -108,6 +109,34 @@ Puzzle solutions may legitimately finish in fewer shots via physical
 contacts. Test the known routes as **upper bounds** and ensure no Puzzle
 wins before the player acts.
 
+## v0.8.4: whole groups and real row-drop continuity
+
+An extra sticky bond creating a **3+ same-colour cluster** already triggered
+match-three, but an existing hex-neighbour bond stretching apart and touching
+again was ignored. Physics now remembers bonds that separated by a meaningful
+amount and emits a *new contact event* when they physically reconnect.
+That event uses the **full colour-connected component**. Six connected blue
+bubbles plus a seventh contacting blue bubble remove all seven, with combo
+points, matched bombs and the usual falling cascade.
+
+Tiny oscillations do not count as separations. Passive spring settling before
+the player has fired a shot must not generate unearned re-contact pops.
+Physical bonds genuinely formed with other bubbles retain their usual match
+behaviour. Puzzle regression checks allow early *legitimate* wins but do not
+allow spontaneous completion before play.
+
+On Arcade ceiling-row insertion, old bubble identities shift from `row,col`
+to `row+1,col` with the phase flip. `row-physics.js` remaps
+`attachedPositions`, velocity/offset data, old/new sticky bonds, stretch
+history and wobble state without resetting them. During `rowShift`,
+`sway.js` **pauses integration without erasing physical state**. Rendering
+offsets the remapped positions by the temporary visual slide so old bubbles
+remain in the same on-screen place at the beginning of the drop. When the
+animation ends, springs react to the new ceiling while preserving momentum.
+
+Both rules are tested on desktop and mobile layouts; actual gameplay feedback
+is still required for the visual feel.
+
 ## Limits and what to tune next
 
 This is a browser-friendly elastic approximation, **not** a complete
@@ -146,5 +175,6 @@ are separate; passing automation is not proof of perfectly tuned game feel.
 - PR #13: bounded static sag and explosion impulses.
 - **PR #14 / v0.8.2: actual force-driven motion and sticky contacts.**
 - **PR #15 / v0.8.3: automatic 3+ pops from new contacts and soft gel links.**
+- **PR #16 / v0.8.4: full 6+1 combos on re-contact and continuous row-drop physics.**
 - Future: tune mass, elastic deformation, contact constraints, per-bond
   strength, earned in-game Extreme Gravity, Fizzlings and level progression.

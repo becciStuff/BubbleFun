@@ -158,6 +158,46 @@ try {
       assert.deepEqual(autoMatch,{bond:true,score:60,shots:0,removed:true,event:'pop'},
         'newly touching same-colour bubbles must pop 3+ and score automatically');
 
+      // Full real-colour component match (six blues + one newly touching)
+      // and uninterrupted swing when a new roof row enters.
+      const fixes = await page.evaluate(async () => {
+        const [{ initialShooter, resolveContactMatches, descendShooter, stepGame },
+          { MOBILE_LAYOUT, DESKTOP_LAYOUT, ROW_HEIGHT },
+          { shooterPosition }, { bondId }] = await Promise.all([
+          import('./src/game.js'), import('./src/config.js'),
+          import('./src/grid.js'), import('./src/physical-bonds.js'),
+        ]);
+        const layout = innerWidth >= 900 ? DESKTOP_LAYOUT : MOBILE_LAYOUT;
+        const state = initialShooter(() => .12, layout);
+        const six = ['1,2','2,2','3,2','3,1','4,1','4,2'];
+        state.board = new Map([
+          ['0,2','green'], ...six.map(key => [key,'blue']),
+          ['0,6','pink'],['1,6','yellow'],['2,6','blue'],
+        ]);
+        state.bombs.clear();
+        const link = bondId('2,2','2,6');
+        state.extraBonds.add(link); state.newContactBonds.add(link);
+        state.comboLevel = 1;
+        const popped = resolveContactMatches(state);
+        const remaining = [...six,'2,6'].filter(key => state.board.has(key)).length;
+        const score = state.score;
+
+        const drop = initialShooter(() => .12, layout);
+        const base = shooterPosition(2,3,drop.phase,layout);
+        drop.attachedPositions.set('2,3',{x:base.x+13,y:base.y+6});
+        drop.swayDynamics.set('2,3',{x:13,y:6,vx:72,vy:-35});
+        const oldX=drop.attachedPositions.get('2,3').x;
+        const oldY=drop.attachedPositions.get('2,3').y;
+        descendShooter(drop, () => .12);
+        const samePlace = Math.abs(drop.attachedPositions.get('3,3').y - drop.rowShift - oldY) < 1e-7 &&
+          drop.attachedPositions.get('3,3').x === oldX;
+        stepGame(drop,.045); // still animating new row
+        const momentum = drop.swayDynamics.get('3,3')?.vx;
+        return {popped,remaining,score,samePlace,momentum};
+      });
+      assert.deepEqual(fixes,{popped:7,remaining:0,score:280,samePlace:true,momentum:72},
+        'entire connected colour group pops and descending rows preserve live motion');
+
       // Puzzles are the second real gameplay route — not another lab.
       await page.locator('[data-play="puzzle"]').click();
       assert.match(await page.locator('#game-title').textContent(), /Puzzle/);
