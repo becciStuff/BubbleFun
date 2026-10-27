@@ -114,7 +114,11 @@ try {
           ]);
         const layout = innerWidth>=900 ? DESKTOP_LAYOUT : MOBILE_LAYOUT;
         const s=initialShooter(()=>.42,layout);
-        s.board=new Map(['0,2','1,2','2,2','0,6','1,6','2,6'].map(k=>[k,'pink']));
+        // Mixed colours: the new contact supports a bubble but cannot pop it.
+        s.board=new Map([
+          ['0,2','blue'],['1,2','pink'],['2,2','green'],
+          ['0,6','yellow'],['1,6','blue'],['2,6','pink'],
+        ]);
         s.reducedMotion=false;
         s.bombs.clear();
         const from=shooterPosition(2,2,0,layout),to=shooterPosition(2,6,0,layout);
@@ -128,6 +132,31 @@ try {
       });
       assert.deepEqual(contact,{stuck:true,attached:true},
         'real bubble-to-bubble contact creates a load-bearing connection');
+
+      // Browser proof of the NEW feature: physics collision -> sticky bond
+      // -> automatic same-colour match -> normal score and pop (no shot fired).
+      const autoMatch = await page.evaluate(async () => {
+        const [{initialShooter,stepGame},{MOBILE_LAYOUT,DESKTOP_LAYOUT},
+          {shooterPosition},{bondId}] = await Promise.all([
+          import('./src/game.js'),import('./src/config.js'),
+          import('./src/grid.js'),import('./src/physical-bonds.js'),
+        ]);
+        const layout=innerWidth>=900?DESKTOP_LAYOUT:MOBILE_LAYOUT;
+        const s=initialShooter(()=>.4,layout);
+        s.board=new Map([
+          ['0,2','blue'],['1,2','pink'],['2,2','pink'],
+          ['0,6','blue'],['1,6','blue'],['2,6','pink'],
+        ]);
+        s.bombs.clear();
+        const a=shooterPosition(2,2,0,layout),b=shooterPosition(2,6,0,layout);
+        s.swayDynamics.set('2,2',{x:b.x-a.x-41.2,y:0,vx:0,vy:0});
+        stepGame(s,.014);
+        return {bond:s.extraBonds.has(bondId('2,2','2,6')),
+          score:s.score,shots:s.shots,removed:['1,2','2,2','2,6'].every(k=>!s.board.has(k)),
+          event:s.lastEvent};
+      });
+      assert.deepEqual(autoMatch,{bond:true,score:60,shots:0,removed:true,event:'pop'},
+        'newly touching same-colour bubbles must pop 3+ and score automatically');
 
       // Puzzles are the second real gameplay route — not another lab.
       await page.locator('[data-play="puzzle"]').click();
