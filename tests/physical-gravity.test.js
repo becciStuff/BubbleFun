@@ -6,7 +6,7 @@ import { bondEdges, bondId, resolveContacts, cleanExtraBonds } from '../src/phys
 import { findDetachedBubbles } from '../src/gravity.js';
 import { stepAttachedSway } from '../src/sway.js';
 import { bubblePosition } from '../src/positions.js';
-import { initialShooter } from '../src/game.js';
+import { initialShooter, stepGame } from '../src/game.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const makeState=(layout,cells)=>{
@@ -96,7 +96,31 @@ test('a freely sagging cantilever can collide and form a NEW bond naturally',()=
   assert.ok(state.board.has(a)&&state.board.has(b),'both endpoints are real attached bubbles');
 });
 
-test('without new impacts an attached structure actually comes to rest',()=>{
+test('a projectile attaches to a displaced bubble where it appears, not its stale grid centre',()=>{
+  const state=makeState(MOBILE_LAYOUT,['0,3','1,3','2,3','2,2']);
+  for(let i=0;i<75;i++) stepAttachedSway(state,.045);
+  const moved=bubblePosition(state,2,2);
+  const original=shooterPosition(2,2,0,state.layout);
+  assert.ok(distance(moved,original)>12);
+  const before=new Set(state.board.keys());
+  state.projectile={
+    x:moved.x-24, y:moved.y,
+    vx:0,vy:-10,colour:'purple',sparkleClock:0,
+  };
+  const score=state.score;
+  stepGame(state,.01);
+  assert.equal(state.status,'playing','a valid moving-bubble hit is not an unfair loss');
+  assert.equal(state.projectile,null,'the collision physically lands the shot');
+  const created=[...state.board.keys()].filter(k=>!before.has(k));
+  assert.equal(created.length,1,'normal matching uses a valid new grid cell');
+  const [r,c]=created[0].split(',').map(Number);
+  const actual=bubblePosition(state,r,c);
+  assert.ok(distance(actual,moved)<RADIUS*2+10,
+    'newly placed shot starts at its actual moving-target contact');
+  assert.equal(state.score,score,'single unmatched shot must not invent points');
+});
+
+test('without new impacts an attached structure actually comes to rest',()=>{test('without new impacts an attached structure actually comes to rest',()=>{
   const state=makeState(MOBILE_LAYOUT,['0,3','1,3','2,3','2,2']);
   for(let i=0;i<240;i++) stepAttachedSway(state,.045);
   const settled=bubblePosition(state,2,2);
