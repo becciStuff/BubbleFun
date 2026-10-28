@@ -20,6 +20,40 @@ try {
         'Lab UI and buttons must be entirely absent');
       assert.equal(await page.locator('#game-canvas').isVisible(), true);
 
+      // Both responsive play styles expose usable earned gravity controls.
+      assert.equal(await page.locator('#gravity-left').count(),1);
+      assert.equal(await page.locator('#gravity-right').count(),1);
+      assert.equal(await page.locator('#gravity-charge-value').textContent(),'0%');
+      assert.equal(await page.locator('#gravity-left').isDisabled(),true);
+      assert.equal(await page.locator('#gravity-right').isDisabled(),true);
+
+      const gravityShift = await page.evaluate(async () => {
+        const [{initialShooter,stepGame},{MOBILE_LAYOUT,DESKTOP_LAYOUT},
+          {awardGravityCharge,activateGravityShift,finishGravityTurn},
+          {bubblePosition}] = await Promise.all([
+            import('./src/game.js'),import('./src/config.js'),
+            import('./src/gravity-events.js'),import('./src/positions.js'),
+          ]);
+        const layout=innerWidth>=900?DESKTOP_LAYOUT:MOBILE_LAYOUT;
+        const board=()=>new Map([['0,3','pink'],['1,3','pink'],
+          ['2,3','blue'],['2,2','blue']]);
+        const normal=initialShooter(()=>.4,layout);
+        const shifted=initialShooter(()=>.4,layout);
+        for(const state of [normal,shifted]) {state.board=board();state.bombs.clear();}
+        awardGravityCharge(shifted,20,'pop');
+        const activated=activateGravityShift(shifted,1);
+        for(let i=0;i<15;i++) {stepGame(normal,.045);stepGame(shifted,.045);}
+        const diff=bubblePosition(shifted,2,2).x-bubblePosition(normal,2,2).x;
+        const warned=initialShooter(()=>.001,layout);
+        warned.shots=3;
+        const roll=finishGravityTurn(warned,()=>.001);
+        return {activated,diff,roll,warned:warned.gravityEvents.warning?.direction};
+      });
+      assert.equal(gravityShift.activated,true);
+      assert.ok(gravityShift.diff>3,'an earned shift must physically move actual bubble positions');
+      assert.equal(gravityShift.roll,'warning','a finished Arcade shot schedules a possible disturbance');
+      assert.equal(gravityShift.warned,-1);
+
       // Player action, not just a direct engine call: fire the Arcade launcher.
       const canvas = page.locator('#game-canvas');
       const bounds = await canvas.boundingBox();
