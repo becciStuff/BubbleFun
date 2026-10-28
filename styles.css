@@ -192,3 +192,24 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
   .score-cell:last-child strong { font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+/* Earned player control and warned instability: accessible on touch and desktop. */
+.gravity-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; padding:10px 12px; margin-bottom:9px; border-radius:13px; background:#e7ddf2; align-items:center; }
+.gravity-meter { min-width:0; display:grid; gap:3px; }
+.gravity-meter-heading { display:flex; justify-content:space-between; gap:8px; color:#70568f; font-size:10px; font-weight:900; letter-spacing:.5px; }
+.gravity-meter-heading strong { color:#55387d; }
+.gravity-instability-heading { margin-top:4px; }
+.gravity-meter-track { height:7px; overflow:hidden; background:#cab9dc; border-radius:999px; }
+.gravity-meter-track span { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#6e63d7,#b660da); }
+.gravity-meter-track.instability span { background:linear-gradient(90deg,#f6bd5d,#ef6581); }
+.gravity-actions { display:flex; gap:6px; }
+.gravity-shift-button { padding:10px 12px; border-radius:10px; border:1px solid #715399; background:#523578; color:white; font-size:12px; font-weight:900; white-space:nowrap; }
+.gravity-shift-button:enabled:hover { background:#7844a7; }
+.gravity-shift-button:disabled { cursor:not-allowed; opacity:.44; }
+.gravity-alert { margin-bottom:9px; border-radius:10px; padding:9px 12px; color:#45235a; font-size:12px; font-weight:900; background:#ffdd9a; text-align:center; }
+.gravity-alert[hidden] { display:none; }
+@media (max-width:500px) {
+  .gravity-controls { grid-template-columns:minmax(0,1fr); gap:8px; }
+  .gravity-actions { justify-content:stretch; }
+  .gravity-shift-button { flex:1; padding:9px 8px; }
+}
