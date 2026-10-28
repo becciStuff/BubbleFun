@@ -6,9 +6,41 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.5 limits gravity match triggering to newly merged colour groups, while preserving full combos and row continuity**, with no Gravity Lab in the UI.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.9.0 introduces earned directional Gravity Shifts and warned Arcade disturbances**, while retaining the stable normal gravity., with no Gravity Lab in the UI.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
+
+## v0.9.0 — Earned Gravity Shifts and warned random disturbances
+
+The next playable gravity layer is part of **Arcade and Puzzles**, not a
+separate Gravity Lab. **Normal spring gravity remains unchanged**; the
+shift temporarily adds a sideways force to the existing physical bodies.
+
+- **Earn charge** from real popped bubbles, bomb chains and gravity drops.
+  Once the **Gravity Charge** bar reaches 100%, use the visible
+  **↙ Shift / Shift ↘** buttons or the **A / D** keys to choose a left or
+  right gravity pull. Each shift lasts **2.4 seconds** and eases in/out.
+  The ceiling stays anchored and existing colour-contact matching still
+  drives real combos; shifts do **not** sever sticky links.
+- **Instability** increases as attached bubbles reach farther towards the
+  launcher. In **Arcade only**, after a completed shot (never during an
+  active aim), the game may schedule a directional disturbance. A warning
+  identifies its direction **one shot in advance**. The random roll is
+  evaluated once per completed turn, with a cooldown after an event.
+  Long, low chains therefore carry more risk *and* more opportunity.
+- **Handcrafted Puzzles** support earned, player-directed shifts but
+  deliberately have **no surprise disturbances**; existing solution
+  paths remain deterministic.
+- The two bars and directional buttons work on desktop and touch-sized
+  displays. With **reduced motion** enabled, directional shifts and
+  random events are disabled, matching the existing static spring policy.
+- The future, more dangerous **Extreme Gravity** ability (actual
+  overload/bond breaking) is **not** part of this release, and neither is
+  the separately agreed depth-based risk/reward scoring. Both remain in
+  the roadmap.
+- Implementation stays modular: `src/gravity-events.js` handles
+  charge/instability/warnings/timing, `src/sway.js` uses its current
+  force, and `src/game.js` owns turn boundaries and rewards.
 
 ## v0.8.5 — Only genuinely new colour groups pop
 
@@ -149,11 +181,11 @@ on desktop and mobile-sized screens.
 
 ## Release tracking
 
-**Current version: v0.8.5** on the correctly-scoped contact matches review branch. Gravity reacts to
+**Current version: v0.9.0** on the gravity-shift review branch. Gravity reacts to
 shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
 Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.8.5**, loading the number from
+The header badge reads **Version 0.9.0**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -161,9 +193,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.8.5 → 0.8.6
+npm run version:patch   # e.g. 0.9.0 → 0.9.1
 # or
-npm run version:minor   # e.g. 0.8.5 → 0.9.0
+npm run version:minor   # e.g. 0.9.0 → 0.10.0
 npm test
 ```
 
@@ -241,6 +273,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/physical-bonds.js` — contact detection, sticky bonds and collision separation
 - `src/contact-matches.js` — whole-colour 3+ match detection from newly touching bonds
 - `src/row-physics.js` — preserve moving bodies and bonds as the ceiling descends
+- `src/gravity-events.js` — charge, risk, fair warned disturbances and directional shift force
 - `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
 - `src/attachment-visuals.js` — subtle glass-like links between live bubble centres
 - `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
@@ -259,6 +292,7 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/physical-gravity.test.js` — force-driven sag, contact adhesion and matching
 - `tests/contact-matches.test.js` — 3+, whole-colour seven-bubble combos, bomb/Puzzle integration, softer bond geometry
 - `tests/row-physics.test.js` — positions, momentum and sticky bond continuity during Arcade row drops
+- `tests/gravity-events.test.js` — earned left/right force, warning timing, risk, cooldown, puzzle fairness and reduced motion
 - `tests/explosion-motion.test.js` — survivor recoil and damping
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
