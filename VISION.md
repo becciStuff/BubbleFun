@@ -60,6 +60,45 @@ We should prototype just a few distinctive powers first, then expand after playt
 3. **Combos and rescues:** More impressive collapses and successful rescues should have clear score feedback, with well-defined multipliers and sensible caps.
 4. **Fair comparison:** If we add leaderboards or ranked challenges, consider tracking assisted and unassisted results separately.
 
+### Agreed direction: depth-based risk-versus-reward scoring
+
+**Design intent (not implemented yet):** The nearer a bubble is to the bottom
+danger zone when it is popped or detached, the **more points it should be
+worth**. Keeping a long hanging chain alive and letting it grow lower should
+create a meaningful strategic choice:
+
+- **Play safe:** pop smaller groups high up before the board becomes dangerous;
+  earn reliable but lower points.
+- **Take a risk:** allow a hanging structure to extend farther toward the
+  launcher, then cut its support or connect matching colours and clear a large
+  chain for a **substantially bigger score**. Wait too long and risk game over.
+- **Reward skillful release:** long dangling lines, deep groups, full-colour
+  contact combos and gravity cascades should feel especially satisfying.
+  A dramatic collapse from a single well-aimed upper support shot can pay off.
+
+**Future implementation principles:**
+1. Reward **each removed bubble's own depth** on the live playfield, not just
+   the height of the shot or the average row of a cluster. A deep bubble
+   removed by a match or by losing its support should both earn a depth bonus.
+2. Measure depth when a bubble **leaves the attached board**, using the same
+   position data as rendering/hit detection. For falling objects, snapshot
+   that depth at detachment so time spent falling to the floor cannot inflate
+   the reward. Keep scores stable across screen sizes.
+3. Multiply fairly with existing **group-size / combo / gravity bonuses**,
+   and show a readable reward callout (for example, *DEEP CLEAR* or
+   *RISK BONUS*) when a big hanging line falls.
+4. Award each bubble's reward **once** across pop, bombs, detachments and
+   subsequent floor bursts. Put the calculation in a small scoring module,
+   not a giant `game.js` rewrite.
+5. Preserve Puzzle solvability and fair comparison on mobile and desktop.
+   Define clear caps and tune the points against the danger of reaching the
+   launcher; don't reward simply losing or idling.
+
+**Exact formula, thresholds and multipliers remain open to playtesting.**
+Possible starting experiment: a gradual depth multiplier from roughly
+1× near the ceiling up to about 2× near the danger line, *before* combo
+bonuses. These are illustrative numbers, **not agreed balance values**.
+
 Exact bonus percentages, multipliers and coin rewards are **not decided yet**.
 
 ## Gravity: the signature mechanic

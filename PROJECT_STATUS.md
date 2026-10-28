@@ -2,9 +2,9 @@
 
 **Updated:** 28 October 2026 (NZ)  
 **Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.8.4 (PR #16), full colour-group combos and row-drop momentum continuity  
-**Current review:** [PR #17](https://github.com/becciStuff/BubbleFun/pull/17) on `fix/only-new-colour-merges-085`  
-**Proposed version:** **v0.8.5**, mirrored in `version.json` and `package.json`  
+**Merged baseline:** v0.8.5 (PR #17), correct colour matching only when new colour groups join  
+**Current review:** docs-only PR for the future depth-scoring requirement (no gameplay changes)  
+**Current game version:** **v0.8.5** (this documentation change does not bump it)  
 **Current goal:** Fix overly aggressive automatic popping. Only a real new
 physical contact joining **previously separate same-colour groups** may
 trigger match-three. Previously connected groups must not explode because
@@ -84,6 +84,27 @@ through other same-colour paths.
   redundant bond, and ordinary post-shot settling. Existing seven-bubble
   matches, bombs, puzzle solvability and row momentum must keep passing.
 
+## Future scoring milestone: depth-based risk and reward
+
+**Agreed player experience — recorded in [VISION.md](VISION.md), not yet
+implemented:** BubbleFun should reward popping or dropping bubbles **nearer
+the bottom danger line** more heavily than safely clearing bubbles near the
+top. A player may choose to keep a long dangling chain alive for higher
+potential points, at the genuine risk of allowing the board to reach the
+launcher and losing.
+
+- Each popped or detached bubble contributes points based on **its depth
+  at the moment it leaves the board**. A low-hanging chain severed with a
+  clever top shot could be a spectacular high-scoring gravity cascade.
+- Long groups, automatic colour-contact matches and already-planned combo
+  rewards should combine with a **bounded depth bonus**, with clear feedback
+  such as *DEEP CLEAR*. Avoid double-counting popped and falling bubbles.
+- Exact depth formula / multipliers are **not yet agreed**; tune for risk,
+  readability, fair mobile/desktop layouts and handcrafted Puzzles.
+- This is a **separate future scoring-design + implementation milestone**,
+  not part of the current normal-gravity physics or Extreme Gravity prototype.
+  Preserve the current well-received physics without unnecessary changes.
+
 ## Architecture
 
 ```text
@@ -140,6 +161,8 @@ and ensure visual movement never disagrees with the real hit tests.
 - [ ] Review PR #17 after final Node/browser CI; merge when satisfied.
 - [ ] Hands-on test a 6+1 colour contact and Arcade row-drop momentum on a live
       desktop and phone. Automated tests are not a replacement for this.
+- [ ] Plan and implement depth-risk scoring as a separate future PR, with
+      per-bubble depth snapshots, large-chain bonuses and scoring regressions.
 - [ ] After deploy, visually inspect screenshot-like side hangers, contacts,
       blast recoil and actual aim fairness on desktop and mobile.
 - [ ] Later: refine multi-anchor tension distribution, bond strength, richer
@@ -147,10 +170,14 @@ and ensure visual movement never disagrees with the real hit tests.
 
 ## Checkpoint handover
 
-> BubbleFun is at PR #17 (v0.8.5) for correcting overly eager contact
-> matches. Previously connected same-colour bubbles must NOT burst when an
-> existing spring bond bounces or a redundant new link forms inside their
-> existing group. Actual newly joined colour components with 3+ members
-> must still pop the entire group, e.g. six blue + one new blue = seven pops.
-> PR #16's continuous row-drop momentum remains intact. Keep modular physics,
-> the real Arcade/Puzzle play styles, and shared moving hitboxes.
+> Main BubbleFun gameplay is v0.8.5 (PR #17 merged). The user has confirmed
+> the automatic colour-contact matching and physics are now working well:
+> do not keep polishing normal gravity without a specific problem.
+>
+> **Remember the future scoring requirement:** Popping or detaching bubbles
+> *closer to the bottom* should award more points, so keeping long hanging
+> lines alive is a deliberate high-risk/high-reward decision. A long chain
+> cleared by an upper support shot should be worth much more than small safe
+> pops near the roof. See the detailed design in VISION.md > Scoring and skill.
+> No formula or release milestone has been approved; don't present it as
+> implemented. Extreme Gravity and Fizzling rescue are also future work.
