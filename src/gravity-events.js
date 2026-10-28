@@ -44,7 +44,7 @@ export function awardGravityCharge(state, bubbles, kind = 'pop') {
 export function canActivateGravityShift(state) {
   const e=state.gravityEvents;
   return !!e && state.status === 'playing' && state.mode === 'shooter' &&
-    !state.reducedMotion && e.charge >= 100 && !e.activeDirection &&
+    !state.reducedMotion && e.charge >= 100 && !e.activeDirection && !e.warning &&
     !state.projectile && !state.pendingBombs.length && !state.falling.length &&
     !state.introTime && state.rowShift <= .5;
 }
