@@ -2,13 +2,12 @@
 
 **Updated:** 28 October 2026 (NZ)  
 **Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.8.5 (PR #17), correct colour matching only when new colour groups join  
-**Current review:** docs-only PR for the future depth-scoring requirement (no gameplay changes)  
-**Current game version:** **v0.8.5** (this documentation change does not bump it)  
-**Current goal:** Fix overly aggressive automatic popping. Only a real new
-physical contact joining **previously separate same-colour groups** may
-trigger match-three. Previously connected groups must not explode because
-their springs stretch or bounce.
+**Merged baseline:** v0.8.5 (PR #17), stable spring physics and correctly scoped contact matching  
+**Current review:** [PR #19](https://github.com/becciStuff/BubbleFun/pull/19) on `feature/gravity-shifts-charge-instability-090`  
+**Proposed version:** **v0.9.0** in `version.json` and `package.json`  
+**Current goal:** Ship player-earned left/right Gravity Shifts and warned,
+risk-sensitive random environmental shifts in the actual game, without
+rewriting the well-tested normal gravity physics or breaking puzzle fairness.
 
 Read [VISION.md](VISION.md), [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) and
 [REFACTORING.md](REFACTORING.md) before adding more features.
@@ -105,6 +104,33 @@ launcher and losing.
   not part of the current normal-gravity physics or Extreme Gravity prototype.
   Preserve the current well-received physics without unnecessary changes.
 
+## PR #19: Gravity Charge and Instability (v0.9.0)
+
+User requested **both player agency and random challenge**. We therefore
+ship two related but independent triggers inside normal Arcade/Puzzles:
+
+- **Player trigger:** Popped bubbles, bomb chains and gravity cascades
+  earn charge. Once full, the player chooses a **left** or **right**
+  2.4-second directional gravity pull with buttons or A/D.
+- **Environmental trigger:** Arcade alone evaluates a once-per-completed-shot
+  random event after shot 3. The instability-weighted chance climbs
+  with longer and lower hanging structures. The game warns **which direction**
+  will pull **after the next shot**, never surprises the player mid-aim,
+  and has cooldown between disturbances.
+- The actual sideways force is applied to the existing spring physics.
+  Pinned roof anchors, live aiming hitboxes, real colour-contact merging,
+  bomb cascades, normal downward gravity, and row-drop momentum are all
+  preserved. Directional shifts **never snap bonds**.
+- The existing three handcrafted Puzzles have **no random disturbances**
+  so their known solutions remain fair; earned manual shifts work in
+  the same gameplay system. Reduced motion disables shift physics.
+- Mobile/desktop controls and warnings added, plus Node physics and
+  browser smoke regressions. Separate `src/gravity-events.js` owns charge,
+  risk, duration, warning and cooldown; no Gravity Lab.
+- **Not implemented:** depth-based scoring rewards (recorded in VISION.md),
+  Extreme Gravity bond-breaking, scripted puzzle storms, Fizzlings and shop.
+  Those remain separate future milestones.
+
 ## Architecture
 
 ```text
@@ -114,6 +140,7 @@ src/supports.js           Ceiling graph, anchor loads, future Extreme Gravity
 src/physical-bonds.js     Sticky contacts, link graph and collision response
 src/contact-matches.js    Whole-colour 3+ detection on new contact events
 src/row-physics.js        Keep live positions, momentum and sticky bonds through row drops
+src/gravity-events.js     Earned shift, actual depth-based instability, warnings/cooldowns
 src/sway.js               Gravity, spring integration, local shot/blast momentum
 src/positions.js          Shared current physical bubble positions
 src/gravity.js            Detachment and falling physics, unwired Surge API
@@ -158,7 +185,8 @@ and ensure visual movement never disagrees with the real hit tests.
 - [x] PR #14 merged: actual spring gravity and physical sticky bonds.
 - [x] PR #15 merged: contact-match lifecycle and gel link visuals.
 - [x] PR #16 merged (v0.8.4); continuous new-row gravity works.
-- [ ] Review PR #17 after final Node/browser CI; merge when satisfied.
+- [x] PR #17 merged (v0.8.5) and user confirmed stable matches.
+- [ ] Review PR #19 (v0.9.0): earned left/right shifts and warned random Arcade events.
 - [ ] Hands-on test a 6+1 colour contact and Arcade row-drop momentum on a live
       desktop and phone. Automated tests are not a replacement for this.
 - [ ] Plan and implement depth-risk scoring as a separate future PR, with
@@ -170,14 +198,14 @@ and ensure visual movement never disagrees with the real hit tests.
 
 ## Checkpoint handover
 
-> Main BubbleFun gameplay is v0.8.5 (PR #17 merged). The user has confirmed
-> the automatic colour-contact matching and physics are now working well:
-> do not keep polishing normal gravity without a specific problem.
+> Main remains stable v0.8.5; PR #19 proposes v0.9.0 directional gravity.
+> **Do not touch normal spring gravity without a concrete bug.** The user
+> confirmed gravity and newly joined colour-group matching feel really good.
 >
-> **Remember the future scoring requirement:** Popping or detaching bubbles
-> *closer to the bottom* should award more points, so keeping long hanging
-> lines alive is a deliberate high-risk/high-reward decision. A long chain
-> cleared by an upper support shot should be worth much more than small safe
-> pops near the roof. See the detailed design in VISION.md > Scoring and skill.
-> No formula or release milestone has been approved; don't present it as
-> implemented. Extreme Gravity and Fizzling rescue are also future work.
+> User wants Gravity Shifts to be (a) earned and triggered intentionally and
+> (b) occasionally random and challenging. The proposed Arcade system warns
+> one shot ahead and increases risk when the hanging board grows lower.
+> Puzzles permit earned shifts but avoid random events in existing handcrafted
+> levels. Shifts act through the same live-position spring solver; no new Lab.
+> Extreme Gravity *bond breaking* and the future **depth-weighted risk/reward
+> scoring** remain separate forthcoming features. No merge by assistant.
