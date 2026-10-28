@@ -187,23 +187,23 @@ Order is agreed in principle; these are **priorities, not promised release numbe
 | **1** | Gravity, swaying connected structures and smoother animation | Make the bubbles feel like a living physical world. |
 | **2** | Earned Gravity Shifts and warned environmental disturbances (**v0.9.0**) | Let players control a sideways pull while adding fair, risky surprises. |
 | **3** | Prototype Fireball, horizontal/vertical blasts and Gravity Surge | Give players meaningful tactical powers. |
-| **3** | Guide-free rewards and different-colour bonuses | Reward skill and clever cascades. |
-| **4** | Fizzling character designs, rescue animations and family story | Give the game identity and heart. |
-| **5** | Earnable coins and the Fizz Shop | Add an enjoyable, fair reward loop. |
-| **6** | Worlds, richer puzzles, boss encounters and sustained visual polish | Build an adventure worth coming back to. |
+| **4** | Guide-free rewards and different-colour bonuses | Reward skill and clever cascades. |
+| **5** | Fizzling character designs, rescue animations and family story | Give the game identity and heart. |
+| **6** | Earnable coins and the Fizz Shop | Add an enjoyable, fair reward loop. |
+| **7** | Worlds, richer puzzles, boss encounters and sustained visual polish | Build an adventure worth coming back to. |
 
 **Design work can overlap implementation:** We can sketch Fizzlings, story themes and bosses early, even if the core physics and abilities are built first.
 
 ## Current prototype baseline
 
-As of **v0.5**, BubbleFun already has:
+As of **v0.9.0** (PR #19 review branch), BubbleFun has:
 
 - Responsive portrait/landscape Bubble Shooter.
 - Arcade mode and three handcrafted puzzles: Twin Towers, Heartbreaker and The Crown.
 - Matching, bombs, chained detonations, detached falling bubbles, basic particle effects and optional sound.
 - Browser-local high scores; no accounts, real-money payments or adverts.
 
-The richer connected-cluster gravity, special shop, Fizzling rescue story and boss levels described in this document are **future ideas, not features already shipped**.
+Normal spring-connected gravity and genuine sticky contact matches are shipped in v0.8.x. Directional Gravity Shifts are proposed in v0.9.0 (PR #19). Extreme Gravity bond breaking, the depth-risk scoring bonuses, special shop, Fizzling rescue story and bosses are still **future designs**, not implemented.
 
 ## Open decisions for our next design conversations
 
