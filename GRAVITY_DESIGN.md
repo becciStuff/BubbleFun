@@ -1,7 +1,7 @@
 # BubbleFun — gravity physics and gameplay
 
-**Current review milestone: v0.9.1 — rare bubble-hosted gravity pulses
-and selected Gravity Orb special shots. Normal gravity remains untouched.** No Gravity Lab or separate
+**Current review milestone: v0.8.5 — only genuinely new colour-group merges
+may trigger gravity-assisted matches.** No Gravity Lab or separate
 play style.
 
 ## Non-negotiable behaviour
@@ -38,8 +38,7 @@ supports.js             Roof support analysis, weak bonds and overload planning
 physical-bonds.js       Spring graph, collision resolution and sticky new links
 contact-matches.js      Pure full-component 3+ detection on new/re-contacts
 row-physics.js          Transfer moving bodies, momentum and bonds on row insertion
-gravity-events.js       Charge, instability, warned random triggers, directional pull
-sway.js                 Downward gravity plus optional real directional shift, springs
+sway.js                 Downward gravity, spring forces, damping and hit impulses
 positions.js            One live position lookup for all systems
 gravity.js              Detachment, falling bodies and optional Surge API
 attachment-visuals.js   Soft curved gel between bubble rims only when stretched
@@ -161,34 +160,6 @@ that had already been connected before the alleged contact.
   sticky physics contacts and continuous row-drop velocities stay intact.
 - Handcrafted Puzzles and regular Arcade must not score or win from
   merely relaxing previously connected bonds.
-
-## v0.9.1: rare, bubble-hosted events and selected special shots
-
-The user rejected v0.9.0's permanent meters, per-shot random rolls
-and A/D controls. Those are **not** desired gameplay mechanics.
-
-- **Hosted event:** The engine marks a very rare ordinary Arcade bubble
-  with a recognisable gravity rune. It stays physically unchanged until
-  popped by a matching group, hit in a bomb blast, or detached and
-  shattered on the floor. The host identity is carried in the same
-  board-cell map through row shifts and in the falling body after detach.
-  **Only its break event** may trigger a temporary gravity pulse.
-- **Event types:** LEFT or RIGHT horizontal acceleration, or heavier
-  DOWNWARD acceleration, each 3.2 seconds with an eased beginning and
-  end. Only the real existing force integrator changes; moving hitboxes,
-  visual links, sticky contacts and matching continue to agree.
-- **Fired special:** Earning a large colour match or drop awards at most
-  one player-owned Gravity Orb. Only when owned can the player select
-  a left/right special for their **next normally aimed and fired
-  bubble**; its impact starts the shift. It respects normal shot/ammo
-  rules. No persistent shift controls or charging bars.
-- **Rare and fair:** Random host placement is 0.7% per eligible Arcade
-  spawn, with one visible host maximum. No per-frame or per-shot RNG
-  event rolling, and no random hosts in handcrafted Puzzle boards.
-  Reduced-motion mode keeps extra forces off.
-- **Separate future milestone:** Extreme Gravity that physically tears
-  overloaded bonds is not implemented. Risk/reward scoring for long
-  low-hanging chains is also preserved as a separate design task.
 
 ## Limits and what to tune next
 
