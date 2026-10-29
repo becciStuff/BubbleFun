@@ -21,6 +21,7 @@ Special-effect bubbles and player tools are **different systems**. Do not replac
 These belong to the playfield and are identifiable as special bubbles. The exact visual design, placement frequency and level progression are **TBD**.
 
 ### 2.1 Bomb Bubble
+COMPLETE
 
 - **Trigger:** The Bomb Bubble is destroyed / activated.
 - **Effect:** A radial explosion destroys other bubbles in its surrounding area.
