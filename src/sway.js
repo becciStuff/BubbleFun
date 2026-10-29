@@ -4,7 +4,6 @@
 import { RADIUS, PITCH } from './config.js';
 import { shooterPosition } from './grid.js';
 import { bondEdges, cleanExtraBonds, resolveContacts } from './physical-bonds.js';
-import { gravityEventForces } from './gravity-events.js';
 
 const GRAVITY = 395;           // Downward force, in pixels/s².
 const SPRING = 170;            // Adhesive bubble-to-bubble bond stiffness.
@@ -119,9 +118,7 @@ export function stepAttachedSway(state, dt) {
     for (const key of keys) {
       const body = bodies.get(key), f = forces.get(key);
       if (body.fixed) continue;
-      const eventForce = gravityEventForces(state);
-      f.ay += GRAVITY + eventForce.ay;
-      f.ax += eventForce.ax;
+      f.ay += GRAVITY;
       f.ax -= HOME*(body.x-rest.get(key).x);
     }
     for (const [a,b] of edges) {

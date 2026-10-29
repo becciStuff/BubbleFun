@@ -192,20 +192,3 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
   .score-cell:last-child strong { font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
-
-/* Only show special-shot controls after a large combo earns an orb. */
-.gravity-special-tray { margin-bottom:9px; padding:10px 12px; display:flex; gap:12px; align-items:center; justify-content:space-between; border-radius:13px; background:linear-gradient(110deg,#e4cff8,#ffe2eb); }
-.gravity-special-tray[hidden] { display:none; }
-.gravity-special-label { font-size:11px; font-weight:900; color:#5a337d; }
-.gravity-special-label small { display:block; margin-top:3px; font-size:10px; font-weight:700; color:#82609d; }
-.gravity-special-choices { display:flex; gap:5px; }
-.gravity-special-button { font-size:11px; font-weight:900; border-radius:10px; padding:10px; color:white; background:#6f4195; border:2px solid transparent; white-space:nowrap; }
-.gravity-special-button:hover { background:#8b51b3; }
-.gravity-special-button[aria-pressed="true"] { border-color:#f7ad51; background:#4b2b70; box-shadow:0 0 0 1px #f7ad51; }
-.gravity-alert { margin-bottom:9px; border-radius:10px; padding:9px 12px; color:#fff0cb; font-size:12px; font-weight:900; background:#5b367d; text-align:center; }
-.gravity-alert[hidden] { display:none; }
-@media(max-width:500px) {
-  .gravity-special-tray { flex-wrap:wrap; }
-  .gravity-special-choices { width:100%; }
-  .gravity-special-button { flex:1; }
-}

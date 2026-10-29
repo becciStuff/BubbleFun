@@ -1,7 +1,6 @@
 import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES } from './config.js';
 import { PUZZLES } from './puzzles.js';
-import { initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame, armGravityOrb } from './game.js';
-import { gravityEventLabel, canArmGravityOrb } from './gravity-events.js';
+import { initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame } from './game.js';
 import { draw } from './render.js';
 import { loadVersion } from './version.js';
 
@@ -48,7 +47,7 @@ function playSound(type) {
     if (audioContext.state === 'suspended') audioContext.resume();
     const now = audioContext.currentTime;
     const tones = {
-      fire: [280, 400, .08], land: [205, 140, .11], warning: [410, 630, .22],
+      fire: [280, 400, .08], land: [205, 140, .11],
       pop: [590, 950, .17], drop: [320, 190, .19],
       cascade: [430, 740, .24], burst: [310, 105, .25],
       chain: [245, 68, .37], surge: [310, 75, .46],
@@ -149,9 +148,9 @@ function updatePlayUI() {
     ? `Clear the glowing bomb targets in ${PUZZLES[puzzleIndex].shots} shots or fewer. The bubbles form a handcrafted pattern — look for a weak point and bring down whole sections.`
     : 'Match three or more colours. Watch hanging bubbles sway as you shoot, trigger bomb chains, and bring down unsupported clusters.');
   putText('tip-copy', puzzle
-    ? 'Clear the targets with careful matches. Big combos can earn a special Gravity Orb shot.'
-    : 'Watch for rare bubbles marked with a gravity swirl! Break one for a short surprise gravity event. Large matches earn selectable Gravity Orb shots.');
-  canvas.setAttribute('aria-label', `${puzzle ? PUZZLES[puzzleIndex].name + ' puzzle' : 'Bubble Shooter'} playfield. Rare marked bubbles trigger gravity events when they break. Aim with mouse or touch; arrow keys and Space also work.`);
+    ? 'You don’t need to clear every bubble. Break the supports or detonate the marked targets to solve the puzzle.'
+    : 'Hanging bubbles react to your shots. Those glowing bubbles are bombs — match their colour or trigger a chain.');
+  canvas.setAttribute('aria-label', `${puzzle ? PUZZLES[puzzleIndex].name + ' puzzle' : 'Bubble Shooter'} playfield. Attached bubbles sway naturally. Aim with mouse or touch; arrow keys and Space also work.`);
 }
 
 function reset() {
@@ -210,16 +209,6 @@ function updateUI() {
       : state.lastPop ? `${state.lastPop} popped! Keep going!`
       : playStyle === 'puzzle' ? `${state.bombs.size} bomb target${state.bombs.size===1?'':'s'} to clear` : 'Match 3+ — glowing bubbles are bombs!');
   putText('game-status', `✦ ${status}`);
-  const gravity=state.gravityEvents;
-  const tray=$('gravity-special-tray');
-  tray.hidden = (!gravity.orbs && !gravity.armed) || state.reducedMotion || state.status !== 'playing';
-  for(const [id,direction] of [['gravity-orb-left',-1],['gravity-orb-right',1]]) {
-    $(id).setAttribute('aria-pressed',String(gravity.armed===direction));
-    $(id).disabled = !canArmGravityOrb(state);
-  }
-  const alert=$('gravity-alert');
-  alert.hidden=!gravity.kind;
-  putText('gravity-alert',gravity.kind ? `✦ ${gravityEventLabel(state)} · ${gravity.remaining.toFixed(1)}s` : '');
   const overlay = $('result-overlay');
   const finished = state.status === 'won' || state.status === 'lost';
   overlay.classList.toggle('hidden', !finished);
@@ -235,15 +224,6 @@ function updateUI() {
 
 document.querySelectorAll('.mode-card').forEach(button => button.addEventListener('click', () => selectPlay(button.dataset.play)));
 document.querySelectorAll('.puzzle-choice').forEach(button => button.addEventListener('click', () => selectPuzzle(Number(button.dataset.puzzle))));
-for (const [id,direction] of [['gravity-orb-left',-1],['gravity-orb-right',1]]) {
-  $(id).addEventListener('click', () => {
-    if (armGravityOrb(state,direction)) {
-      announce(`Gravity Orb armed ${direction<0?'left':'right'}! Aim and fire your next bubble.`);
-      updateUI();
-      canvas.focus();
-    }
-  });
-}
 $('restart-button').addEventListener('click', reset);
 $('play-again-button').addEventListener('click', reset);
 $('next-puzzle-button').addEventListener('click', () => selectPuzzle(puzzleIndex + 1));

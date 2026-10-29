@@ -113,40 +113,6 @@ Attached bubbles should feel connected but not completely rigid:
 
 **Important engineering guardrail:** The collision and aiming rules must agree with what players see. If a cluster visibly swings away from a shot, the game should not secretly collide with its previous grid position. We may begin with modest constrained swaying before attempting full dynamic matching physics. Keep the simulation deterministic, understandable and fast on mobile.
 
-## v0.9.1 — Bubble-hosted Gravity Events and special-shot Gravity Orbs
-
-**Accepted interaction:** Gravity should not be another meter the player
-manages continuously. Events are unusual *things* tied to bubbles, like
-the existing bombs and future special shots.
-
-- **Rare, recognisable host:** An ordinary Arcade bubble has a very
-  small (0.7%) chance of being marked with a gravity swirl when added to
-  the board; no more than one hosted bubble is present at once.
-  **Only breaking that specific bubble** — matching it, hitting it with
-  a bomb or dropping it until it bursts on the floor — activates a
-  surprise gravity event. Time and shot count do **not** roll events.
-- **Temporary physical effect:** A host picks **LEFT**, **RIGHT**, or
-  **HEAVIER DOWNWARD** gravity for 3.2 seconds, then smoothly returns to
-  the unchanged spring/downward-gravity behaviour. The event is
-  visually labelled; actual bubble hitboxes and contacts move with it.
-- **Selected ability, not a permanent input:** Clearing a large matching
-  group or cascade can earn a **Gravity Orb**. Only when owned does the
-  power-up selector appear. Choose left or right, then **fire a special
-  marked bubble**. The chosen shift triggers *on shot impact*, consuming
-  the ability once. There is no A/D gravity control and no always-on
-  Gravity Charge/Instability UI.
-- **Fair levels:** Existing handcrafted Puzzles have no random hosts
-  (preserving solvable layouts) but can earn selected special shots.
-  Reduced-motion preference disables the extra gravity forces.
-- **Future:** Other event hosts, scripted special puzzle levels and
-  Extreme Gravity that can tear overstressed support links. The
-  separately agreed depth-based scoring bonus for risky deep clears
-  also remains future work.
-
-**v0.9.0 was a rejected experiment:** continuous charge/risk meters,
-per-shot random rolls and A/D directional controls were not the intended
-feature. Do not reintroduce those mechanics.
-
 ## Earn-only coin economy
 
 Players earn in-game coins for useful, skilled play:
@@ -186,25 +152,24 @@ Order is agreed in principle; these are **priorities, not promised release numbe
 | Priority | Work | Main goal |
 | --- | --- | --- |
 | **1** | Gravity, swaying connected structures and smoother animation | Make the bubbles feel like a living physical world. |
-| **2** | Rare Gravity Event host bubbles and selected Gravity Orb special shots (**v0.9.1**) | Make gravity an occasional physical surprise or earned fired ability. |
-| **3** | Prototype Fireball, horizontal/vertical blasts and Gravity Surge | Give players meaningful tactical powers. |
-| **4** | Guide-free rewards and different-colour bonuses | Reward skill and clever cascades. |
-| **5** | Fizzling character designs, rescue animations and family story | Give the game identity and heart. |
-| **6** | Earnable coins and the Fizz Shop | Add an enjoyable, fair reward loop. |
-| **7** | Worlds, richer puzzles, boss encounters and sustained visual polish | Build an adventure worth coming back to. |
+| **2** | Prototype Fireball, horizontal/vertical blasts and Gravity Surge | Give players meaningful tactical powers. |
+| **3** | Guide-free rewards and different-colour bonuses | Reward skill and clever cascades. |
+| **4** | Fizzling character designs, rescue animations and family story | Give the game identity and heart. |
+| **5** | Earnable coins and the Fizz Shop | Add an enjoyable, fair reward loop. |
+| **6** | Worlds, richer puzzles, boss encounters and sustained visual polish | Build an adventure worth coming back to. |
 
 **Design work can overlap implementation:** We can sketch Fizzlings, story themes and bosses early, even if the core physics and abilities are built first.
 
 ## Current prototype baseline
 
-As of **v0.9.1** (PR #20 review branch), BubbleFun has:
+As of **v0.5**, BubbleFun already has:
 
 - Responsive portrait/landscape Bubble Shooter.
 - Arcade mode and three handcrafted puzzles: Twin Towers, Heartbreaker and The Crown.
 - Matching, bombs, chained detonations, detached falling bubbles, basic particle effects and optional sound.
 - Browser-local high scores; no accounts, real-money payments or adverts.
 
-Normal spring-connected gravity and genuine sticky contact matches are shipped in v0.8.x. Rare hosted Gravity Events and selected, fired Gravity Orbs are proposed in v0.9.1 (PR #20), replacing the rejected v0.9.0 meters. Extreme Gravity bond breaking, the depth-risk scoring bonuses, special shop, Fizzling rescue story and bosses are still **future designs**, not implemented.
+The richer connected-cluster gravity, special shop, Fizzling rescue story and boss levels described in this document are **future ideas, not features already shipped**.
 
 ## Open decisions for our next design conversations
 
