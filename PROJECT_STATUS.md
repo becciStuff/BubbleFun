@@ -2,12 +2,10 @@
 
 **Updated:** 28 October 2026 (NZ)  
 **Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.8.5 (PR #17), stable spring physics and correctly scoped contact matching  
-**Current review:** [PR #19](https://github.com/becciStuff/BubbleFun/pull/19) on `feature/gravity-shifts-charge-instability-090`  
-**Proposed version:** **v0.9.0** in `version.json` and `package.json`  
-**Current goal:** Ship player-earned left/right Gravity Shifts and warned,
-risk-sensitive random environmental shifts in the actual game, without
-rewriting the well-tested normal gravity physics or breaking puzzle fairness.
+**Merged baseline:** v0.9.0 (PR #19), *superseded* always-on shift controls.  
+**Current review:** [PR #20](https://github.com/becciStuff/BubbleFun/pull/20) on `fix/rare-gravity-hosts-and-special-orbs-091`  
+**Proposed version:** **v0.9.1**; the active branch removes that mistaken UI and implements rare bubble-hosted events and fired player specials.  
+**Current goal:** Gravity should normally behave exactly as in v0.8.5. Only rare, visibly marked bubbles or explicitly selected earned special shots should temporarily alter the real spring forces.
 
 Read [VISION.md](VISION.md), [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) and
 [REFACTORING.md](REFACTORING.md) before adding more features.
@@ -104,7 +102,35 @@ launcher and losing.
   not part of the current normal-gravity physics or Extreme Gravity prototype.
   Preserve the current well-received physics without unnecessary changes.
 
-## PR #19: Gravity Charge and Instability (v0.9.0)
+## PR #20: correct the special-event design (v0.9.1)
+
+**User feedback:** v0.9.0's permanently visible Gravity Charge/
+Instability bars and ordinary per-shot random events missed the point.
+Gravity should be a **rare bubble-hosted surprise** or a **selected special
+bubble the player has earned**, not background management or A/D controls.
+
+- A very rare new **gravity-hosted bubble** is marked with a visible rune.
+  It retains its usual colour and physics until **popped by a match or
+  bomb, or shattered on the floor after falling**. Only breaking that
+  specific host briefly changes the pull to left, right or extra downward.
+- Chance to place a host is **0.7% per eligible Arcade bubble on spawn**;
+  at most one exists on the board at a time. No arbitrary per-shot
+  random rolls. It is visual and deliberate: players can aim for it.
+- A 6+ bubble match or sufficiently large bomb/falling clear can grant a
+  selectable **Gravity Orb special**. Only when owned does the
+  Orb Left/Orb Right selector appear; it arms the next normal-colour
+  fired bubble and triggers its temporary gravity force **on impact**.
+- Normal downward gravity, real spring connections, newly merged-colour
+  matches, bomb cascades and row-drop momentum stay unchanged. No
+  unplanned breaking of sticky support bonds.
+- Existing handcrafted Puzzles receive **no random hosts**, keeping
+  solutions fair. Earned shots are available there. Reduced motion
+  disables extra motion. Depth-weighted scoring and actual overloaded
+  bond-breaking Extreme Gravity remain future work.
+- Retains small independent `src/gravity-events.js`; no Gravity Lab.
+
+### Rejected previous experiment
+### PR #19: Gravity Charge and Instability (v0.9.0)
 
 User requested **both player agency and random challenge**. We therefore
 ship two related but independent triggers inside normal Arcade/Puzzles:
@@ -198,14 +224,18 @@ and ensure visual movement never disagrees with the real hit tests.
 
 ## Checkpoint handover
 
-> Main remains stable v0.8.5; PR #19 proposes v0.9.0 directional gravity.
-> **Do not touch normal spring gravity without a concrete bug.** The user
-> confirmed gravity and newly joined colour-group matching feel really good.
+> **PR #20 / v0.9.1** is correcting the merged PR #19 design mistake:
+> remove permanent Charge/Instability meters, A/D shift controls and
+> per-shot random rolls. Normal physics was already good and should remain
+> untouched.
 >
-> User wants Gravity Shifts to be (a) earned and triggered intentionally and
-> (b) occasionally random and challenging. The proposed Arcade system warns
-> one shot ahead and increases risk when the hanging board grows lower.
-> Puzzles permit earned shifts but avoid random events in existing handcrafted
-> levels. Shifts act through the same live-position spring solver; no new Lab.
-> Extreme Gravity *bond breaking* and the future **depth-weighted risk/reward
-> scoring** remain separate forthcoming features. No merge by assistant.
+> Random Gravity Events are now hosted by **rare, visibly marked coloured
+> bubbles**, triggered only when those specific bubbles break (match, bomb,
+> or after falling and bursting on the floor). A player-controlled Gravity
+> Orb is earned by a large match/drop, then **selected as a special on the
+> next fired bubble**, which triggers on impact. Short, visible left/right/
+> heavy-gravity pulses then return to normal. Keep the existing Puzzle
+> solutions deterministic, physical hitboxes honest, and all PRs reviewable.
+>
+> Don't conflate these with later earned Extreme Gravity bond-breaking or
+> the agreed risk/reward scoring for deep hanging chains.
