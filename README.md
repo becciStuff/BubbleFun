@@ -6,41 +6,48 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.9.0 introduces earned directional Gravity Shifts and warned Arcade disturbances**, while retaining the stable normal gravity., with no Gravity Lab in the UI.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.9.1 uses rare event-host bubbles and earned, selectable Gravity Orb shots**, not permanent shift controls., with no Gravity Lab in the UI.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
-## v0.9.0 — Earned Gravity Shifts and warned random disturbances
+## v0.9.1 — Rare Gravity Event bubbles and selectable Gravity Orb shots
 
-The next playable gravity layer is part of **Arcade and Puzzles**, not a
-separate Gravity Lab. **Normal spring gravity remains unchanged**; the
-shift temporarily adds a sideways force to the existing physical bodies.
+**Corrected design:** Gravity isn't a constantly managed resource. The
+always-visible Charge/Instability meters, random per-shot rolls, warnings and
+A/D shift buttons from v0.9.0 have been **removed**.
 
-- **Earn charge** from real popped bubbles, bomb chains and gravity drops.
-  Once the **Gravity Charge** bar reaches 100%, use the visible
-  **↙ Shift / Shift ↘** buttons or the **A / D** keys to choose a left or
-  right gravity pull. Each shift lasts **2.4 seconds** and eases in/out.
-  The ceiling stays anchored and existing colour-contact matching still
-  drives real combos; shifts do **not** sever sticky links.
-- **Instability** increases as attached bubbles reach farther towards the
-  launcher. In **Arcade only**, after a completed shot (never during an
-  active aim), the game may schedule a directional disturbance. A warning
-  identifies its direction **one shot in advance**. The random roll is
-  evaluated once per completed turn, with a cooldown after an event.
-  Long, low chains therefore carry more risk *and* more opportunity.
-- **Handcrafted Puzzles** support earned, player-directed shifts but
-  deliberately have **no surprise disturbances**; existing solution
-  paths remain deterministic.
-- The two bars and directional buttons work on desktop and touch-sized
-  displays. With **reduced motion** enabled, directional shifts and
-  random events are disabled, matching the existing static spring policy.
-- The future, more dangerous **Extreme Gravity** ability (actual
-  overload/bond breaking) is **not** part of this release, and neither is
-  the separately agreed depth-based risk/reward scoring. Both remain in
-  the roadmap.
-- Implementation stays modular: `src/gravity-events.js` handles
-  charge/instability/warnings/timing, `src/sway.js` uses its current
-  force, and `src/game.js` owns turn boundaries and rewards.
+- **Rare host bubbles:** Ordinary Arcade bubbles have only a **0.7% chance**
+  at spawn to carry a special gravity swirl, with no more than one on the
+  board. You can see the emblem and aim for it. It triggers *only when that
+  marked bubble actually breaks*: by colour match, bomb or impact after
+  detaching and falling to the floor. No random event happens merely from
+  waiting, the number of shots, or how low other bubbles hang.
+- **Surprise:** A triggered host causes a temporary **LEFT**, **RIGHT**
+  or **HEAVY DOWNWARD** gravity effect for **3.2 seconds** before the
+  board returns to its usual downward pull. The existing spring physics
+  moves real attached bubbles, so shifts can bring distinct matching
+  colour groups into contact. Existing sticky bonds are never randomly
+  severed.
+- **Player-owned Gravity Orb:** Clearing **6+ matching bubbles** in one
+  match (or a sufficiently big drop or bomb clear) can earn one
+  special-shot orb. Only then does the **Orb Left / Orb Right** selector
+  appear. Choose the direction, aim, and **fire your next normal-colour
+  bubble**. The special triggers *on impact*, not when you click the
+  selector; it's consumed once.
+- **Puzzles:** No randomly marked gravity hosts in the existing
+  handcrafted levels, preserving their known solutions. Earned specials
+  are available there; reduced-motion preferences keep extra forces off.
+- **Important:** This is **not** yet Extreme Gravity that tears overloaded
+  bonds, and the previously agreed bottom-depth risk/reward score bonus
+  is still future work. Normal gravity, contact matching and row physics
+  remain unchanged.
+
+## v0.9.0 — Superseded gravity meter experiment
+
+The previous release experimented with permanent Charge/Instability meters,
+per-shot random rolls and A/D shift buttons. **That interpretation was
+incorrect**. v0.9.1 replaces it with rare marked host bubbles and earned
+special shots; do not restore the always-on system.
 
 ## v0.8.5 — Only genuinely new colour groups pop
 
@@ -181,11 +188,11 @@ on desktop and mobile-sized screens.
 
 ## Release tracking
 
-**Current version: v0.9.0** on the gravity-shift review branch. Gravity reacts to
+**Current version: v0.9.1** on the rare-event/special-orb review branch. Gravity reacts to
 shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
 Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.9.0**, loading the number from
+The header badge reads **Version 0.9.1**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -193,7 +200,7 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.9.0 → 0.9.1
+npm run version:patch   # e.g. 0.9.1 → 0.9.2
 # or
 npm run version:minor   # e.g. 0.9.0 → 0.10.0
 npm test
