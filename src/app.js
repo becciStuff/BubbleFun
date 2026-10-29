@@ -1,7 +1,7 @@
 import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES } from './config.js';
 import { PUZZLES } from './puzzles.js';
 import { initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame, armGravityOrb } from './game.js';
-import { gravityEventLabel } from './gravity-events.js';
+import { gravityEventLabel, canArmGravityOrb } from './gravity-events.js';
 import { draw } from './render.js';
 import { loadVersion } from './version.js';
 
@@ -212,10 +212,10 @@ function updateUI() {
   putText('game-status', `✦ ${status}`);
   const gravity=state.gravityEvents;
   const tray=$('gravity-special-tray');
-  tray.hidden = !gravity.orbs && !gravity.armed;
+  tray.hidden = (!gravity.orbs && !gravity.armed) || state.reducedMotion || state.status !== 'playing';
   for(const [id,direction] of [['gravity-orb-left',-1],['gravity-orb-right',1]]) {
     $(id).setAttribute('aria-pressed',String(gravity.armed===direction));
-    $(id).disabled = !gravity.orbs || !!state.projectile || !!gravity.kind;
+    $(id).disabled = !canArmGravityOrb(state);
   }
   const alert=$('gravity-alert');
   alert.hidden=!gravity.kind;
