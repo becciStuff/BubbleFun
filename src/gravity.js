@@ -64,7 +64,10 @@ export function stepFallingBubbles(fallingBubbles, layout, dt, {
     }
     if (falling.burstAt <= 0 || falling.y + RADIUS >= layout.height - 22) {
       const floorY = layout.height - 22 - RADIUS;
-      onBurst(falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75, falling);
+      // Preserve the existing four-argument callback for normal and bomb
+      // bubbles. Only an actual event host needs its identity forwarded.
+      if (falling.gravityHost) onBurst(falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75, falling);
+      else onBurst(falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75);
       exploded++;
     } else remaining.push(falling);
   }
