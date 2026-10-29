@@ -11,8 +11,9 @@ import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles } from 
 import { bubblePosition } from './positions.js';
 import { stepAttachedSway, kickAttachedSway, kickExplosionSway } from './sway.js';
 import { findContactMatches } from './contact-matches.js';
-import { initialGravityEvents, awardGravityCharge, finishGravityTurn, advanceGravityShift, activateGravityShift } from './gravity-events.js';
-import { shiftAttachedPhysicsForNewRow } from './row-physics.js';
+import { initialGravityEvents, maybePlaceGravityHost, earnGravityOrb, takeArmedGravityOrb,
+  triggerGravityEvent, popGravityHost, advanceGravityEvent, gravityEventLabel } from './gravity-events.js';
+import { shiftAttachedPhysicsForNewRow, shiftedCellKey } from './row-physics.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -24,7 +25,7 @@ export {
 export { shooterColumns, shooterPosition, connectedShooter, floatingShooter } from './grid.js';
 export { PUZZLES } from './puzzles.js';
 export { releaseFloatingShooter } from './gravity.js';
-export { activateGravityShift } from './gravity-events.js';
+export { armGravityOrb } from './gravity-events.js';
 export { popPosition, initialPop, popGroup, hasPopMoves, collapsePop, popAt, popCellAt } from './pop-mode.js';
 
 const randomColour = (colours, random = Math.random) => colours[Math.floor(random() * colours.length)];
@@ -65,7 +66,7 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
     const secondOptions = different.length ? different : nearby;
     if (secondOptions.length) bombs.add(secondOptions[Math.floor(random() * secondOptions.length)]);
   }
-  return {
+  const state = {
     mode: 'shooter', variant: 'arcade', layout, board, bombs, pendingBombs: [], bombClock: 0,
     phase: 0, angle: 0, projectile: null,
     current: randomColour(colours, random), next: randomColour(colours, random),
@@ -77,6 +78,8 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
     gravityEvents: initialGravityEvents(), gravityRandom: random,
     ...visualState(),
   };
+  for (const cell of board.keys()) maybePlaceGravityHost(state,cell,random);
+  return state;
 }
 
 export function initialPuzzle(index = 0, layout = MOBILE_LAYOUT, random = Math.random) {
@@ -85,6 +88,7 @@ export function initialPuzzle(index = 0, layout = MOBILE_LAYOUT, random = Math.r
   state.board = board;
   state.bombs = bombs;
   state.variant = 'puzzle';
+  state.gravityEvents.hosts.clear(); // Existing handcrafted Puzzles stay deterministic.
   state.puzzleIndex = safeIndex;
   state.puzzleName = puzzle.name;
   state.puzzleGoal = puzzle.goal;
@@ -122,6 +126,7 @@ export function fireShooter(state) {
     vx: Math.sin(state.angle) * speed,
     vy: -Math.cos(state.angle) * speed,
     colour: state.current,
+    gravitySpecialDirection: takeArmedGravityOrb(state),
     sparkleClock: 0,
   };
   state.recoil = 1;
@@ -176,16 +181,19 @@ function removeCells(state, cells, effectCount) {
     const { x, y } = bubblePosition(state, r, c);
     impacts.push({ x, y });
     if (state.bombs.delete(key(r, c))) bombs.push({ x, y, row: r, col: c });
+    const event = popGravityHost(state,key(r,c),state.gravityRandom);
+    if (event) {
+      addExplosion(state,x,y,'purple',.95);
+      addCallout(state,x,y-38,gravityEventLabel(state),'pink');
+      state.shake=Math.max(state.shake,.65);
+    }
     addBurst(state, x, y, colour, effectCount);
     addPulse(state, x, y, colour, .65);
     state.board.delete(key(r, c));
   }
   // Removed bubbles transfer their last momentum to their surviving links.
   // Do this after deleting victims so nothing kicks an already-popped cell.
-  if (impacts.length) {
-    awardGravityCharge(state, impacts.length, 'pop');
-    kickExplosionSway(state, impacts, Math.min(1.45, .65 + impacts.length * .095));
-  }
+  if (impacts.length) kickExplosionSway(state, impacts, Math.min(1.45, .65 + impacts.length * .095));
   return bombs;
 }
 
@@ -210,7 +218,7 @@ export function detonateNextBomb(state) {
   state.lastBombs++;
   const points = (50 + victims.length * 25) * state.comboLevel;
   state.score += points;
-  awardGravityCharge(state, victims.length, 'bomb');
+  earnGravityOrb(state, victims.length);
   state.lastPop += victims.length;
   state.lastChain = { multiplier: state.comboLevel, points, popped: victims.length, detonated: state.lastBombs };
   addExplosion(state, bomb.x, bomb.y, 'yellow', 1.15 + Math.min(.35, state.comboLevel * .05));
@@ -230,11 +238,14 @@ export function descendShooter(state, random = Math.random) {
   }
   state.phase = 1 - state.phase; // Preserves the x positions of existing rows.
   state.board = shifted;
+  state.gravityEvents.hosts = new Set([...state.gravityEvents.hosts].map(shiftedCellKey));
   for (let col = 0; col < shooterColumns(0, state.phase, state.layout); col++) {
     state.board.set(key(0, col), randomColour(COLOURS.slice(0, 4), random));
     if (shiftedBombs.size < 4 && random() < .09) shiftedBombs.add(key(0, col));
   }
   state.bombs = shiftedBombs;
+  for (const cell of state.board.keys()) if (cell.startsWith('0,'))
+    maybePlaceGravityHost(state,cell,random);
   // The cells moved down by one row, but they are the SAME physical
   // bodies. Move their keys and world coordinates without erasing swing
   // momentum or sticky connections. The new ceiling will then constrain
@@ -264,7 +275,7 @@ function settleShooter(state) {
   state.lastDrop += detached;
   state.lastPop += detached;
   state.score += detached * 30;
-  awardGravityCharge(state, detached, 'drop');
+  earnGravityOrb(state, detached >= 9 ? detached : 0);
   if (detached) {
     addCallout(state, state.layout.width / 2, state.layout.height * .58, `GRAVITY! ${detached} FALLING +${detached * 30}`, 'pink');
     if (!state.lastBombs) emit(state, 'cascade');
@@ -316,6 +327,11 @@ function lockShooter(state, hitCell = null) {
     state.attachedPositions.set(key(row,col),{x:px,y:py});
   }
   const impact = bubblePosition(state, row, col);
+  if (shot.gravitySpecialDirection) {
+    triggerGravityEvent(state,'special',state.gravityRandom,shot.gravitySpecialDirection);
+    addCallout(state,impact.x,impact.y-58,gravityEventLabel(state),'pink');
+    state.shake=Math.max(state.shake,.5);
+  }
   const same = connectedShooter(state.board, row, col, state.phase, true, state.layout, state.extraBonds);
   for (const [k] of state.board) {
     const [r, c] = k.split(',').map(Number);
@@ -328,6 +344,7 @@ function lockShooter(state, hitCell = null) {
   if (same.length >= 3) {
     state.comboLevel = 1;
     state.pendingBombs.push(...removeCells(state, same, 13));
+    earnGravityOrb(state,same.length);
     state.lastPop = same.length;
     state.score += same.length * 20;
     state.shake = Math.max(state.shake, Math.min(.9, same.length * .085));
@@ -367,6 +384,7 @@ export function resolveContactMatches(state) {
     state.highestCombo = Math.max(state.highestCombo, bonus);
     state.comboDisplay = 2.8;
     state.pendingBombs.push(...removeCells(state, group, 12));
+    earnGravityOrb(state,group.length);
     const points = group.length * 20 * bonus;
     state.score += points;
     state.lastPop += group.length;
@@ -401,7 +419,7 @@ export function stepGame(state, dt) {
   }
   if (state.comboDisplay) state.comboDisplay = Math.max(0, state.comboDisplay - dt);
   if (state.mode === 'shooter') {
-    advanceGravityShift(state, dt);
+    advanceGravityEvent(state, dt);
     stepAttachedSway(state, dt);
     resolveContactMatches(state);
   }
@@ -418,7 +436,12 @@ export function stepGame(state, dt) {
     }
     const { remaining, exploded } = stepFallingBubbles(state.falling, state.layout, dt, {
       onSpark: (x, y, colour, vx, vy) => addSpark(state, x, y, colour, vx, vy),
-      onBurst: (x, y, colour, strength) => addExplosion(state, x, y, colour, strength),
+      onBurst: (x, y, colour, strength, falling) => {
+        addExplosion(state, x, y, colour, strength);
+        if (falling?.gravityHost && triggerGravityEvent(state,'host',state.gravityRandom)) {
+          addCallout(state,x,y-45,gravityEventLabel(state),'pink');
+        }
+      },
     });
     state.falling = remaining;
     if (exploded) {
@@ -447,19 +470,6 @@ export function stepGame(state, dt) {
           emit(state, 'lose');
         }
       }
-    }
-  }
-  if (state.mode === 'shooter') {
-    const shiftEvent=finishGravityTurn(state,state.gravityRandom);
-    if (shiftEvent === 'warning') {
-      const direction=state.gravityEvents.warning.direction < 0 ? 'LEFT' : 'RIGHT';
-      addCallout(state,state.layout.width/2,state.layout.top+95,
-        `GRAVITY SHIFT ${direction} NEXT SHOT!`,'yellow');
-      emit(state,'warning');
-    }
-    if (shiftEvent === 'disturbance') {
-      addCallout(state,state.layout.width/2,state.layout.top+95,'GRAVITY SHIFT!','pink');
-      emit(state,'surge');
     }
   }
   if (state.mode !== 'shooter' || !state.projectile || state.status !== 'playing') return;

@@ -20,39 +20,71 @@ try {
         'Lab UI and buttons must be entirely absent');
       assert.equal(await page.locator('#game-canvas').isVisible(), true);
 
-      // Both responsive play styles expose usable earned gravity controls.
-      assert.equal(await page.locator('#gravity-left').count(),1);
-      assert.equal(await page.locator('#gravity-right').count(),1);
-      assert.equal(await page.locator('#gravity-charge-value').textContent(),'0%');
-      assert.equal(await page.locator('#gravity-left').isDisabled(),true);
-      assert.equal(await page.locator('#gravity-right').isDisabled(),true);
+      // No always-on controls or per-turn instability management.
+      assert.equal(await page.locator('#gravity-left, #gravity-right, #gravity-charge-value, #gravity-instability-value').count(),0);
+      assert.equal(await page.locator('#gravity-special-tray').count(),1);
+      assert.equal(await page.locator('#gravity-special-tray').isVisible(),false,
+        'special selector is only offered after earning a Gravity Orb');
 
-      const gravityShift = await page.evaluate(async () => {
-        const [{initialShooter,stepGame},{MOBILE_LAYOUT,DESKTOP_LAYOUT},
-          {awardGravityCharge,activateGravityShift,finishGravityTurn},
-          {bubblePosition}] = await Promise.all([
-            import('./src/game.js'),import('./src/config.js'),
-            import('./src/gravity-events.js'),import('./src/positions.js'),
-          ]);
+      // Real engine: rare marked host POP causes a strong temporary event,
+      // whereas 30 ordinary completed shots never spontaneously roll one.
+      const gravityEvent = await page.evaluate(async () => {
+        const [{initialShooter,stepGame,resolveContactMatches,fireShooter,aimShooter},
+          {MOBILE_LAYOUT,DESKTOP_LAYOUT},{bubblePosition},
+          {earnGravityOrb,armGravityOrb}] = await Promise.all([
+          import('./src/game.js'),import('./src/config.js'),
+          import('./src/positions.js'),import('./src/gravity-events.js'),
+        ]);
         const layout=innerWidth>=900?DESKTOP_LAYOUT:MOBILE_LAYOUT;
-        const board=()=>new Map([['0,3','pink'],['1,3','pink'],
-          ['2,3','blue'],['2,2','blue']]);
-        const normal=initialShooter(()=>.4,layout);
+        const board=()=>new Map([
+          ['0,2','green'],['1,2','pink'],['2,2','pink'],
+          ['0,6','blue'],['1,6','blue'],['2,6','pink'],
+        ]);
+        const s=initialShooter(()=>.4,layout);
+        s.board=board();s.bombs.clear();
+        s.gravityEvents.hosts.add('2,6');
+        s.gravityRandom=()=>.1;
+        const link=['2,2','2,6'].sort().join('|');
+        s.extraBonds.add(link);s.newContactBonds.add(link);
+        const popped=resolveContactMatches(s);
+        const hostEvent=s.gravityEvents.kind;
+
+        const baseline=initialShooter(()=>.4,layout);
         const shifted=initialShooter(()=>.4,layout);
-        for(const state of [normal,shifted]) {state.board=board();state.bombs.clear();}
-        awardGravityCharge(shifted,20,'pop');
-        const activated=activateGravityShift(shifted,1);
-        for(let i=0;i<15;i++) {stepGame(normal,.045);stepGame(shifted,.045);}
-        const diff=bubblePosition(shifted,2,2).x-bubblePosition(normal,2,2).x;
-        const warned=initialShooter(()=>.001,layout);
-        warned.shots=3;
-        const roll=finishGravityTurn(warned,()=>.001);
-        return {activated,diff,roll,warned:warned.gravityEvents.warning?.direction};
+        const smallBoard=()=>new Map([['0,3','pink'],['1,3','pink'],['2,3','blue'],['2,2','blue']]);
+        for(const q of [baseline,shifted]) {q.board=smallBoard();q.bombs.clear();}
+        shifted.gravityRandom=()=>.9;
+        const heavy=await import('./src/gravity-events.js');
+        const triggered=heavy.triggerGravityEvent(shifted,'host',()=>.4);
+        for(let i=0;i<15;i++) {
+          stepGame(baseline,.045);stepGame(shifted,.045);
+        }
+        const shiftDistance=bubblePosition(shifted,2,2).x-bubblePosition(baseline,2,2).x;
+        const ordinary=initialShooter(()=>.4,layout);
+        ordinary.shots=30;
+        for(let i=0;i<30;i++)stepGame(ordinary,.045);
+        const silent=ordinary.gravityEvents.kind===null;
+
+        const orb=initialShooter(()=>.4,layout);
+        orb.board=smallBoard();orb.bombs.clear();
+        earnGravityOrb(orb,7);
+        const selected=armGravityOrb(orb,1);
+        aimShooter(orb,layout.width/2,layout.top);
+        const fired=fireShooter(orb);
+        const specialProjectile=orb.projectile?.gravitySpecialDirection===1;
+        for(let i=0;i<220 && orb.projectile;i++)stepGame(orb,.02);
+        return {popped,hostEvent,triggered,shiftDistance,silent,
+          selected,fired,specialProjectile,orbEvent:orb.gravityEvents.kind};
       });
-      assert.equal(gravityShift.activated,true);
-      assert.ok(gravityShift.diff>3,'an earned shift must physically move actual bubble positions');
-      assert.equal(gravityShift.roll,'warning','a finished Arcade shot schedules a possible disturbance');
-      assert.equal(gravityShift.warned,-1);
+      assert.equal(gravityEvent.popped,3);
+      assert.equal(gravityEvent.hostEvent,'left','marked host breaks into a real event');
+      assert.equal(gravityEvent.triggered,'right');
+      assert.ok(gravityEvent.shiftDistance>3,'real attached bubbles move on timed gravity event');
+      assert.equal(gravityEvent.silent,true,'no perpetual random rolls');
+      assert.equal(gravityEvent.selected,true);
+      assert.equal(gravityEvent.fired,true);
+      assert.equal(gravityEvent.specialProjectile,true);
+      assert.equal(gravityEvent.orbEvent,'right','earned special triggers only on shot impact');
 
       // Player action, not just a direct engine call: fire the Arcade launcher.
       const canvas = page.locator('#game-canvas');

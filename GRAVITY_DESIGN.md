@@ -1,7 +1,7 @@
 # BubbleFun — gravity physics and gameplay
 
-**Current review milestone: v0.9.0 — earned directional Gravity Shifts plus
-warned Arcade disturbances, preserving working normal gravity.** No Gravity Lab or separate
+**Current review milestone: v0.9.1 — rare bubble-hosted gravity pulses
+and selected Gravity Orb special shots. Normal gravity remains untouched.** No Gravity Lab or separate
 play style.
 
 ## Non-negotiable behaviour
@@ -162,37 +162,33 @@ that had already been connected before the alleged contact.
 - Handcrafted Puzzles and regular Arcade must not score or win from
   merely relaxing previously connected bonds.
 
-## v0.9.0: two directional shift triggers on the same real spring network
+## v0.9.1: rare, bubble-hosted events and selected special shots
 
-The first gravity-shift release is a lateral acceleration added to the
-already-working spring solver. Normal gravity is unchanged. This is not
-a new mode or simulated decorative animation; the SAME moving bubble
-centres are used for hitboxes, links, colour matches and detachment.
+The user rejected v0.9.0's permanent meters, per-shot random rolls
+and A/D controls. Those are **not** desired gameplay mechanics.
 
-1. **Earned control:** `src/gravity-events.js` awards capped 0–100
-   Gravity Charge for actual pops, bomb victims and detached groups.
-   At 100 the player chooses left/right using button or A/D, at a safe
-   moment between shots. The shift lasts 2.4 seconds, with eased force.
-2. **Warned environment:** Arcade evaluates once after a shot *and all its
-   effects/row transition have resolved*, not on an arbitrary clock tick.
-   Random odds rise with the actual low-hanging depth and share of lower
-   bubbles. If selected, the direction is announced one full shot before
-   the effect; a cooldown limits repeats. No random roll during aiming.
-3. **Puzzle fairness:** No environmental randomness in the three existing
-   handcrafted Puzzles, but player-earned directional shifts still use
-   the same mechanics. Reduced-motion setting disables shifts.
-4. **No weight-breaking here:** A directional shift can move attached
-   structures into fresh same-colour contacts, causing ordinary 3+ pops
-   and support cascades. It cannot snap a still-attached bond by force.
-   Extreme Gravity / Gravity Surge is still a future earned special
-   requiring separate support-load tuning and regression tests.
-5. **Future scoring:** Depth-weighted bonuses for clearing long risky
-   hanging chains remain agreed design, but are NOT part of this PR.
-   Instability is a *risk indicator*, not a points multiplier.
-
-The controller is independent of `src/sway.js` and `src/game.js`:
-the former consumes the directional force, while the latter reports
-actual score-worthy pop/drop events and completed turns. Keep it so.
+- **Hosted event:** The engine marks a very rare ordinary Arcade bubble
+  with a recognisable gravity rune. It stays physically unchanged until
+  popped by a matching group, hit in a bomb blast, or detached and
+  shattered on the floor. The host identity is carried in the same
+  board-cell map through row shifts and in the falling body after detach.
+  **Only its break event** may trigger a temporary gravity pulse.
+- **Event types:** LEFT or RIGHT horizontal acceleration, or heavier
+  DOWNWARD acceleration, each 3.2 seconds with an eased beginning and
+  end. Only the real existing force integrator changes; moving hitboxes,
+  visual links, sticky contacts and matching continue to agree.
+- **Fired special:** Earning a large colour match or drop awards at most
+  one player-owned Gravity Orb. Only when owned can the player select
+  a left/right special for their **next normally aimed and fired
+  bubble**; its impact starts the shift. It respects normal shot/ammo
+  rules. No persistent shift controls or charging bars.
+- **Rare and fair:** Random host placement is 0.7% per eligible Arcade
+  spawn, with one visible host maximum. No per-frame or per-shot RNG
+  event rolling, and no random hosts in handcrafted Puzzle boards.
+  Reduced-motion mode keeps extra forces off.
+- **Separate future milestone:** Extreme Gravity that physically tears
+  overloaded bonds is not implemented. Risk/reward scoring for long
+  low-hanging chains is also preserved as a separate design task.
 
 ## Limits and what to tune next
 

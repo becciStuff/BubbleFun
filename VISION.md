@@ -113,38 +113,39 @@ Attached bubbles should feel connected but not completely rigid:
 
 **Important engineering guardrail:** The collision and aiming rules must agree with what players see. If a cluster visibly swings away from a shot, the game should not secretly collide with its previous grid position. We may begin with modest constrained swaying before attempting full dynamic matching physics. Keep the simulation deterministic, understandable and fast on mobile.
 
-## Directional Gravity Shifts: earned control + warned surprise (v0.9.0)
+## v0.9.1 — Bubble-hosted Gravity Events and special-shot Gravity Orbs
 
-**Implemented first playable version:** Normal gravity still pulls down as
-before. The player can temporarily add a lateral pull to the real spring
-network, causing long hanging chains to swing into new colour matches.
-This does **not** break structural bonds; future **Extreme Gravity / Gravity
-Surge** remains a separately designed overload-breaking special.
+**Accepted interaction:** Gravity should not be another meter the player
+manages continuously. Events are unusual *things* tied to bubbles, like
+the existing bombs and future special shots.
 
-- **Earned:** Pops, bomb chains and detached gravity cascades build a 0–100%
-  **Gravity Charge** bar. At full charge, the player can choose a
-  leftward or rightward shift using accessible desktop/touch buttons
-  (A/D keyboard shortcuts). The shift runs 2.4 seconds with a soft
-  onset/finish; it uses the same moving positions as shot collisions.
-- **Random but fair:** Arcade tracks **Gravity Instability**, which rises
-  when dangling structures grow longer and lower. After a shot and its
-  cascade have **fully finished**, an instability-weighted random roll
-  may schedule a left/right disturbance. The direction is **announced
-  before the player's next shot**, and the shift occurs only after that
-  next shot resolves. There is a cooldown after each disturbance.
-- **A meaningful risk:** Building dangerous low-hanging lines makes
-  a surprise shift more likely, but can also bring separated colours
-  into contact for a huge combo. Players can clear early or gamble
-  on a favourable warned shift. The separately agreed **depth-weighted
-  scoring** will later magnify this reward.
-- **Keep fairness:** No random shifts in the existing handcrafted Puzzles,
-  so their tested solutions stay reproducible. Earned directional shifts
-  are supported there. Reduced-motion preference disables shifts and
-  random disturbances, matching the existing static-body policy.
-- **Later design possibilities:** Special puzzle levels with deliberately
-  scripted environmental shifts, an ability to influence warnings, and
-  Extreme Gravity that may snap overloaded attachments. These are
-  **not part of v0.9.0**, and should be separate small milestones.
+- **Rare, recognisable host:** An ordinary Arcade bubble has a very
+  small (0.7%) chance of being marked with a gravity swirl when added to
+  the board; no more than one hosted bubble is present at once.
+  **Only breaking that specific bubble** — matching it, hitting it with
+  a bomb or dropping it until it bursts on the floor — activates a
+  surprise gravity event. Time and shot count do **not** roll events.
+- **Temporary physical effect:** A host picks **LEFT**, **RIGHT**, or
+  **HEAVIER DOWNWARD** gravity for 3.2 seconds, then smoothly returns to
+  the unchanged spring/downward-gravity behaviour. The event is
+  visually labelled; actual bubble hitboxes and contacts move with it.
+- **Selected ability, not a permanent input:** Clearing a large matching
+  group or cascade can earn a **Gravity Orb**. Only when owned does the
+  power-up selector appear. Choose left or right, then **fire a special
+  marked bubble**. The chosen shift triggers *on shot impact*, consuming
+  the ability once. There is no A/D gravity control and no always-on
+  Gravity Charge/Instability UI.
+- **Fair levels:** Existing handcrafted Puzzles have no random hosts
+  (preserving solvable layouts) but can earn selected special shots.
+  Reduced-motion preference disables the extra gravity forces.
+- **Future:** Other event hosts, scripted special puzzle levels and
+  Extreme Gravity that can tear overstressed support links. The
+  separately agreed depth-based scoring bonus for risky deep clears
+  also remains future work.
+
+**v0.9.0 was a rejected experiment:** continuous charge/risk meters,
+per-shot random rolls and A/D directional controls were not the intended
+feature. Do not reintroduce those mechanics.
 
 ## Earn-only coin economy
 
@@ -185,7 +186,7 @@ Order is agreed in principle; these are **priorities, not promised release numbe
 | Priority | Work | Main goal |
 | --- | --- | --- |
 | **1** | Gravity, swaying connected structures and smoother animation | Make the bubbles feel like a living physical world. |
-| **2** | Earned Gravity Shifts and warned environmental disturbances (**v0.9.0**) | Let players control a sideways pull while adding fair, risky surprises. |
+| **2** | Rare Gravity Event host bubbles and selected Gravity Orb special shots (**v0.9.1**) | Make gravity an occasional physical surprise or earned fired ability. |
 | **3** | Prototype Fireball, horizontal/vertical blasts and Gravity Surge | Give players meaningful tactical powers. |
 | **4** | Guide-free rewards and different-colour bonuses | Reward skill and clever cascades. |
 | **5** | Fizzling character designs, rescue animations and family story | Give the game identity and heart. |
@@ -196,14 +197,14 @@ Order is agreed in principle; these are **priorities, not promised release numbe
 
 ## Current prototype baseline
 
-As of **v0.9.0** (PR #19 review branch), BubbleFun has:
+As of **v0.9.1** (PR #20 review branch), BubbleFun has:
 
 - Responsive portrait/landscape Bubble Shooter.
 - Arcade mode and three handcrafted puzzles: Twin Towers, Heartbreaker and The Crown.
 - Matching, bombs, chained detonations, detached falling bubbles, basic particle effects and optional sound.
 - Browser-local high scores; no accounts, real-money payments or adverts.
 
-Normal spring-connected gravity and genuine sticky contact matches are shipped in v0.8.x. Directional Gravity Shifts are proposed in v0.9.0 (PR #19). Extreme Gravity bond breaking, the depth-risk scoring bonuses, special shop, Fizzling rescue story and bosses are still **future designs**, not implemented.
+Normal spring-connected gravity and genuine sticky contact matches are shipped in v0.8.x. Rare hosted Gravity Events and selected, fired Gravity Orbs are proposed in v0.9.1 (PR #20), replacing the rejected v0.9.0 meters. Extreme Gravity bond breaking, the depth-risk scoring bonuses, special shop, Fizzling rescue story and bosses are still **future designs**, not implemented.
 
 ## Open decisions for our next design conversations
 

@@ -22,9 +22,10 @@ export function releaseFloatingShooter(state, cells, random = Math.random) {
     if (!colour) continue;
     const { x, y } = bubblePosition(state, row, col);
     const bomb = state.bombs.delete(cellKey(row, col));
+    const gravityHost = state.gravityEvents?.hosts.delete(cellKey(row,col)) ?? false;
     state.board.delete(cellKey(row, col));
     state.falling.push({
-      x, y, colour, bomb,
+      x, y, colour, bomb, gravityHost,
       vx: (x - state.layout.width / 2) * .09 + (random() - .5) * 50,
       vy: -25 - random() * 40,
       gravity: 885 + random() * 140,
@@ -63,7 +64,10 @@ export function stepFallingBubbles(fallingBubbles, layout, dt, {
     }
     if (falling.burstAt <= 0 || falling.y + RADIUS >= layout.height - 22) {
       const floorY = layout.height - 22 - RADIUS;
-      onBurst(falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75);
+      // Preserve the existing four-argument callback for normal and bomb
+      // bubbles. Only an actual event host needs its identity forwarded.
+      if (falling.gravityHost) onBurst(falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75, falling);
+      else onBurst(falling.x, Math.min(falling.y, floorY), falling.colour, falling.bomb ? 1 : .75);
       exploded++;
     } else remaining.push(falling);
   }
