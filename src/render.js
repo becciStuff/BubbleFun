@@ -2,6 +2,7 @@ import { WIDTH, HEIGHT, RADIUS, SWATCHES } from './config.js';
 import { shotBubbleCollision } from './grid.js';
 import { bubblePosition } from './positions.js';
 import { drawAttachmentLinks } from './attachment-visuals.js';
+import { gravityEventLabel, EVENT_DURATION } from './gravity-events.js';
 import { popPosition, popGroup } from './game.js';
 
 const shade = (hex, amount) => {
@@ -90,6 +91,19 @@ function bombMark(ctx, x, y, seconds) {
   ctx.beginPath(); ctx.moveTo(x + 5, y - 9); ctx.quadraticCurveTo(x + 8, y - 17, x + 13, y - 16); ctx.stroke();
   star(ctx, x + 15, y - 17, 4.1 + beat * 1.8, .92, '#fff0ae');
   star(ctx, x - 1, y + 2, 5.7, 1, '#ffe39c');
+  ctx.restore();
+}
+
+// The same emblem marks rare event hosts, detached hosts, and armed shots.
+// Unlike an invisible random roll, players can see what creates the event.
+function gravityRune(ctx, x, y, seconds=0) {
+  ctx.save();ctx.translate(x,y);
+  ctx.shadowColor='#a87aff';ctx.shadowBlur=10;
+  ctx.fillStyle='rgba(62,26,124,.91)';ctx.strokeStyle='#fce18e';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(0,0,13,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.shadowBlur=0;ctx.fillStyle='#fff2c7';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='bold 21px sans-serif';ctx.fillText('↻',0,0);
   ctx.restore();
 }
 
@@ -193,11 +207,12 @@ function aimGuide(ctx, state) {
 function shooter(ctx, state, seconds, reducedMotion = false) {
   const {width,height,launchY} = state.layout;
   const chainActive = state.comboLevel >= 2 && state.comboDisplay > 0;
-  const bannerWidth = state.variant === 'puzzle' ? 310 : chainActive ? 235 : 227;
+  const eventLabel=gravityEventLabel(state);
+  const bannerWidth = eventLabel ? 245 : state.variant === 'puzzle' ? 310 : chainActive ? 235 : 227;
   roundRect(ctx, (width - bannerWidth)/2, 17, bannerWidth, 24, 12,
-    chainActive ? 'rgba(225,61,154,.65)' : 'rgba(13,20,72,.4)');
-  label(ctx, chainActive ? `EXPLOSIVE COMBO ×${state.comboLevel}` : state.variant === 'puzzle' ? `PUZZLE ${state.puzzleIndex + 1} · ${state.puzzleName.toUpperCase()}` : 'MATCH 3+ · DETONATE BOMBS', width/2, 29,
-    chainActive ? '#fff0b3' : '#acbdfa', 11);
+    eventLabel ? 'rgba(124,65,186,.91)' : chainActive ? 'rgba(225,61,154,.65)' : 'rgba(13,20,72,.4)');
+  label(ctx, eventLabel || (chainActive ? `EXPLOSIVE COMBO ×${state.comboLevel}` : state.variant === 'puzzle' ? `PUZZLE ${state.puzzleIndex + 1} · ${state.puzzleName.toUpperCase()}` : 'MATCH 3+ · DETONATE BOMBS'), width/2, 29,
+    eventLabel || chainActive ? '#fff0b3' : '#acbdfa', 11);
   ctx.strokeStyle = `rgba(255,148,198,${.17 + Math.sin(seconds * 2) * .045})`; ctx.lineWidth = 1.3;
   ctx.setLineDash([8,10]);
   ctx.beginPath(); ctx.moveTo(30,launchY-47); ctx.lineTo(width-30,launchY-47); ctx.stroke();
@@ -214,6 +229,7 @@ function shooter(ctx, state, seconds, reducedMotion = false) {
     ctx.save(); ctx.translate(x,y); ctx.scale(squash,1+(1-squash)*.7);
     bubble(ctx,0,0,colour,RADIUS,false,Math.max(.1,entrance));
     if (state.bombs.has(k)) bombMark(ctx,0,0,seconds);
+    if (state.gravityEvents?.hosts.has(k)) gravityRune(ctx,0,0,seconds);
     ctx.restore();
   }
   // Detached bubbles no longer disappear: gravity takes over until they burst.
@@ -223,6 +239,7 @@ function shooter(ctx, state, seconds, reducedMotion = false) {
     ctx.rotate(falling.rotation);
     bubble(ctx, 0, 0, falling.colour, RADIUS, true);
     if (falling.bomb) bombMark(ctx,0,0,seconds);
+    if (falling.gravityHost) gravityRune(ctx,0,0,seconds);
     star(ctx, -12, 14, 3.1, .75, '#fff5df');
     ctx.restore();
   }
@@ -237,11 +254,21 @@ function shooter(ctx, state, seconds, reducedMotion = false) {
   ctx.fillStyle='#1d1245'; ctx.beginPath(); ctx.ellipse(x,launchY+40,48,15,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#805baa'; ctx.beginPath();ctx.ellipse(x,launchY+34,43,12,0,0,Math.PI*2);ctx.fill();
   bubble(ctx,x,launchY+state.recoil*5,state.current,21);
+  if(state.gravityEvents?.armed) gravityRune(ctx,x,launchY+state.recoil*5,seconds);
   if (state.projectile) {
     ctx.save();
     ctx.shadowBlur = 22;
     ctx.shadowColor = SWATCHES[state.projectile.colour];
     bubble(ctx,state.projectile.x,state.projectile.y,state.projectile.colour,21,true);
+    if(state.projectile.gravitySpecialDirection) gravityRune(ctx,state.projectile.x,state.projectile.y,seconds);
+    ctx.restore();
+  }
+  if(eventLabel) {
+    ctx.save();
+    ctx.fillStyle='rgba(202,153,255,.28)';
+    ctx.fillRect(width*.15,46,width*.70,4);
+    ctx.fillStyle='#fff0a9';
+    ctx.fillRect(width*.15,46,width*.70*(state.gravityEvents.remaining/EVENT_DURATION),4);
     ctx.restore();
   }
   label(ctx,state.variant === 'puzzle' ? `${state.bombs.size} TARGET${state.bombs.size===1?'':'S'} REMAINING` : 'BUBBLE LAUNCHER',x,height-17,'#a596d1',10);
