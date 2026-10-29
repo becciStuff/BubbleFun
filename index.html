@@ -67,6 +67,20 @@
             <div class="score-cell"><span id="turn-label">NEXT ROW IN</span><strong id="turns-value">5 shots</strong></div>
           </div>
 
+          <div class="gravity-controls" role="group" aria-label="Gravity shift abilities">
+            <div class="gravity-meter">
+              <div class="gravity-meter-heading"><span>⚡ GRAVITY CHARGE</span><strong id="gravity-charge-value">0%</strong></div>
+              <div class="gravity-meter-track" role="progressbar" id="gravity-charge-meter" aria-label="Earned gravity charge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="gravity-charge-fill"></span></div>
+              <div class="gravity-meter-heading gravity-instability-heading"><span>☁ INSTABILITY</span><strong id="gravity-instability-value">0%</strong></div>
+              <div class="gravity-meter-track instability" role="progressbar" id="gravity-instability-meter" aria-label="Gravity disturbance risk" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="gravity-instability-fill"></span></div>
+            </div>
+            <div class="gravity-actions">
+              <button id="gravity-left" class="gravity-shift-button" type="button" disabled aria-label="Spend full charge to shift gravity left" title="Earn 100% charge to shift left">↙ Shift</button>
+              <button id="gravity-right" class="gravity-shift-button" type="button" disabled aria-label="Spend full charge to shift gravity right" title="Earn 100% charge to shift right">Shift ↘</button>
+            </div>
+          </div>
+          <div class="gravity-alert" id="gravity-alert" role="status" aria-live="polite" hidden></div>
+
           <div class="mission-strip" id="mission-strip" hidden></div>
 
           <div class="stage-wrap">

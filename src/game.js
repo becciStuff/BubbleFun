@@ -11,6 +11,7 @@ import { findDetachedBubbles, releaseFloatingShooter, stepFallingBubbles } from 
 import { bubblePosition } from './positions.js';
 import { stepAttachedSway, kickAttachedSway, kickExplosionSway } from './sway.js';
 import { findContactMatches } from './contact-matches.js';
+import { initialGravityEvents, awardGravityCharge, finishGravityTurn, advanceGravityShift, activateGravityShift } from './gravity-events.js';
 import { shiftAttachedPhysicsForNewRow } from './row-physics.js';
 
 // Keep the existing public API during the refactor, so current tests and any
@@ -23,6 +24,7 @@ export {
 export { shooterColumns, shooterPosition, connectedShooter, floatingShooter } from './grid.js';
 export { PUZZLES } from './puzzles.js';
 export { releaseFloatingShooter } from './gravity.js';
+export { activateGravityShift } from './gravity-events.js';
 export { popPosition, initialPop, popGroup, hasPopMoves, collapsePop, popAt, popCellAt } from './pop-mode.js';
 
 const randomColour = (colours, random = Math.random) => colours[Math.floor(random() * colours.length)];
@@ -72,6 +74,7 @@ export function initialShooter(random = Math.random, layout = MOBILE_LAYOUT) {
     comboDisplay: 0, lastChain: null, pendingRow: false, pendingDanger: false,
     wobble: new Map(), rowShift: 0, introTime: 0, pendingPuzzleLoss: false,
     attachedPositions: new Map(), swayDynamics: new Map(), extraBonds: new Set(), newContactBonds: new Set(), swayClock: 0,
+    gravityEvents: initialGravityEvents(), gravityRandom: random,
     ...visualState(),
   };
 }
@@ -179,7 +182,10 @@ function removeCells(state, cells, effectCount) {
   }
   // Removed bubbles transfer their last momentum to their surviving links.
   // Do this after deleting victims so nothing kicks an already-popped cell.
-  if (impacts.length) kickExplosionSway(state, impacts, Math.min(1.45, .65 + impacts.length * .095));
+  if (impacts.length) {
+    awardGravityCharge(state, impacts.length, 'pop');
+    kickExplosionSway(state, impacts, Math.min(1.45, .65 + impacts.length * .095));
+  }
   return bombs;
 }
 
@@ -204,6 +210,7 @@ export function detonateNextBomb(state) {
   state.lastBombs++;
   const points = (50 + victims.length * 25) * state.comboLevel;
   state.score += points;
+  awardGravityCharge(state, victims.length, 'bomb');
   state.lastPop += victims.length;
   state.lastChain = { multiplier: state.comboLevel, points, popped: victims.length, detonated: state.lastBombs };
   addExplosion(state, bomb.x, bomb.y, 'yellow', 1.15 + Math.min(.35, state.comboLevel * .05));
@@ -257,6 +264,7 @@ function settleShooter(state) {
   state.lastDrop += detached;
   state.lastPop += detached;
   state.score += detached * 30;
+  awardGravityCharge(state, detached, 'drop');
   if (detached) {
     addCallout(state, state.layout.width / 2, state.layout.height * .58, `GRAVITY! ${detached} FALLING +${detached * 30}`, 'pink');
     if (!state.lastBombs) emit(state, 'cascade');
@@ -393,6 +401,7 @@ export function stepGame(state, dt) {
   }
   if (state.comboDisplay) state.comboDisplay = Math.max(0, state.comboDisplay - dt);
   if (state.mode === 'shooter') {
+    advanceGravityShift(state, dt);
     stepAttachedSway(state, dt);
     resolveContactMatches(state);
   }
@@ -438,6 +447,19 @@ export function stepGame(state, dt) {
           emit(state, 'lose');
         }
       }
+    }
+  }
+  if (state.mode === 'shooter') {
+    const shiftEvent=finishGravityTurn(state,state.gravityRandom);
+    if (shiftEvent === 'warning') {
+      const direction=state.gravityEvents.warning.direction < 0 ? 'LEFT' : 'RIGHT';
+      addCallout(state,state.layout.width/2,state.layout.top+95,
+        `GRAVITY SHIFT ${direction} NEXT SHOT!`,'yellow');
+      emit(state,'warning');
+    }
+    if (shiftEvent === 'disturbance') {
+      addCallout(state,state.layout.width/2,state.layout.top+95,'GRAVITY SHIFT!','pink');
+      emit(state,'surge');
     }
   }
   if (state.mode !== 'shooter' || !state.projectile || state.status !== 'playing') return;

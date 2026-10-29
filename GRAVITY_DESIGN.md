@@ -1,7 +1,7 @@
 # BubbleFun — gravity physics and gameplay
 
-**Current review milestone: v0.8.5 — only genuinely new colour-group merges
-may trigger gravity-assisted matches.** No Gravity Lab or separate
+**Current review milestone: v0.9.0 — earned directional Gravity Shifts plus
+warned Arcade disturbances, preserving working normal gravity.** No Gravity Lab or separate
 play style.
 
 ## Non-negotiable behaviour
@@ -38,7 +38,8 @@ supports.js             Roof support analysis, weak bonds and overload planning
 physical-bonds.js       Spring graph, collision resolution and sticky new links
 contact-matches.js      Pure full-component 3+ detection on new/re-contacts
 row-physics.js          Transfer moving bodies, momentum and bonds on row insertion
-sway.js                 Downward gravity, spring forces, damping and hit impulses
+gravity-events.js       Charge, instability, warned random triggers, directional pull
+sway.js                 Downward gravity plus optional real directional shift, springs
 positions.js            One live position lookup for all systems
 gravity.js              Detachment, falling bodies and optional Surge API
 attachment-visuals.js   Soft curved gel between bubble rims only when stretched
@@ -160,6 +161,38 @@ that had already been connected before the alleged contact.
   sticky physics contacts and continuous row-drop velocities stay intact.
 - Handcrafted Puzzles and regular Arcade must not score or win from
   merely relaxing previously connected bonds.
+
+## v0.9.0: two directional shift triggers on the same real spring network
+
+The first gravity-shift release is a lateral acceleration added to the
+already-working spring solver. Normal gravity is unchanged. This is not
+a new mode or simulated decorative animation; the SAME moving bubble
+centres are used for hitboxes, links, colour matches and detachment.
+
+1. **Earned control:** `src/gravity-events.js` awards capped 0–100
+   Gravity Charge for actual pops, bomb victims and detached groups.
+   At 100 the player chooses left/right using button or A/D, at a safe
+   moment between shots. The shift lasts 2.4 seconds, with eased force.
+2. **Warned environment:** Arcade evaluates once after a shot *and all its
+   effects/row transition have resolved*, not on an arbitrary clock tick.
+   Random odds rise with the actual low-hanging depth and share of lower
+   bubbles. If selected, the direction is announced one full shot before
+   the effect; a cooldown limits repeats. No random roll during aiming.
+3. **Puzzle fairness:** No environmental randomness in the three existing
+   handcrafted Puzzles, but player-earned directional shifts still use
+   the same mechanics. Reduced-motion setting disables shifts.
+4. **No weight-breaking here:** A directional shift can move attached
+   structures into fresh same-colour contacts, causing ordinary 3+ pops
+   and support cascades. It cannot snap a still-attached bond by force.
+   Extreme Gravity / Gravity Surge is still a future earned special
+   requiring separate support-load tuning and regression tests.
+5. **Future scoring:** Depth-weighted bonuses for clearing long risky
+   hanging chains remain agreed design, but are NOT part of this PR.
+   Instability is a *risk indicator*, not a points multiplier.
+
+The controller is independent of `src/sway.js` and `src/game.js`:
+the former consumes the directional force, while the latter reports
+actual score-worthy pop/drop events and completed turns. Keep it so.
 
 ## Limits and what to tune next
 

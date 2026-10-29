@@ -113,6 +113,39 @@ Attached bubbles should feel connected but not completely rigid:
 
 **Important engineering guardrail:** The collision and aiming rules must agree with what players see. If a cluster visibly swings away from a shot, the game should not secretly collide with its previous grid position. We may begin with modest constrained swaying before attempting full dynamic matching physics. Keep the simulation deterministic, understandable and fast on mobile.
 
+## Directional Gravity Shifts: earned control + warned surprise (v0.9.0)
+
+**Implemented first playable version:** Normal gravity still pulls down as
+before. The player can temporarily add a lateral pull to the real spring
+network, causing long hanging chains to swing into new colour matches.
+This does **not** break structural bonds; future **Extreme Gravity / Gravity
+Surge** remains a separately designed overload-breaking special.
+
+- **Earned:** Pops, bomb chains and detached gravity cascades build a 0–100%
+  **Gravity Charge** bar. At full charge, the player can choose a
+  leftward or rightward shift using accessible desktop/touch buttons
+  (A/D keyboard shortcuts). The shift runs 2.4 seconds with a soft
+  onset/finish; it uses the same moving positions as shot collisions.
+- **Random but fair:** Arcade tracks **Gravity Instability**, which rises
+  when dangling structures grow longer and lower. After a shot and its
+  cascade have **fully finished**, an instability-weighted random roll
+  may schedule a left/right disturbance. The direction is **announced
+  before the player's next shot**, and the shift occurs only after that
+  next shot resolves. There is a cooldown after each disturbance.
+- **A meaningful risk:** Building dangerous low-hanging lines makes
+  a surprise shift more likely, but can also bring separated colours
+  into contact for a huge combo. Players can clear early or gamble
+  on a favourable warned shift. The separately agreed **depth-weighted
+  scoring** will later magnify this reward.
+- **Keep fairness:** No random shifts in the existing handcrafted Puzzles,
+  so their tested solutions stay reproducible. Earned directional shifts
+  are supported there. Reduced-motion preference disables shifts and
+  random disturbances, matching the existing static-body policy.
+- **Later design possibilities:** Special puzzle levels with deliberately
+  scripted environmental shifts, an ability to influence warnings, and
+  Extreme Gravity that may snap overloaded attachments. These are
+  **not part of v0.9.0**, and should be separate small milestones.
+
 ## Earn-only coin economy
 
 Players earn in-game coins for useful, skilled play:
@@ -152,24 +185,25 @@ Order is agreed in principle; these are **priorities, not promised release numbe
 | Priority | Work | Main goal |
 | --- | --- | --- |
 | **1** | Gravity, swaying connected structures and smoother animation | Make the bubbles feel like a living physical world. |
-| **2** | Prototype Fireball, horizontal/vertical blasts and Gravity Surge | Give players meaningful tactical powers. |
-| **3** | Guide-free rewards and different-colour bonuses | Reward skill and clever cascades. |
-| **4** | Fizzling character designs, rescue animations and family story | Give the game identity and heart. |
-| **5** | Earnable coins and the Fizz Shop | Add an enjoyable, fair reward loop. |
-| **6** | Worlds, richer puzzles, boss encounters and sustained visual polish | Build an adventure worth coming back to. |
+| **2** | Earned Gravity Shifts and warned environmental disturbances (**v0.9.0**) | Let players control a sideways pull while adding fair, risky surprises. |
+| **3** | Prototype Fireball, horizontal/vertical blasts and Gravity Surge | Give players meaningful tactical powers. |
+| **4** | Guide-free rewards and different-colour bonuses | Reward skill and clever cascades. |
+| **5** | Fizzling character designs, rescue animations and family story | Give the game identity and heart. |
+| **6** | Earnable coins and the Fizz Shop | Add an enjoyable, fair reward loop. |
+| **7** | Worlds, richer puzzles, boss encounters and sustained visual polish | Build an adventure worth coming back to. |
 
 **Design work can overlap implementation:** We can sketch Fizzlings, story themes and bosses early, even if the core physics and abilities are built first.
 
 ## Current prototype baseline
 
-As of **v0.5**, BubbleFun already has:
+As of **v0.9.0** (PR #19 review branch), BubbleFun has:
 
 - Responsive portrait/landscape Bubble Shooter.
 - Arcade mode and three handcrafted puzzles: Twin Towers, Heartbreaker and The Crown.
 - Matching, bombs, chained detonations, detached falling bubbles, basic particle effects and optional sound.
 - Browser-local high scores; no accounts, real-money payments or adverts.
 
-The richer connected-cluster gravity, special shop, Fizzling rescue story and boss levels described in this document are **future ideas, not features already shipped**.
+Normal spring-connected gravity and genuine sticky contact matches are shipped in v0.8.x. Directional Gravity Shifts are proposed in v0.9.0 (PR #19). Extreme Gravity bond breaking, the depth-risk scoring bonuses, special shop, Fizzling rescue story and bosses are still **future designs**, not implemented.
 
 ## Open decisions for our next design conversations
 

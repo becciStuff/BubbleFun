@@ -1,6 +1,7 @@
 import { MOBILE_LAYOUT, DESKTOP_LAYOUT, SWATCHES } from './config.js';
 import { PUZZLES } from './puzzles.js';
-import { initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame } from './game.js';
+import { initialShooter, initialPuzzle, fireShooter, aimShooter, stepGame, activateGravityShift } from './game.js';
+import { assessGravityInstability, canActivateGravityShift } from './gravity-events.js';
 import { draw } from './render.js';
 import { loadVersion } from './version.js';
 
@@ -47,7 +48,7 @@ function playSound(type) {
     if (audioContext.state === 'suspended') audioContext.resume();
     const now = audioContext.currentTime;
     const tones = {
-      fire: [280, 400, .08], land: [205, 140, .11],
+      fire: [280, 400, .08], land: [205, 140, .11], warning: [410, 630, .22],
       pop: [590, 950, .17], drop: [320, 190, .19],
       cascade: [430, 740, .24], burst: [310, 105, .25],
       chain: [245, 68, .37], surge: [310, 75, .46],
@@ -123,6 +124,14 @@ window.addEventListener('keydown', event => {
   if (event.key === 'ArrowLeft') { state.angle = Math.max(-1.15, state.angle - .065); event.preventDefault(); }
   if (event.key === 'ArrowRight') { state.angle = Math.min(1.15, state.angle + .065); event.preventDefault(); }
   if (event.code === 'Space') { fireShooter(state); event.preventDefault(); }
+  if (event.key.toLowerCase() === 'a' || event.key.toLowerCase() === 'd') {
+    const direction=event.key.toLowerCase() === 'a' ? -1 : 1;
+    if (activateGravityShift(state,direction)) {
+      playSound('surge');
+      announce(`Earned Gravity Shift ${direction<0?'left':'right'} activated!`);
+    }
+    event.preventDefault();
+  }
 });
 
 const scoreKey = () => playStyle === 'arcade' ? 'shooter' : `puzzle-${puzzleIndex}`;
@@ -148,9 +157,9 @@ function updatePlayUI() {
     ? `Clear the glowing bomb targets in ${PUZZLES[puzzleIndex].shots} shots or fewer. The bubbles form a handcrafted pattern — look for a weak point and bring down whole sections.`
     : 'Match three or more colours. Watch hanging bubbles sway as you shoot, trigger bomb chains, and bring down unsupported clusters.');
   putText('tip-copy', puzzle
-    ? 'You don’t need to clear every bubble. Break the supports or detonate the marked targets to solve the puzzle.'
-    : 'Hanging bubbles react to your shots. Those glowing bubbles are bombs — match their colour or trigger a chain.');
-  canvas.setAttribute('aria-label', `${puzzle ? PUZZLES[puzzleIndex].name + ' puzzle' : 'Bubble Shooter'} playfield. Attached bubbles sway naturally. Aim with mouse or touch; arrow keys and Space also work.`);
+    ? 'Clear the targets with your shots; earned directional Gravity Shifts can help. No random disturbances in these handcrafted puzzles.'
+    : 'Combos and cascades earn Gravity Charge. Low hanging chains raise instability and invite warned random shifts.');
+  canvas.setAttribute('aria-label', `${puzzle ? PUZZLES[puzzleIndex].name + ' puzzle' : 'Bubble Shooter'} playfield. Bubbles sway and respond to directional gravity shifts. Aim with mouse or touch; arrow keys and Space also work.`);
 }
 
 function reset() {
@@ -209,6 +218,33 @@ function updateUI() {
       : state.lastPop ? `${state.lastPop} popped! Keep going!`
       : playStyle === 'puzzle' ? `${state.bombs.size} bomb target${state.bombs.size===1?'':'s'} to clear` : 'Match 3+ — glowing bubbles are bombs!');
   putText('game-status', `✦ ${status}`);
+  const gravity=state.gravityEvents;
+  const charge=Math.round(gravity.charge);
+  const instability=assessGravityInstability(state);
+  gravity.instability=instability;
+  putText('gravity-charge-value',`${charge}%`);
+  putText('gravity-instability-value',`${instability}%`);
+  $('gravity-charge-fill').style.width=`${charge}%`;
+  $('gravity-instability-fill').style.width=`${instability}%`;
+  $('gravity-charge-meter').setAttribute('aria-valuenow',String(charge));
+  $('gravity-instability-meter').setAttribute('aria-valuenow',String(instability));
+  const allowed=canActivateGravityShift(state);
+  $('gravity-left').disabled=!allowed;
+  $('gravity-right').disabled=!allowed;
+  const alert=$('gravity-alert');
+  if (state.reducedMotion) {
+    alert.hidden=false;
+    putText('gravity-alert','Reduced motion: gravity shifts are disabled.');
+  } else if (gravity.activeDirection) {
+    alert.hidden=false;
+    putText('gravity-alert',`${gravity.activeSource === 'environment' ? '☁ RANDOM' : '⚡ EARNED'} GRAVITY SHIFT ${gravity.activeDirection<0?'↙ LEFT':'RIGHT ↘'} · ${gravity.remaining.toFixed(1)}s`);
+  } else if (gravity.warning) {
+    alert.hidden=false;
+    putText('gravity-alert',`⚠ GRAVITY SHIFT ${gravity.warning.direction<0?'↙ LEFT':'RIGHT ↘'} — AFTER YOUR NEXT SHOT!`);
+  } else {
+    alert.hidden=true;
+    putText('gravity-alert','');
+  }
   const overlay = $('result-overlay');
   const finished = state.status === 'won' || state.status === 'lost';
   overlay.classList.toggle('hidden', !finished);
@@ -224,6 +260,15 @@ function updateUI() {
 
 document.querySelectorAll('.mode-card').forEach(button => button.addEventListener('click', () => selectPlay(button.dataset.play)));
 document.querySelectorAll('.puzzle-choice').forEach(button => button.addEventListener('click', () => selectPuzzle(Number(button.dataset.puzzle))));
+for (const [id,direction] of [['gravity-left',-1],['gravity-right',1]]) {
+  $(id).addEventListener('click', () => {
+    if (activateGravityShift(state,direction)) {
+      playSound('surge');
+      announce(`Earned Gravity Shift ${direction<0?'left':'right'} activated!`);
+      updateUI();
+    }
+  });
+}
 $('restart-button').addEventListener('click', reset);
 $('play-again-button').addEventListener('click', reset);
 $('next-puzzle-button').addEventListener('click', () => selectPuzzle(puzzleIndex + 1));
