@@ -438,7 +438,7 @@ export function stepGame(state, dt) {
       onSpark: (x, y, colour, vx, vy) => addSpark(state, x, y, colour, vx, vy),
       onBurst: (x, y, colour, strength, falling) => {
         addExplosion(state, x, y, colour, strength);
-        if (falling.gravityHost && triggerGravityEvent(state,'host',state.gravityRandom)) {
+        if (falling?.gravityHost && triggerGravityEvent(state,'host',state.gravityRandom)) {
           addCallout(state,x,y-45,gravityEventLabel(state),'pink');
         }
       },
