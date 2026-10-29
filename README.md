@@ -6,48 +6,24 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Before new features:** Read [REFACTORING.md](REFACTORING.md) for the staged module split and regression-test plan. Configuration, grid, puzzle setup and basic falling physics have been separated; advanced gravity features are still to come.
 
-**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.9.1 uses rare event-host bubbles and earned, selectable Gravity Orb shots**, not permanent shift controls., with no Gravity Lab in the UI.
+**Building gravity?** Read [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) for support, strain and motion rules. **v0.8.5 limits gravity match triggering to newly merged colour groups, while preserving full combos and row continuity**, with no Gravity Lab in the UI.
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
-## v0.9.1 — Rare Gravity Event bubbles and selectable Gravity Orb shots
+## v0.9.2 — Remove experimental Gravity Shifts; preserve normal physics
 
-**Corrected design:** Gravity isn't a constantly managed resource. The
-always-visible Charge/Instability meters, random per-shot rolls, warnings and
-A/D shift buttons from v0.9.0 have been **removed**.
+This maintenance release **fully removes the later Gravity Shift experiment**
+introduced in v0.9.0 and v0.9.1. The permanent meters, random disturbances,
+hosted special bubbles, Gravity Orbs, shift directions, temporary gravity forces,
+selection buttons, warning UI, and their dedicated implementation are gone.
 
-- **Rare host bubbles:** Ordinary Arcade bubbles have only a **0.7% chance**
-  at spawn to carry a special gravity swirl, with no more than one on the
-  board. You can see the emblem and aim for it. It triggers *only when that
-  marked bubble actually breaks*: by colour match, bomb or impact after
-  detaching and falling to the floor. No random event happens merely from
-  waiting, the number of shots, or how low other bubbles hang.
-- **Surprise:** A triggered host causes a temporary **LEFT**, **RIGHT**
-  or **HEAVY DOWNWARD** gravity effect for **3.2 seconds** before the
-  board returns to its usual downward pull. The existing spring physics
-  moves real attached bubbles, so shifts can bring distinct matching
-  colour groups into contact. Existing sticky bonds are never randomly
-  severed.
-- **Player-owned Gravity Orb:** Clearing **6+ matching bubbles** in one
-  match (or a sufficiently big drop or bomb clear) can earn one
-  special-shot orb. Only then does the **Orb Left / Orb Right** selector
-  appear. Choose the direction, aim, and **fire your next normal-colour
-  bubble**. The special triggers *on impact*, not when you click the
-  selector; it's consumed once.
-- **Puzzles:** No randomly marked gravity hosts in the existing
-  handcrafted levels, preserving their known solutions. Earned specials
-  are available there; reduced-motion preferences keep extra forces off.
-- **Important:** This is **not** yet Extreme Gravity that tears overloaded
-  bonds, and the previously agreed bottom-depth risk/reward score bonus
-  is still future work. Normal gravity, contact matching and row physics
-  remain unchanged.
-
-## v0.9.0 — Superseded gravity meter experiment
-
-The previous release experimented with permanent Charge/Instability meters,
-per-shot random rolls and A/D shift buttons. **That interpretation was
-incorrect**. v0.9.1 replaces it with rare marked host bubbles and earned
-special shots; do not restore the always-on system.
+**Nothing from the previously working real gravity is removed:** suspended
+bubbles still sag and swing on springs; physical sticky contacts still form
+real attachments; new 3+ same-colour contacts pop their whole connected group;
+explosion recoil, falling cascades, puzzles and row-drop momentum are unchanged.
+The gameplay, physics, UI and browser smoke code return to the stable,
+pre-experiment v0.8.5 implementation. The version number advances only to
+mark the removal release.
 
 ## v0.8.5 — Only genuinely new colour groups pop
 
@@ -188,11 +164,11 @@ on desktop and mobile-sized screens.
 
 ## Release tracking
 
-**Current version: v0.9.1** on the rare-event/special-orb review branch. Gravity reacts to
+**Current version: v0.9.2** — the shift-free, stable v0.8.5 gameplay and physics restored. Gravity reacts to
 shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
 Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.9.1**, loading the number from
+The header badge reads **Version 0.9.2**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -200,9 +176,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.9.1 → 0.9.2
+npm run version:patch   # e.g. 0.9.2 → 0.9.3
 # or
-npm run version:minor   # e.g. 0.9.0 → 0.10.0
+npm run version:minor   # e.g. 0.9.2 → 0.10.0
 npm test
 ```
 
@@ -280,7 +256,6 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/physical-bonds.js` — contact detection, sticky bonds and collision separation
 - `src/contact-matches.js` — whole-colour 3+ match detection from newly touching bonds
 - `src/row-physics.js` — preserve moving bodies and bonds as the ceiling descends
-- `src/gravity-events.js` — charge, risk, fair warned disturbances and directional shift force
 - `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
 - `src/attachment-visuals.js` — subtle glass-like links between live bubble centres
 - `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
@@ -299,7 +274,6 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `tests/physical-gravity.test.js` — force-driven sag, contact adhesion and matching
 - `tests/contact-matches.test.js` — 3+, whole-colour seven-bubble combos, bomb/Puzzle integration, softer bond geometry
 - `tests/row-physics.test.js` — positions, momentum and sticky bond continuity during Arcade row drops
-- `tests/gravity-events.test.js` — earned left/right force, warning timing, risk, cooldown, puzzle fairness and reduced motion
 - `tests/explosion-motion.test.js` — survivor recoil and damping
 - `tests/modules.test.js` — visual effects and dormant Pop regression tests
 
