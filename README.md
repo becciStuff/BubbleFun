@@ -268,6 +268,22 @@ Both play styles support a restart button, optional sound effects and separate l
 
 The archived **Bubble Pop** rules remain in `src/pop-mode.js` and are tested but the mode is not presented in the UI.
 
+## Debug scoring
+
+If scores seem to jump unexpectedly, click **Score log: Off** in the right-hand
+How to Play panel to switch the log **On**. Open your browser's developer console
+(**F12 → Console**) before firing a shot. Each match, bomb detonation or falling
+cascade that actually awards points prints one expandable `[BubbleFun score]`
+entry with its score change and running total. Expand the entry for the base
+amount, combo multiplier, depth bonus, bomb activation bonus and a per-bubble
+table of colour, grid cell, depth percentage, depth multiplier and points before
+the event's final rounding. An empty/no-points event produces no entry.
+
+The switch is **off by default**, stays at the selected setting across restarts
+and reloads where local storage is available, and works in Arcade and Puzzles.
+Switch it Off again to stop logging. Logging is diagnostic only: it does not
+change the scoring configuration, physics, scores or high-score storage.
+
 ## Run tests
 
 Node.js 20 or later is sufficient; no `npm install` is needed.

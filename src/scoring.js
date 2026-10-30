@@ -45,6 +45,10 @@ export function awardBubbleClear(state, cells, kind, combo = 1) {
   const config = state.scoringConfig ?? SCORING_CONFIG;
   const unit = pointsPerBubble(kind, config);
   const unique = new Set();
+  // A callback is installed only when the player enables scoring diagnostics.
+  // Normal gameplay does not allocate per-bubble trace records.
+  const trace = typeof state.onScoreAwarded === 'function' ? [] : null;
+  const scoreBefore = state.score;
   let weighted = 0, count = 0, totalDepth = 0;
   for (const [row, col] of cells) {
     const key = cellKey(row, col);
@@ -52,18 +56,36 @@ export function awardBubbleClear(state, cells, kind, combo = 1) {
     unique.add(key);
     const { y } = bubblePosition(state, row, col);
     const depth = bubbleDepth(y, state.layout, config);
+    const multiplier = depthMultiplier(y, state.layout, config);
     totalDepth += depth;
-    weighted += unit * depthMultiplier(y, state.layout, config);
+    weighted += unit * multiplier;
+    if (trace) trace.push({
+      cell: key, colour: state.board.get(key), y: Number(y.toFixed(1)),
+      depthPercent: Number((depth * 100).toFixed(1)),
+      basePoints: unit, depthMultiplier: Number(multiplier.toFixed(3)),
+      comboMultiplier: combo, pointsBeforeRounding: Number((unit * multiplier * combo).toFixed(2)),
+    });
     count++;
   }
   const fixed = kind === 'bomb' ? config.bombActivationPoints : 0;
   const points = Math.round((weighted + fixed) * combo);
   const basePoints = (count * unit + fixed) * combo;
   state.score += points;
-  return {
+  const result = {
     points, basePoints, depthBonus: points - basePoints,
     count, averageDepth: count ? totalDepth / count : 0,
   };
+  if (trace && points !== 0) {
+    try {
+      state.onScoreAwarded({
+        kind, combo, ...result, activationBonus: fixed * combo,
+        scoreBefore, scoreAfter: state.score, bubbles: trace,
+      });
+    } catch {
+      // Debug output must never interrupt a shot, a cascade or its rewards.
+    }
+  }
+  return result;
 }
 
 // A readable celebration for genuinely deep, substantial hanging clears.

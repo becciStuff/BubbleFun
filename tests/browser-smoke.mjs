@@ -20,6 +20,19 @@ try {
         'Lab UI and buttons must be entirely absent');
       assert.equal(await page.locator('#game-canvas').isVisible(), true);
 
+      // A real player can turn scoring diagnostics on/off without a console
+      // command, and the preference survives a page reload.
+      const debugButton = page.locator('#score-debug-button');
+      assert.equal(await debugButton.getAttribute('aria-pressed'), 'false');
+      await debugButton.click();
+      assert.equal(await debugButton.getAttribute('aria-pressed'), 'true');
+      assert.equal(await page.evaluate(() => localStorage.getItem('bubblefun-debug-scoring')), 'on');
+      await page.reload({ waitUntil: 'networkidle' });
+      assert.equal(await debugButton.getAttribute('aria-pressed'), 'true');
+      await debugButton.click();
+      assert.equal(await debugButton.getAttribute('aria-pressed'), 'false');
+      assert.equal(await page.evaluate(() => localStorage.getItem('bubblefun-debug-scoring')), 'off');
+
       // Player action, not just a direct engine call: fire the Arcade launcher.
       const canvas = page.locator('#game-canvas');
       const bounds = await canvas.boundingBox();
