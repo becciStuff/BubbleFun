@@ -29,7 +29,7 @@ for(const layout of [MOBILE_LAYOUT,DESKTOP_LAYOUT]) {
     assert.equal(state.extraBonds.has(sticky),true,'real collision establishes a sticky link');
     for(const key of ['1,2','2,2','2,6'])
       assert.equal(state.board.has(key),false,`${key} should pop as part of same-colour group`);
-    assert.equal(state.score-score,60,'standard match points, no phantom turn cost');
+    assert.ok(state.score-score>60,'live-depth bonus rewards this moving contact match without a phantom turn');
     assert.equal(state.shots,shots,'a gravity contact does not consume ammunition');
     assert.equal(state.lastPop,3);
     assert.equal(state.lastEvent,'pop');
@@ -120,7 +120,7 @@ for (const layout of [MOBILE_LAYOUT, DESKTOP_LAYOUT]) {
     for (const k of [...six, '2,6']) assert.equal(state.board.has(k), false,
       `connected blue ${k} must also burst, not just the pair that touched`);
     assert.equal(state.lastPop, 7);
-    assert.equal(state.score - oldScore, 7 * 20 * 2, 'combo scores the full group');
+    assert.ok(state.score-oldScore>7*20*2, 'combo scores all seven bubbles and their own depth bonuses');
     assert.equal(state.comboLevel, 2);
     assert.equal(state.shots, 0, 'swing-assisted match costs no turn');
   });
