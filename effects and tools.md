@@ -134,15 +134,15 @@ More tools may be added later, but **none are agreed yet**. Every new player too
 
 ## 5. Scoring and strategic risk/reward
 
-The scoring change is **planned but not yet implemented**. It is an important part of why these effects and tools exist:
+**Depth-based points are implemented in the v0.10.0 scoring PR** (Arcade and Puzzles). All player-tool charging and new special effects in this document are **still design-only**. Scoring is an important part of why these tools should exist:
 
 - **Depth matters:** A bubble popped or detached **closer to the bottom danger line** should award more points than one cleared high up.
 - **Reward long hanging lines:** Players may deliberately grow a long, low-hanging chain, risking game over for a large eventual reward when an upper support is removed or Increase Gravity makes it drop.
 - **Play safe or gamble:** Clearing early/high should be safer but generally worth less than a skilfully timed large, deep cascade.
 - **Both pops and falls count:** Reward each affected bubble by **its own depth when it is removed/detached**. Don't inflate rewards just because an animation carries a bubble farther down afterward.
 - **Count once:** A bubble must not pay out multiple times through pop, explosion, detachment and floor burst.
-- **Combine cleanly:** Existing combos, bomb cascades and future depth bonuses should work with player-tool charging, but charging must be balanced so a single huge chain doesn't make every tool permanently reusable.
-- **Future design:** Exact points, depth multipliers, charge rates and per-cascade caps are undecided. Preserve fair gameplay on desktop/mobile and in handcrafted Puzzles.
+- **Combine cleanly:** Existing combos, bomb cascades and depth bonuses should work with future player-tool charging, but charging must be balanced so a single huge chain doesn't make every tool permanently reusable.
+- **Configured first pass:** Points, a smooth 1–3× depth multiplier and the danger-line threshold live in [src/scoring-config.js](src/scoring-config.js), calculated by [src/scoring.js](src/scoring.js). The exact **player-tool charge rates and per-cascade caps are undecided**. Preserve fair gameplay on desktop/mobile and in handcrafted Puzzles.
 
 The detailed depth-scoring intent is also recorded in [VISION.md](VISION.md). The current normal spring physics is already valued; **do not rewrite it just to add scoring or specials**.
 
