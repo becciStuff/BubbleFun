@@ -29,6 +29,37 @@ let audioContext = null;
 let lastTime = 0;
 let seenEvent = 0;
 let bestScore = readBest('arcade');
+const SCORE_LOG_KEY = 'bubblefun-debug-scoring';
+function readScoreLogPreference() {
+  try { return localStorage.getItem(SCORE_LOG_KEY) === 'on'; }
+  catch { return false; }
+}
+let scoreLogEnabled = readScoreLogPreference();
+
+// Each callback corresponds to a real score award, not a rendering frame.
+// Per-bubble values are before the single final event-rounding step.
+function logScoreAward(event) {
+  console.groupCollapsed(`[BubbleFun score] ${event.kind.toUpperCase()} +${event.points} (${event.scoreBefore} → ${event.scoreAfter})`);
+  console.log('Award breakdown', {
+    type: event.kind,
+    bubbles: event.count,
+    comboMultiplier: event.combo,
+    basePointsIncludingCombo: event.basePoints,
+    depthBonus: event.depthBonus,
+    bombActivationBonusIncludingCombo: event.activationBonus,
+    awardedPoints: event.points,
+    scoreBefore: event.scoreBefore,
+    scoreAfter: event.scoreAfter,
+  });
+  console.table(event.bubbles);
+  console.groupEnd();
+}
+
+function updateScoreLogButton() {
+  const button = $('score-debug-button');
+  button.setAttribute('aria-pressed', String(scoreLogEnabled));
+  button.textContent = `Score log: ${scoreLogEnabled ? 'On' : 'Off'}`;
+}
 
 function readBest(gameMode) {
   try { return Number(localStorage.getItem(`bubblefun-best-${gameMode}`)) || 0; }
@@ -155,6 +186,7 @@ function updatePlayUI() {
 
 function reset() {
   state = playStyle === 'puzzle' ? initialPuzzle(puzzleIndex, chosenLayout()) : initialShooter(Math.random, chosenLayout());
+  state.onScoreAwarded = scoreLogEnabled ? logScoreAward : null;
   state.reducedMotion = reducedMotion;
   if (reducedMotion) state.introTime = 0;
   canvas.width = state.layout.width;
@@ -164,6 +196,7 @@ function reset() {
   bestScore = readBest(scoreKey());
   pointerDown = false;
   updatePlayUI();
+  updateScoreLogButton();
   announce(`${playStyle === 'puzzle' ? state.puzzleName : 'Arcade'} started.`);
   updateUI();
 }
@@ -225,6 +258,14 @@ function updateUI() {
 document.querySelectorAll('.mode-card').forEach(button => button.addEventListener('click', () => selectPlay(button.dataset.play)));
 document.querySelectorAll('.puzzle-choice').forEach(button => button.addEventListener('click', () => selectPuzzle(Number(button.dataset.puzzle))));
 $('restart-button').addEventListener('click', reset);
+$('score-debug-button').addEventListener('click', () => {
+  scoreLogEnabled = !scoreLogEnabled;
+  try { localStorage.setItem(SCORE_LOG_KEY, scoreLogEnabled ? 'on' : 'off'); }
+  catch { /* Logging still works this session when storage is unavailable. */ }
+  state.onScoreAwarded = scoreLogEnabled ? logScoreAward : null;
+  updateScoreLogButton();
+  if (scoreLogEnabled) console.info('[BubbleFun score] Logging enabled. Play a shot to see scoring events.');
+});
 $('play-again-button').addEventListener('click', reset);
 $('next-puzzle-button').addEventListener('click', () => selectPuzzle(puzzleIndex + 1));
 $('sound-button').addEventListener('click', () => {
