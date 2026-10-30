@@ -10,6 +10,43 @@ A small, free-to-play bubble shooter built with plain HTML, CSS and JavaScript. 
 
 **Picking up the project?** Start with [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current baseline, agreed decisions, next tasks and a new-chat handover.
 
+## v0.10.0 — Configurable, depth-based risk/reward scoring
+
+**Points now depend on how low each bubble actually hangs.** Every bubble
+popped by a normal or new sticky-contact match, caught by a Bomb Bubble
+explosion, or detached by gravity earns a smooth per-bubble **1× near the
+ceiling through 3× near the launcher danger line** bonus. The curve gets
+more generous near the bottom so delaying a risky long chain has a real
+payoff. A support shot made high on the board still rewards the individual
+*low-hanging bubbles* released below it.
+
+Scoring is **isolated from gameplay and physics**:
+
+- **`src/scoring-config.js` — tweak values here.** Base match (20),
+  gravity drop (30), bomb victim (25), fixed bomb activation bonus (50);
+  minimum/maximum depth multipliers (1/3), curve exponent (1.5),
+  danger-line offset (47 px), maximum combo (8), minimum bomb combo (2),
+  and deep-clear banner thresholds (6 bubbles, average depth at least 65%).
+- **`src/scoring.js` — calculations and awards**. Reads the live bubble
+  position from the existing position system and normalises depth against
+  the current mobile/desktop layout. Any `state.scoringConfig` object
+  can override the defaults for isolated balancing/tests.
+- **`src/game.js` — unchanged play rules**. Before each removal it asks
+  the scoring module to award points. Once detached, bubbles cannot be
+  scored again on their trip to the floor or on impact.
+- **DEEP CLEAR!** replaces the ordinary gravity callout when at least six
+  bubbles fall from an average depth of 65% or more; it is presentation
+  only, not additional points.
+
+Existing combo behaviour and fixed bomb activation rewards remain.
+Normal spring gravity, sticky contacts, aiming, explosions and new-row
+momentum were **not changed**. Original high scores are still kept in the
+browser; comparing old and new top scores is not like-for-like.
+
+Future Rocket/Match Colour/Increase Gravity/Bomb tool charging is
+**not implemented** by this PR. The separate [effects and tools.md](effects%20and%20tools.md)
+spec still governs when those single-use specials should earn charge.
+
 ## v0.9.2 — Remove experimental Gravity Shifts; preserve normal physics
 
 This maintenance release **fully removes the later Gravity Shift experiment**
@@ -164,11 +201,11 @@ on desktop and mobile-sized screens.
 
 ## Release tracking
 
-**Current version: v0.9.2** — the shift-free, stable v0.8.5 gameplay and physics restored. Gravity reacts to
+**Current version: v0.10.0** — configurable depth rewards on the unchanged, shift-free spring-gravity game. Gravity reacts to
 shots in real Arcade and Puzzle gameplay. Elastic bond breakage and earned
 Extreme Gravity specials are future work.
 
-The header badge reads **Version 0.9.2**, loading the number from
+The header badge reads **Version 0.10.0**, loading the number from
 the root `version.json` file. That JSON file is the single source for the
 on-screen version; `package.json` mirrors it for developer tooling and tests
 prevent the two from drifting.
@@ -176,9 +213,9 @@ prevent the two from drifting.
 To release a new version from a Node.js terminal:
 
 ```bash
-npm run version:patch   # e.g. 0.9.2 → 0.9.3
+npm run version:patch   # e.g. 0.10.0 → 0.10.1
 # or
-npm run version:minor   # e.g. 0.9.2 → 0.10.0
+npm run version:minor   # e.g. 0.10.0 → 0.11.0
 npm test
 ```
 
@@ -258,7 +295,9 @@ The repository is static-site ready. On GitHub, you can enable **Settings → Pa
 - `src/row-physics.js` — preserve moving bodies and bonds as the ceiling descends
 - `src/positions.js` — shared current bubble centres for aiming, impacts, physics and visuals
 - `src/attachment-visuals.js` — subtle glass-like links between live bubble centres
-- `src/game.js` — shooter rules, scoring and turn orchestration, retaining legacy exports during the refactor
+- `src/game.js` — shooter rules and turn orchestration, retaining legacy exports during the refactor
+- `src/scoring.js` — per-bubble live depth scoring and combo math
+- `src/scoring-config.js` — independent, editable points, multiplier curve and banner thresholds
 - `src/effects.js` — visual effect creation, particles and effect lifetimes
 - `src/pop-mode.js` — archived Bubble Pop logic (not shown in the UI)
 - `src/render.js` — responsive canvas bubble graphics, aim guide and effects

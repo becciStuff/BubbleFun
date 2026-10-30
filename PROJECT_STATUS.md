@@ -1,11 +1,10 @@
 # BubbleFun — current project status
 
-**Updated:** 29 October 2026 (NZ)  
-**Repository:** https://github.com/becciStuff/BubbleFun  
-**Merged baseline:** v0.9.1 (PR #20); temporary Gravity Shift experiment being removed in this PR. Underlying gameplay/physics is the stable, user-approved v0.8.5 implementation.  
-**Current review:** [PR #21](https://github.com/becciStuff/BubbleFun/pull/21) on `fix/remove-gravity-shift-features-preserve-physics-092`  
-**Proposed version:** **v0.9.2**, a removal-only release.  
-**Current goal:** Remove *all* Gravity Shift/Orb/Event UI and mechanics without altering earlier spring gravity, matching, falling, explosions, row continuity, Arcade/Puzzle rules or scoring.
+**Updated:** 30 October 2026 (NZ)  
+**Merged baseline:** v0.9.2, all unwanted Gravity Shift features removed; stable spring physics retained.  
+**Current review:** [PR #23](https://github.com/becciStuff/BubbleFun/pull/23) on `feature/configurable-depth-scoring-093`.  
+**Proposed version:** **v0.10.0** (first configurable depth scoring release).  
+**Current goal:** Reward deep, risky pops/drops with an adjustable 1×–3× per-bubble multiplier, without changing physics, combo detection or the user's unimplemented special tools.
 
 Read [VISION.md](VISION.md), [GRAVITY_DESIGN.md](GRAVITY_DESIGN.md) and
 [REFACTORING.md](REFACTORING.md) before adding more features.
@@ -81,26 +80,27 @@ through other same-colour paths.
   redundant bond, and ordinary post-shot settling. Existing seven-bubble
   matches, bombs, puzzle solvability and row momentum must keep passing.
 
-## Future scoring milestone: depth-based risk and reward
+## PR #23 — Depth scoring as an independent configurable system
 
-**Agreed player experience — recorded in [VISION.md](VISION.md), not yet
-implemented:** BubbleFun should reward popping or dropping bubbles **nearer
-the bottom danger line** more heavily than safely clearing bubbles near the
-top. A player may choose to keep a long dangling chain alive for higher
-potential points, at the genuine risk of allowing the board to reach the
-launcher and losing.
+**First playable implementation of the agreed risk/reward mechanic:**
 
-- Each popped or detached bubble contributes points based on **its depth
-  at the moment it leaves the board**. A low-hanging chain severed with a
-  clever top shot could be a spectacular high-scoring gravity cascade.
-- Long groups, automatic colour-contact matches and already-planned combo
-  rewards should combine with a **bounded depth bonus**, with clear feedback
-  such as *DEEP CLEAR*. Avoid double-counting popped and falling bubbles.
-- Exact depth formula / multipliers are **not yet agreed**; tune for risk,
-  readability, fair mobile/desktop layouts and handcrafted Puzzles.
-- This is a **separate future scoring-design + implementation milestone**,
-  not part of the current normal-gravity physics or Extreme Gravity prototype.
-  Preserve the current well-received physics without unnecessary changes.
+- **`src/scoring-config.js`** exposes independently tunable match, drop,
+  bomb-victim and activation points; 1–3× smooth depth multiplier (power 1.5);
+  danger-line offset, combo bounds and DEEP CLEAR thresholds.
+- **`src/scoring.js`** owns all live Y-position depth calculations and
+  awards for Arcade and Puzzle: standard matches, real new swinging-contact
+  matches, bomb victims and detachments.
+- The existing base values and combo behaviour remain. Each removed
+  bubble earns its own depth reward *before leaving the board*.
+  Floor bursts never add points; overlapping removals cannot count twice.
+- **DEEP CLEAR!** appears for qualifying long low-hanging drops. It
+  displays the actual award, but gives no extra points beyond depth.
+- All depth comparisons are proportional to the playfield, not fixed
+  mobile/desktop pixel rows. Puzzle goals and hit physics are unchanged.
+- Existing Bomb Bubbles remain functional; no new bubble effects, player
+  tools, random shifts or Extreme Gravity behaviour are implemented.
+- This is an *initial balance configuration* that can be tuned from
+  one file, independent of future tool-charge rules and coin economy.
 
 ## PR #21: Remove the rejected Gravity Shift experiment
 
@@ -140,7 +140,9 @@ src/positions.js          Shared current physical bubble positions
 src/gravity.js            Detachment and falling physics, unwired Surge API
 src/attachment-visuals.js Real link rendering
 src/render.js             Canvas and aim guide from live positions
-src/game.js               Rules, scoring and thin physics calls
+src/game.js               Rules and thin scoring/physics orchestration
+src/scoring.js            Scoring calculations and award events
+src/scoring-config.js     Editable score weights, depth curve, combo caps
 src/app.js                Input and UI
 src/puzzles.js            Handcrafted puzzles
 src/effects.js            Visual effects separate from physical motion
@@ -184,8 +186,8 @@ and ensure visual movement never disagrees with the real hit tests.
 - [ ] Review PR #21: fully remove Gravity Shift experiment, with no change to earlier physics.
 - [ ] Hands-on test a 6+1 colour contact and Arcade row-drop momentum on a live
       desktop and phone. Automated tests are not a replacement for this.
-- [ ] Plan and implement depth-risk scoring as a separate future PR, with
-      per-bubble depth snapshots, large-chain bonuses and scoring regressions.
+- [x] PR #23: implement initial independent configurable depth scoring and scoring regressions.
+- [ ] Playtest the 1×–3× curve and DEEP CLEAR threshold against long risky chains; tune in config only.
 - [ ] After deploy, visually inspect screenshot-like side hangers, contacts,
       blast recoil and actual aim fairness on desktop and mobile.
 - [ ] Later: refine multi-anchor tension distribution, bond strength, richer
@@ -193,15 +195,19 @@ and ensure visual movement never disagrees with the real hit tests.
 
 ## Checkpoint handover
 
-> PR #21 / v0.9.2 removes *all* Gravity Shift/Orb/Event changes introduced
-> after the working v0.8.5 gravity. The user explicitly requested removal
-> with **NO changes to previously working normal gravity**.
+> v0.9.2 remains the stable, real spring-gravity baseline. The user
+> rejected the earlier experimental Gravity Shift systems and does not
+> want those restored. Do not alter swinging, collision, sticky contacts,
+> bomb effects, matching, falling dynamics or ceiling-row continuity.
 >
-> Keep real physics from PRs #14–17: springs, swaying, new physical contacts,
-> whole matching groups, bombs/recoil/falling, preserved row-drop momentum
-> and Puzzle fairness. Do not redesign or introduce Gravity Shift abilities
-> unless the user explicitly develops a new vision later.
+> PR #23 / proposed v0.10.0 adds **only depth-sensitive scoring**.
+> `src/scoring.js` calculates match, bomb and gravity-detachment points
+> from *each bubble's actual live position*, while `src/scoring-config.js`
+> keeps the defaults adjustable. Current range is **1× at the ceiling to
+> 3× at the launcher danger line** with a smooth power-1.5 curve.
+> Long low-hanging chains can earn a large reward if cleared skilfully.
+> Floor impacts do not score again; the existing combo system is retained.
 >
-> The separate future scoring idea from PR #18 remains: deeper, riskier
-> hanging bubbles should be worth more when popped or detached. Nothing
-> regarding that scoring has yet been implemented.
+> The [effects and tools.md](effects%20and%20tools.md) spec remains
+> **design-only** for new effects and earned one-use player tools.
+> Their score-to-charge formulas are deliberately not implemented here.

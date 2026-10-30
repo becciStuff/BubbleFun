@@ -12,6 +12,7 @@ import { bubblePosition } from './positions.js';
 import { stepAttachedSway, kickAttachedSway, kickExplosionSway } from './sway.js';
 import { findContactMatches } from './contact-matches.js';
 import { shiftAttachedPhysicsForNewRow } from './row-physics.js';
+import { awardBubbleClear, nextComboMultiplier, isDeepClear } from './scoring.js';
 
 // Keep the existing public API during the refactor, so current tests and any
 // consumers importing from game.js continue to work.
@@ -194,16 +195,16 @@ export function detonateNextBomb(state) {
     const p = bubblePosition(state, r, c);
     if (Math.hypot(p.x - bomb.x, p.y - bomb.y) <= BOMB_RADIUS) victims.push([r, c]);
   }
+  const award = awardBubbleClear(state, victims, 'bomb', nextComboMultiplier(state.comboLevel, 'bomb', state.scoringConfig));
   state.pendingBombs.push(...removeCells(state, victims, 11));
   // A bomb blast has an extra outward pressure wave, even when only a few
   // remaining bubbles survive inside its visual blast radius.
   kickExplosionSway(state, [{ x: bomb.x, y: bomb.y }], 1.35);
-  state.comboLevel = Math.min(8, Math.max(2, state.comboLevel + 1));
+  state.comboLevel = nextComboMultiplier(state.comboLevel, 'bomb', state.scoringConfig);
   state.highestCombo = Math.max(state.highestCombo, state.comboLevel);
   state.comboDisplay = 2.8;
   state.lastBombs++;
-  const points = (50 + victims.length * 25) * state.comboLevel;
-  state.score += points;
+  const points = award.points;
   state.lastPop += victims.length;
   state.lastChain = { multiplier: state.comboLevel, points, popped: victims.length, detonated: state.lastBombs };
   addExplosion(state, bomb.x, bomb.y, 'yellow', 1.15 + Math.min(.35, state.comboLevel * .05));
@@ -253,12 +254,13 @@ function ceilingReachedLauncher(state) {
 
 function settleShooter(state) {
   const floaters = findDetachedBubbles(state.board, state.phase, state.layout, state.extraBonds);
+  const award = awardBubbleClear(state, floaters, 'drop');
   const detached = releaseFloatingShooter(state, floaters);
   state.lastDrop += detached;
   state.lastPop += detached;
-  state.score += detached * 30;
   if (detached) {
-    addCallout(state, state.layout.width / 2, state.layout.height * .58, `GRAVITY! ${detached} FALLING +${detached * 30}`, 'pink');
+    const callout = isDeepClear(award, state.scoringConfig) ? 'DEEP CLEAR!' : 'GRAVITY!';
+    addCallout(state, state.layout.width / 2, state.layout.height * .58, `${callout} ${detached} FALLING +${award.points}`, 'pink');
     if (!state.lastBombs) emit(state, 'cascade');
   }
   if (state.variant === 'puzzle' ? state.bombs.size === 0 : state.board.size === 0) {
@@ -319,12 +321,12 @@ function lockShooter(state, hitCell = null) {
   state.lastDrop = 0;
   if (same.length >= 3) {
     state.comboLevel = 1;
+    const award = awardBubbleClear(state, same, 'match', state.comboLevel);
     state.pendingBombs.push(...removeCells(state, same, 13));
     state.lastPop = same.length;
-    state.score += same.length * 20;
     state.shake = Math.max(state.shake, Math.min(.9, same.length * .085));
     addPulse(state, impact.x, impact.y, shot.colour, 1.35);
-    addCallout(state, impact.x, impact.y - 25, `POP! +${same.length * 20}`, 'yellow');
+    addCallout(state, impact.x, impact.y - 25, `POP! +${award.points}`, 'yellow');
     emit(state, 'pop');
   } else {
     addPulse(state, impact.x, impact.y, shot.colour, .38);
@@ -354,13 +356,13 @@ export function resolveContactMatches(state) {
   for (const group of groups) {
     const first = group[0];
     const origin = bubblePosition(state, first[0], first[1]);
-    const bonus = Math.min(8, Math.max(1, state.comboLevel + 1));
+    const bonus = nextComboMultiplier(state.comboLevel, 'contact', state.scoringConfig);
     state.comboLevel = bonus;
     state.highestCombo = Math.max(state.highestCombo, bonus);
     state.comboDisplay = 2.8;
+    const award = awardBubbleClear(state, group, 'match', bonus);
     state.pendingBombs.push(...removeCells(state, group, 12));
-    const points = group.length * 20 * bonus;
-    state.score += points;
+    const points = award.points;
     state.lastPop += group.length;
     state.shake = Math.max(state.shake, .6);
     addPulse(state, origin.x, origin.y, 'yellow', 1.1);

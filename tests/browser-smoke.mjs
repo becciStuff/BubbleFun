@@ -155,8 +155,11 @@ try {
           score:s.score,shots:s.shots,removed:['1,2','2,2','2,6'].every(k=>!s.board.has(k)),
           event:s.lastEvent};
       });
-      assert.deepEqual(autoMatch,{bond:true,score:60,shots:0,removed:true,event:'pop'},
-        'newly touching same-colour bubbles must pop 3+ and score automatically');
+      assert.equal(autoMatch.bond,true);
+      assert.ok(autoMatch.score>60,'live-depth rewards exceed the basic 3-bubble match');
+      assert.deepEqual({shots:autoMatch.shots,removed:autoMatch.removed,event:autoMatch.event},
+        {shots:0,removed:true,event:'pop'},
+        'newly touching same-colour bubbles must pop 3+ without using a shot');
 
       // Full real-colour component match (six blues + one newly touching)
       // and uninterrupted swing when a new roof row enters.
@@ -195,8 +198,11 @@ try {
         const momentum = drop.swayDynamics.get('3,3')?.vx;
         return {popped,remaining,score,samePlace,momentum};
       });
-      assert.deepEqual(fixes,{popped:7,remaining:0,score:280,samePlace:true,momentum:72},
-        'entire connected colour group pops and descending rows preserve live motion');
+      assert.ok(fixes.score>280,'seven-bubble combo earns the new per-bubble depth bonus');
+      assert.deepEqual({popped:fixes.popped,remaining:fixes.remaining,
+        samePlace:fixes.samePlace,momentum:fixes.momentum},
+        {popped:7,remaining:0,samePlace:true,momentum:72},
+        'entire colour group pops and descending rows preserve live motion');
 
       // A previously connected colour group must survive additional bonds
       // or bouncing. The new contact must actually merge colour COMPONENTS.
