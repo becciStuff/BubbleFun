@@ -99,3 +99,45 @@ for (const layout of [MOBILE_LAYOUT,DESKTOP_LAYOUT]) {
     assert.equal(award.points,20);
   });
 }
+
+test('score tracing is opt-in and reports each depth, award and running total', () => {
+  const layout = MOBILE_LAYOUT;
+  const ceiling = layout.top + RADIUS;
+  const danger = layout.launchY - SCORING_CONFIG.dangerLineOffset;
+  const state = initialShooter(() => .2, layout);
+  state.board = new Map([['0,2', 'pink'], ['1,2', 'blue']]);
+  state.bombs.clear();
+  state.attachedPositions.set('0,2', {x: 120, y: ceiling});
+  state.attachedPositions.set('1,2', {x: 120, y: danger});
+
+  const first = awardBubbleClear(state, [[0,2], [1,2]], 'match', 2);
+  assert.equal(first.points, 160);
+  assert.equal(state.onScoreAwarded, undefined, 'normal gameplay does not log');
+
+  const reports = [];
+  state.onScoreAwarded = event => reports.push(event);
+  const second = awardBubbleClear(state, [[0,2], [1,2], [1,2]], 'bomb', 3);
+  assert.equal(second.points, 450);
+  assert.equal(reports.length, 1);
+  const report = reports[0];
+  assert.equal(report.kind, 'bomb');
+  assert.equal(report.combo, 3);
+  assert.equal(report.points, second.points);
+  assert.equal(report.basePoints, second.basePoints);
+  assert.equal(report.depthBonus, second.depthBonus);
+  assert.equal(report.activationBonus, 150);
+  assert.equal(report.scoreBefore, 160);
+  assert.equal(report.scoreAfter, 610);
+  assert.equal(state.score, 610);
+  assert.equal(report.bubbles.length, 2, 'duplicate cells are reported only once');
+  assert.deepEqual(report.bubbles.map(b => b.depthPercent), [0, 100]);
+  assert.deepEqual(report.bubbles.map(b => b.depthMultiplier), [1, 3]);
+  assert.deepEqual(report.bubbles.map(b => b.pointsBeforeRounding), [75, 225]);
+  assert.equal(awardBubbleClear(state, [], 'drop').points, 0);
+  assert.equal(reports.length, 1, 'empty awards do not clutter the log');
+
+  state.onScoreAwarded = () => { throw new Error('Console unavailable'); };
+  assert.equal(awardBubbleClear(state, [[0,2]], 'match').points, 20,
+    'a broken diagnostics callback cannot interfere with scoring');
+  assert.equal(state.score, 630);
+});
