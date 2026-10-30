@@ -130,6 +130,11 @@ h1,h2,h3 { font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; }
 .control-row { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: #c6bcdf; font-size: 11px; font-weight: 700; }
 .control-symbol { border: 1px solid #66558b; color: #f6e8ff; min-width: 29px; height: 27px; display: grid; place-items: center; border-radius: 7px; font-size: 17px; }
 .keyboard-symbol { font-size: 11px; }
+.score-debug-control { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; border-top: 1px solid #534677; margin-top: 17px; padding-top: 15px; }
+.score-debug-button { padding: 8px 12px; border: 1px solid #77669c; border-radius: 9px; background: #3b3066; color: #f2eaff; font-size: 11px; font-weight: 800; }
+.score-debug-button:hover { background: #4a3b79; }
+.score-debug-button[aria-pressed="true"] { border-color: #58d9c1; color: #a8ffe8; }
+.score-debug-control small { color: #b8abda; font-size: 10px; line-height: 1.5; }
 .tip-card { margin-top: 16px; padding: 16px 14px; border: 1px solid #685073; background: #41305d; border-radius: 14px; display: flex; gap: 10px; }
 .tip-star { color: #fbd77d; font-size: 25px; line-height: 1; }
 .tip-card strong { color: #f8d68c; font-size: 10px; letter-spacing: 1.5px; }
