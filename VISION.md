@@ -62,7 +62,7 @@ We should prototype just a few distinctive powers first, then expand after playt
 
 ### Agreed direction: depth-based risk-versus-reward scoring
 
-**Design intent (not implemented yet):** The nearer a bubble is to the bottom
+**Agreed and implemented in the v0.10.0 scoring PR:** The nearer a bubble is to the bottom
 danger zone when it is popped or detached, the **more points it should be
 worth**. Keeping a long hanging chain alive and letting it grow lower should
 create a meaningful strategic choice:
@@ -76,7 +76,7 @@ create a meaningful strategic choice:
   contact combos and gravity cascades should feel especially satisfying.
   A dramatic collapse from a single well-aimed upper support shot can pay off.
 
-**Future implementation principles:**
+**Implemented scoring principles and playtest guardrails:**
 1. Reward **each removed bubble's own depth** on the live playfield, not just
    the height of the shot or the average row of a cluster. A deep bubble
    removed by a match or by losing its support should both earn a depth bonus.
@@ -94,12 +94,21 @@ create a meaningful strategic choice:
    Define clear caps and tune the points against the danger of reaching the
    launcher; don't reward simply losing or idling.
 
-**Exact formula, thresholds and multipliers remain open to playtesting.**
-Possible starting experiment: a gradual depth multiplier from roughly
-1× near the ceiling up to about 2× near the danger line, *before* combo
-bonuses. These are illustrative numbers, **not agreed balance values**.
+**First playable values in v0.10.0 (all configurable):** A smooth depth
+multiplier rises from **1× at the ceiling to 3× at the danger line**;
+by default, depth progression is raised to exponent **1.5** to make
+low-hanging clears especially rewarding. Each affected bubble uses its
+live position on removal, and combo multipliers apply as before. A
+six-plus-bubble drop averaging at least 65% of the danger-line depth
+displays *DEEP CLEAR!* without additional bonus points.
 
-Exact bonus percentages, multipliers and coin rewards are **not decided yet**.
+Adjust these parameters in [src/scoring-config.js](src/scoring-config.js)
+without touching the normal gravity physics. This is a first balance
+pass, **not a final guaranteed score economy**.
+
+Other proposed bonuses (prismatic colours, guide-free shots, rescue
+awards), earned-tool charging, and in-game coin rewards are **not yet
+implemented or calibrated**.
 
 ## Gravity: the signature mechanic
 
